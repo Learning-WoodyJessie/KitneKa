@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+backend/venv/
+.env
+*.db
+
+# Javascript/Node
+node_modules/
+frontend/dist/
+.DS_Store
+.vscode/
