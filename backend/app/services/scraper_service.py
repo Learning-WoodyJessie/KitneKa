@@ -98,107 +98,93 @@ class RealScraperService:
 
     def search_instagram(self, query: str, location: str = None):
         """
-        Uses SerpApi to search Instagram for product-related posts AND profiles/accounts.
-        Returns combined results of Instagram posts and seller accounts.
+        Discover Instagram boutiques using Google web search with site:instagram.com restriction.
+        Returns Instagram shop profiles discovered via Google search.
         """
-        # Include location in query for better local results
-        search_query = f"{query} {location}" if location else query
-        logger.info(f"Searching Instagram posts and accounts for: {search_query}")
+        # Build search query with Instagram site restriction
+        if location:
+            search_query = f"{query} {location} site:instagram.com"
+        else:
+            search_query = f"{query} India site:instagram.com"
         
-        all_results = []
+        logger.info(f"Discovering Instagram shops via Google search: {search_query}")
         
-        # 1. Search for Posts
         try:
-            params_posts = {
-                "engine": "instagram",
+            params = {
+                "engine": "google",
                 "q": search_query,
-                "api_key": self.serpapi_key
+                "api_key": self.serpapi_key,
+                "num": 10
             }
             
-            search = GoogleSearch(params_posts)
+            search = GoogleSearch(params)
             results = search.get_dict()
             
-            logger.info(f"Instagram Posts API response keys: {list(results.keys())}")
-            posts = results.get("posts", results.get("results", results.get("organic_results", [])))
-            logger.info(f"Found {len(posts)} Instagram posts")
+            organic_results = results.get("organic_results", [])
+            logger.info(f"Found {len(organic_results)} Google results for Instagram shops")
             
-            for item in posts[:10]:  # Limit to 10 posts
-                caption = item.get("caption", item.get("text", ""))
-                price = 0
-                if caption:
+            # Filter keywords for boutiques/stores
+            store_keywords = ['store', 'boutique', 'shop', 'label', 'studio', 'collection', 'designer', 'brand']
+            
+            instagram_results = []
+            seen_handles = set()
+            
+            for item in organic_results:
+                link = item.get("link", "")
+                title = item.get("title", "")
+                snippet = item.get("snippet", "")
+                
+                # Extract Instagram handle from URL
+                if "instagram.com" in link:
                     import re
-                    price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', caption)
-                    if price_match:
-                        try:
-                            price = float(price_match.group(1).replace(',', ''))
-                        except:
+                    handle_match = re.search(r'instagram\.com/([^/?]+)', link)
+                    if handle_match:
+                        handle = handle_match.group(1)
+                        
+                        # Skip if we've already seen this handle
+                        if handle in seen_handles:
+                            continue
+                        
+                        # Filter for likely store accounts
+                        text_to_check = (title + ' ' + snippet).lower()
+                        is_likely_store = any(keyword in text_to_check for keyword in store_keywords)
+                        
+                        # Include all for now (can tighten filter later)
+                        if is_likely_store or True:
+                            seen_handles.add(handle)
+                            
+                            # Try to extract price from snippet
                             price = 0
-                
-                all_results.append({
-                    "type": "post",
-                    "id": item.get("post_id", item.get("id", f"ig_post_{random.randint(1000,9999)}")),
-                    "username": item.get("username", item.get("user", {}).get("username", "Instagram User")),
-                    "profile_url": f"https://instagram.com/{item.get('username', item.get('user', {}).get('username', ''))}",
-                    "post_url": item.get("link", item.get("url", "")),
-                    "caption": caption[:150] + "..." if len(caption) > 150 else caption,
-                    "image": item.get("thumbnail", item.get("image", "")),
-                    "price": price,
-                    "likes": item.get("likes", item.get("like_count", 0)),
-                    "comments": item.get("comments", item.get("comment_count", 0))
-                })
+                            price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', snippet)
+                            if price_match:
+                                try:
+                                    price = float(price_match.group(1).replace(',', ''))
+                                except:
+                                    price = 0
+                            
+                            instagram_results.append({
+                                "type": "account",
+                                "id": f"ig_profile_{handle}",
+                                "username": handle,
+                                "profile_url": f"https://instagram.com/{handle}",
+                                "post_url": f"https://instagram.com/{handle}",
+                                "caption": snippet[:150] + "..." if len(snippet) > 150 else snippet,
+                                "image": "https://via.placeholder.com/400x400?text=Instagram+Shop",
+                                "price": price,
+                                "likes": 0,
+                                "comments": 0,
+                                "followers": 0
+                            })
+                            
+                            if len(instagram_results) >= 15:
+                                break
+            
+            logger.info(f"Returning {len(instagram_results)} unique Instagram shop profiles")
+            return instagram_results
+            
         except Exception as e:
-            logger.error(f"SerpApi Instagram Posts search failed: {e}")
-        
-        # 2. Search for Profiles/Accounts
-        try:
-            # Try searching with type=user to get profiles
-            params_profiles = {
-                "engine": "instagram",
-                "q": search_query,
-                "type": "users",  # Search for user profiles
-                "api_key": self.serpapi_key
-            }
-            
-            search_profiles = GoogleSearch(params_profiles)
-            profile_results = search_profiles.get_dict()
-            
-            logger.info(f"Instagram Profiles API response keys: {list(profile_results.keys())}")
-            profiles = profile_results.get("users", profile_results.get("accounts", profile_results.get("results", [])))
-            logger.info(f"Found {len(profiles)} Instagram profiles")
-            
-            for profile in profiles[:10]:  # Limit to 10 profiles
-                username = profile.get("username", profile.get("user", {}).get("username", ""))
-                bio = profile.get("bio", profile.get("biography", ""))
-                
-                # Try to extract price from bio
-                price = 0
-                if bio:
-                    import re
-                    price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', bio)
-                    if price_match:
-                        try:
-                            price = float(price_match.group(1).replace(',', ''))
-                        except:
-                            price = 0
-                
-                all_results.append({
-                    "type": "account",
-                    "id": f"ig_profile_{username}",
-                    "username": username,
-                    "profile_url": f"https://instagram.com/{username}",
-                    "post_url": f"https://instagram.com/{username}",
-                    "caption": bio[:150] + "..." if len(bio) > 150 else bio,
-                    "image": profile.get("profile_pic_url", profile.get("profile_picture", "")),
-                    "price": price,
-                    "likes": 0,
-                    "comments": profile.get("posts_count", profile.get("media_count", 0)),
-                    "followers": profile.get("followers", profile.get("follower_count", 0))
-                })
-        except Exception as e:
-            logger.error(f"SerpApi Instagram Profiles search failed: {e}")
-        
-        logger.info(f"Returning {len(all_results)} total Instagram results ({sum(1 for r in all_results if r['type'] == 'post')} posts, {sum(1 for r in all_results if r['type'] == 'account')} accounts)")
-        return all_results
+            logger.error(f"Google Instagram search failed: {e}")
+            return []
 
 
 
