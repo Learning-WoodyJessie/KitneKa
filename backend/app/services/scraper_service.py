@@ -5,7 +5,6 @@ import logging
 import os
 from serpapi import GoogleSearch
 import asyncio
-from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,6 @@
-# Deployment Guide for BharatPricing
+# Deployment Guide for KitneKa
+
+Your code is now on GitHub: **https://github.com/Learning-WoodyJessie/KitneKa**
 
 You can deploy this application for free using **Vercel** (Frontend) and **Render** (Backend).
 
