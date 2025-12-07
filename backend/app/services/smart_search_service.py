@@ -29,7 +29,7 @@ class SmartSearchService:
             logger.error(f"LLM Analysis Failed: {e}")
             return {"category": "General", "optimized_term": query, "needs_local": True}
 
-    def _synthesize_results(self, query, online_data, local_data):
+    def _synthesize_results(self, query, online_data, local_data, instagram_data):
         """
         Uses LLM to rank products and generate recommendations.
         """
@@ -37,7 +37,8 @@ class SmartSearchService:
         context = {
             "query": query,
             "online_top_5": online_data[:5],
-            "local_top_5": local_data[:5]
+            "local_top_5": local_data[:5],
+            "instagram_top_5": instagram_data[:5]
         }
         
         try:
@@ -79,18 +80,20 @@ class SmartSearchService:
         
         # 2. Fetch Data (Parallel ideally, sequential for now)
         logger.info(f"Fetching Data for: {search_term}")
-        online_results = self.scraper.search_serpapi(search_term) # We already have this
-        local_results = self.scraper.search_local_stores(search_term, location) # Need to implement this
+        online_results = self.scraper.search_serpapi(search_term)
+        local_results = self.scraper.search_local_stores(search_term, location)
+        instagram_results = self.scraper.search_instagram(search_term)
         
         # 3. Synthesize
         logger.info("Synthesizing Results...")
-        insight = self._synthesize_results(query, online_results, local_results)
+        insight = self._synthesize_results(query, online_results, local_results, instagram_results)
         
         return {
             "analysis": analysis,
             "results": {
                 "online": online_results,
-                "local": local_results
+                "local": local_results,
+                "instagram": instagram_results
             },
             "insight": insight
         }

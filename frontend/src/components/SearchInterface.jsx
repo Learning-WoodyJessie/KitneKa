@@ -232,6 +232,13 @@ const SearchInterface = () => {
                                 {searchData?.results?.online?.length > 0 && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{searchData.results.online.length}</span>}
                             </button>
                             <button
+                                onClick={() => setActiveTab('instagram')}
+                                className={`pb-4 text-sm font-medium tracking-wide transition-all ${activeTab === 'instagram' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-black'}`}
+                            >
+                                INSTAGRAM
+                                {searchData?.results?.instagram?.length > 0 && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{searchData.results.instagram.length}</span>}
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('local')}
                                 className={`pb-4 text-sm font-medium tracking-wide transition-all ${activeTab === 'local' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-black'}`}
                             >
@@ -414,6 +421,72 @@ const SearchInterface = () => {
                             )
                         )
                     }
+
+                    {/* INSTAGRAM RESULTS TAB */}
+                    {!error && activeTab === 'instagram' && (
+                        searchData?.results?.instagram && searchData.results.instagram.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {searchData.results.instagram.map((post) => (
+                                    <div key={post.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
+                                        <div className="relative aspect-square bg-gray-100">
+                                            <img
+                                                src={post.image}
+                                                alt={post.username}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                ❤️ {post.likes}
+                                            </div>
+                                        </div>
+                                        <div className="p-5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                    {post.username.charAt(0).toUpperCase()}
+                                                </div>
+                                                <a
+                                                    href={post.profile_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="font-semibold text-gray-900 hover:text-purple-600 transition-colors"
+                                                >
+                                                    @{post.username}
+                                                </a>
+                                            </div>
+                                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{post.caption}</p>
+                                            {post.price > 0 && (
+                                                <div className="mb-4 text-2xl font-bold text-gray-900">
+                                                    ₹{post.price.toLocaleString()}
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <a
+                                                    href={post.post_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-sm text-center hover:from-purple-600 hover:to-pink-600 transition-all"
+                                                >
+                                                    View on Instagram
+                                                </a>
+                                                {!post.price && (
+                                                    <span className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium text-xs text-center flex items-center justify-center">
+                                                        DM for Price
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-8 text-center border-2 border-dashed border-purple-200">
+                                <div className="max-w-md mx-auto">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">📸</div>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-2">No Instagram sellers found</h3>
+                                    <p className="text-gray-600 mb-4">Try searching for fashion or handmade products popular on Instagram.</p>
+                                </div>
+                            </div>
+                        )
+                    )}
 
                     {
                         searchData && (!searchData.results?.online?.length && !searchData.results?.local?.length) && !loading && searched && (

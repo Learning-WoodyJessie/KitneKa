@@ -96,6 +96,57 @@ class RealScraperService:
             logger.error(f"SerpApi Local Failed: {e}")
             return []
 
+    def search_instagram(self, query: str):
+        """
+        Uses SerpApi to search Instagram for product-related posts/profiles.
+        Returns Instagram posts with seller info, caption, image, and price (if mentioned).
+        """
+        logger.info(f"Searching Instagram for: {query}")
+        try:
+            params = {
+                "engine": "instagram",
+                "q": query,
+                "api_key": self.serpapi_key
+            }
+            
+            search = GoogleSearch(params)
+            results = search.get_dict()
+            posts = results.get("posts", [])
+            
+            cleaned_results = []
+            for item in posts[:20]:  # Limit to 20 posts
+                # Try to extract price from caption using regex
+                caption = item.get("caption", "")
+                price = 0
+                price_match = None
+                if caption:
+                    # Look for ₹1000, Rs.500, Rs 500, 1000/- patterns
+                    import re
+                    price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', caption)
+                    if price_match:
+                        price_str = price_match.group(1).replace(',', '')
+                        try:
+                            price = float(price_str)
+                        except:
+                            price = 0
+                
+                cleaned_results.append({
+                    "id": item.get("post_id", f"ig_{random.randint(1000,9999)}"),
+                    "username": item.get("username", "Instagram User"),
+                    "profile_url": f"https://instagram.com/{item.get('username', '')}",
+                    "post_url": item.get("link", ""),
+                    "caption": caption[:150] + "..." if len(caption) > 150 else caption,
+                    "image": item.get("thumbnail", ""),
+                    "price": price,
+                    "likes": item.get("likes", 0),
+                    "comments": item.get("comments", 0)
+                })
+            return cleaned_results
+        except Exception as e:
+            logger.error(f"SerpApi Instagram Failed: {e}")
+            return []
+
+
 
     def search_products(self, query: str):
         # Primary: SerpApi
