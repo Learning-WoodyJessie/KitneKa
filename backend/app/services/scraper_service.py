@@ -98,49 +98,45 @@ class RealScraperService:
 
     def search_instagram(self, query: str, location: str = None):
         """
-        Uses SerpApi to search Instagram for product-related posts/profiles.
-        Returns Instagram posts with seller info, caption, image, and price (if mentioned).
+        Uses SerpApi to search Instagram for product-related posts AND profiles/accounts.
+        Returns combined results of Instagram posts and seller accounts.
         """
         # Include location in query for better local results
         search_query = f"{query} {location}" if location else query
-        logger.info(f"Searching Instagram for: {search_query}")
+        logger.info(f"Searching Instagram posts and accounts for: {search_query}")
+        
+        all_results = []
+        
+        # 1. Search for Posts
         try:
-            params = {
+            params_posts = {
                 "engine": "instagram",
                 "q": search_query,
                 "api_key": self.serpapi_key
             }
             
-            search = GoogleSearch(params)
+            search = GoogleSearch(params_posts)
             results = search.get_dict()
             
-            # Log available keys for debugging
-            logger.info(f"Instagram API response keys: {list(results.keys())}")
-            
-            # Try multiple possible keys for Instagram results
+            logger.info(f"Instagram Posts API response keys: {list(results.keys())}")
             posts = results.get("posts", results.get("results", results.get("organic_results", [])))
-            
             logger.info(f"Found {len(posts)} Instagram posts")
             
-            cleaned_results = []
-            for item in posts[:20]:  # Limit to 20 posts
-                # Try to extract price from caption using regex
+            for item in posts[:10]:  # Limit to 10 posts
                 caption = item.get("caption", item.get("text", ""))
                 price = 0
-                price_match = None
                 if caption:
-                    # Look for ₹1000, Rs.500, Rs 500, 1000/- patterns
                     import re
                     price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', caption)
                     if price_match:
-                        price_str = price_match.group(1).replace(',', '')
                         try:
-                            price = float(price_str)
+                            price = float(price_match.group(1).replace(',', ''))
                         except:
                             price = 0
                 
-                cleaned_results.append({
-                    "id": item.get("post_id", item.get("id", f"ig_{random.randint(1000,9999)}")),
+                all_results.append({
+                    "type": "post",
+                    "id": item.get("post_id", item.get("id", f"ig_post_{random.randint(1000,9999)}")),
                     "username": item.get("username", item.get("user", {}).get("username", "Instagram User")),
                     "profile_url": f"https://instagram.com/{item.get('username', item.get('user', {}).get('username', ''))}",
                     "post_url": item.get("link", item.get("url", "")),
@@ -150,11 +146,59 @@ class RealScraperService:
                     "likes": item.get("likes", item.get("like_count", 0)),
                     "comments": item.get("comments", item.get("comment_count", 0))
                 })
-            logger.info(f"Returning {len(cleaned_results)} Instagram results")
-            return cleaned_results
         except Exception as e:
-            logger.error(f"SerpApi Instagram Failed: {e}")
-            return []
+            logger.error(f"SerpApi Instagram Posts search failed: {e}")
+        
+        # 2. Search for Profiles/Accounts
+        try:
+            # Try searching with type=user to get profiles
+            params_profiles = {
+                "engine": "instagram",
+                "q": search_query,
+                "type": "users",  # Search for user profiles
+                "api_key": self.serpapi_key
+            }
+            
+            search_profiles = GoogleSearch(params_profiles)
+            profile_results = search_profiles.get_dict()
+            
+            logger.info(f"Instagram Profiles API response keys: {list(profile_results.keys())}")
+            profiles = profile_results.get("users", profile_results.get("accounts", profile_results.get("results", [])))
+            logger.info(f"Found {len(profiles)} Instagram profiles")
+            
+            for profile in profiles[:10]:  # Limit to 10 profiles
+                username = profile.get("username", profile.get("user", {}).get("username", ""))
+                bio = profile.get("bio", profile.get("biography", ""))
+                
+                # Try to extract price from bio
+                price = 0
+                if bio:
+                    import re
+                    price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', bio)
+                    if price_match:
+                        try:
+                            price = float(price_match.group(1).replace(',', ''))
+                        except:
+                            price = 0
+                
+                all_results.append({
+                    "type": "account",
+                    "id": f"ig_profile_{username}",
+                    "username": username,
+                    "profile_url": f"https://instagram.com/{username}",
+                    "post_url": f"https://instagram.com/{username}",
+                    "caption": bio[:150] + "..." if len(bio) > 150 else bio,
+                    "image": profile.get("profile_pic_url", profile.get("profile_picture", "")),
+                    "price": price,
+                    "likes": 0,
+                    "comments": profile.get("posts_count", profile.get("media_count", 0)),
+                    "followers": profile.get("followers", profile.get("follower_count", 0))
+                })
+        except Exception as e:
+            logger.error(f"SerpApi Instagram Profiles search failed: {e}")
+        
+        logger.info(f"Returning {len(all_results)} total Instagram results ({sum(1 for r in all_results if r['type'] == 'post')} posts, {sum(1 for r in all_results if r['type'] == 'account')} accounts)")
+        return all_results
 
 
 

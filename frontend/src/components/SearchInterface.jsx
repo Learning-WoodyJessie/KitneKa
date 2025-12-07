@@ -426,48 +426,59 @@ const SearchInterface = () => {
                     {!error && activeTab === 'instagram' && (
                         searchData?.results?.instagram && searchData.results.instagram.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {searchData.results.instagram.map((post) => (
-                                    <div key={post.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
+                                {searchData.results.instagram.map((item) => (
+                                    <div key={item.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
                                         <div className="relative aspect-square bg-gray-100">
                                             <img
-                                                src={post.image}
-                                                alt={post.username}
+                                                src={item.image}
+                                                alt={item.username}
                                                 className="w-full h-full object-cover"
                                             />
-                                            <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                                ❤️ {post.likes}
-                                            </div>
+                                            {item.type === 'post' ? (
+                                                <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                    ❤️ {item.likes}
+                                                </div>
+                                            ) : (
+                                                <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 font-semibold">
+                                                    👤 ACCOUNT
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="p-5">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                                    {post.username.charAt(0).toUpperCase()}
+                                                    {item.username.charAt(0).toUpperCase()}
                                                 </div>
                                                 <a
-                                                    href={post.profile_url}
+                                                    href={item.profile_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="font-semibold text-gray-900 hover:text-purple-600 transition-colors"
                                                 >
-                                                    @{post.username}
+                                                    @{item.username}
                                                 </a>
                                             </div>
-                                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{post.caption}</p>
-                                            {post.price > 0 && (
+                                            {item.type === 'account' && item.followers > 0 && (
+                                                <div className="text-xs text-gray-500 mb-2">
+                                                    {item.followers.toLocaleString()} followers • {item.comments} posts
+                                                </div>
+                                            )}
+                                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{item.caption}</p>
+                                            {item.price > 0 && (
                                                 <div className="mb-4 text-2xl font-bold text-gray-900">
-                                                    ₹{post.price.toLocaleString()}
+                                                    ₹{item.price.toLocaleString()}
                                                 </div>
                                             )}
                                             <div className="flex gap-2">
                                                 <a
-                                                    href={post.post_url}
+                                                    href={item.post_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-sm text-center hover:from-purple-600 hover:to-pink-600 transition-all"
                                                 >
-                                                    View on Instagram
+                                                    {item.type === 'account' ? 'View Profile' : 'View Post'}
                                                 </a>
-                                                {!post.price && (
+                                                {!item.price && (
                                                     <span className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium text-xs text-center flex items-center justify-center">
                                                         DM for Price
                                                     </span>
