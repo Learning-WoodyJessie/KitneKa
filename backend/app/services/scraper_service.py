@@ -113,12 +113,19 @@ class RealScraperService:
             
             search = GoogleSearch(params)
             results = search.get_dict()
-            posts = results.get("posts", [])
+            
+            # Log available keys for debugging
+            logger.info(f"Instagram API response keys: {list(results.keys())}")
+            
+            # Try multiple possible keys for Instagram results
+            posts = results.get("posts", results.get("results", results.get("organic_results", [])))
+            
+            logger.info(f"Found {len(posts)} Instagram posts")
             
             cleaned_results = []
             for item in posts[:20]:  # Limit to 20 posts
                 # Try to extract price from caption using regex
-                caption = item.get("caption", "")
+                caption = item.get("caption", item.get("text", ""))
                 price = 0
                 price_match = None
                 if caption:
@@ -133,16 +140,17 @@ class RealScraperService:
                             price = 0
                 
                 cleaned_results.append({
-                    "id": item.get("post_id", f"ig_{random.randint(1000,9999)}"),
-                    "username": item.get("username", "Instagram User"),
-                    "profile_url": f"https://instagram.com/{item.get('username', '')}",
-                    "post_url": item.get("link", ""),
+                    "id": item.get("post_id", item.get("id", f"ig_{random.randint(1000,9999)}")),
+                    "username": item.get("username", item.get("user", {}).get("username", "Instagram User")),
+                    "profile_url": f"https://instagram.com/{item.get('username', item.get('user', {}).get('username', ''))}",
+                    "post_url": item.get("link", item.get("url", "")),
                     "caption": caption[:150] + "..." if len(caption) > 150 else caption,
-                    "image": item.get("thumbnail", ""),
+                    "image": item.get("thumbnail", item.get("image", "")),
                     "price": price,
-                    "likes": item.get("likes", 0),
-                    "comments": item.get("comments", 0)
+                    "likes": item.get("likes", item.get("like_count", 0)),
+                    "comments": item.get("comments", item.get("comment_count", 0))
                 })
+            logger.info(f"Returning {len(cleaned_results)} Instagram results")
             return cleaned_results
         except Exception as e:
             logger.error(f"SerpApi Instagram Failed: {e}")
