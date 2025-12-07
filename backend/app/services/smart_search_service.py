@@ -82,7 +82,7 @@ class SmartSearchService:
         logger.info(f"Fetching Data for: {search_term}")
         online_results = self.scraper.search_serpapi(search_term)
         local_results = self.scraper.search_local_stores(search_term, location)
-        instagram_results = self.scraper.search_instagram(search_term)
+        instagram_results = self.scraper.search_instagram(search_term, location)
         
         # 3. Synthesize
         logger.info("Synthesizing Results...")

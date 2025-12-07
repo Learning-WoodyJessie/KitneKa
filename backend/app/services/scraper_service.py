@@ -96,16 +96,18 @@ class RealScraperService:
             logger.error(f"SerpApi Local Failed: {e}")
             return []
 
-    def search_instagram(self, query: str):
+    def search_instagram(self, query: str, location: str = None):
         """
         Uses SerpApi to search Instagram for product-related posts/profiles.
         Returns Instagram posts with seller info, caption, image, and price (if mentioned).
         """
-        logger.info(f"Searching Instagram for: {query}")
+        # Include location in query for better local results
+        search_query = f"{query} {location}" if location else query
+        logger.info(f"Searching Instagram for: {search_query}")
         try:
             params = {
                 "engine": "instagram",
-                "q": query,
+                "q": search_query,
                 "api_key": self.serpapi_key
             }
             
