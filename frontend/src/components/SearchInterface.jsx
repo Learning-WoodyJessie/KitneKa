@@ -427,63 +427,61 @@ const SearchInterface = () => {
                         searchData?.results?.instagram && searchData.results.instagram.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {searchData.results.instagram.map((item) => (
-                                    <div key={item.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
-                                        <div className="relative aspect-square bg-gray-100">
-                                            <img
-                                                src={item.image}
-                                                alt={item.username}
-                                                className="w-full h-full object-cover"
-                                            />
-                                            {item.type === 'post' ? (
-                                                <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                                    ❤️ {item.likes}
-                                                </div>
-                                            ) : (
-                                                <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 font-semibold">
-                                                    👤 ACCOUNT
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-5">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                    <div key={item.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow flex flex-col">
+                                        {/* Profile Avatar at Top */}
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="relative">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
                                                     {item.username.charAt(0).toUpperCase()}
                                                 </div>
+                                                {item.type === 'account' && (
+                                                    <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
+                                                        ✓
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div>
                                                 <a
                                                     href={item.profile_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="font-semibold text-gray-900 hover:text-purple-600 transition-colors"
+                                                    className="font-bold text-gray-900 hover:text-purple-600 transition-colors block"
                                                 >
                                                     @{item.username}
                                                 </a>
-                                            </div>
-                                            {item.type === 'account' && item.followers > 0 && (
-                                                <div className="text-xs text-gray-500 mb-2">
-                                                    {item.followers.toLocaleString()} followers • {item.comments} posts
-                                                </div>
-                                            )}
-                                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{item.caption}</p>
-                                            {item.price > 0 && (
-                                                <div className="mb-4 text-2xl font-bold text-gray-900">
-                                                    ₹{item.price.toLocaleString()}
-                                                </div>
-                                            )}
-                                            <div className="flex gap-2">
-                                                <a
-                                                    href={item.post_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-sm text-center hover:from-purple-600 hover:to-pink-600 transition-all"
-                                                >
-                                                    {item.type === 'account' ? 'View Profile' : 'View Post'}
-                                                </a>
-                                                {!item.price && (
-                                                    <span className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium text-xs text-center flex items-center justify-center">
-                                                        DM for Price
-                                                    </span>
+                                                {item.followers > 0 && (
+                                                    <div className="text-xs text-gray-500">
+                                                        {item.followers.toLocaleString()} followers
+                                                    </div>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {/* Description */}
+                                        <p className="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">{item.caption}</p>
+
+                                        {/* Price if available */}
+                                        {item.price > 0 && (
+                                            <div className="mb-4 text-2xl font-bold text-gray-900">
+                                                ₹{item.price.toLocaleString()}
+                                            </div>
+                                        )}
+
+                                        {/* Action Button */}
+                                        <div className="mt-auto">
+                                            <a
+                                                href={item.post_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 rounded-lg font-medium text-sm text-center hover:from-purple-600 hover:to-pink-600 transition-all block"
+                                            >
+                                                View Profile
+                                            </a>
+                                            {!item.price && (
+                                                <div className="text-center text-xs text-gray-500 mt-2">
+                                                    DM for Price
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
