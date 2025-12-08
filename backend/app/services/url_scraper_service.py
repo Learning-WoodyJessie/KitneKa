@@ -1,5 +1,4 @@
-import requests
-from bs4 import BeautifulSoup
+from serpapi import GoogleSearch
 from openai import OpenAI
 import json
 import logging
@@ -13,24 +12,17 @@ logger = logging.getLogger(__name__)
 class URLScraperService:
     def __init__(self):
         self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
+        self.serpapi_key = os.environ.get("SERPAPI_API_KEY")
 
     def _extract_from_url_path(self, url: str) -> str:
         """
-        Fallback: Extract product info from URL path when scraping fails.
+        Fallback: Extract product info from URL path when SerpAPI fails.
         Example: /petite-lexington-pave-two-tone-watch/MK4740.html
         Returns: "Petite Lexington Pave Two Tone Watch MK4740"
         """
         try:
             parsed = urlparse(url)
-            path = unquote(parsed.path)  # Decode URL encoding
+            path = unquote(parsed.path)
             
             # Remove file extensions and split by slashes
             path = re.sub(r'\.(html?|php|asp|jsp).*$', '', path, flags=re.IGNORECASE)
@@ -50,8 +42,8 @@ class URLScraperService:
 
     def extract_product_from_url(self, url: str) -> Dict[str, Any]:
         """
-        Scrapes a product URL and extracts product details.
-        Falls back to URL path parsing if scraping fails.
+        Uses SerpAPI to fetch product page and extract details.
+        Falls back to URL path parsing if SerpAPI fails.
         
         Args:
             url: Product URL (e.g., Amazon, Michael Kors, etc.)
@@ -59,64 +51,56 @@ class URLScraperService:
         Returns:
             Dictionary with extracted product details and search query
         """
-        logger.info(f"Scraping product URL: {url}")
+        logger.info(f"Fetching product page via SerpAPI: {url}")
         
         extracted_text = ""
-        scraping_failed = False
+        serpapi_failed = False
         
         try:
-            # Try to fetch the page
-            response = requests.get(url, headers=self.headers, timeout=10, allow_redirects=True)
+            # Use SerpAPI to fetch the URL content
+            params = {
+                "engine": "google",
+                "q": f"site:{urlparse(url).netloc} {url}",  # Search for the specific URL
+                "api_key": self.serpapi_key,
+                "num": 1
+            }
             
-            # Check if we got blocked
-            if response.status_code == 403 or "access denied" in response.text.lower():
-                logger.warning(f"Website blocked our request (Status: {response.status_code})")
-                scraping_failed = True
-            else:
-                response.raise_for_status()
-                soup = BeautifulSoup(response.text, 'html.parser')
+            search = GoogleSearch(params)
+            results = search.get_dict()
+            
+            # Try to get the first organic result (should be the product page)
+            organic_results = results.get("organic_results", [])
+            
+            if organic_results:
+                first_result = organic_results[0]
+                title = first_result.get("title", "")
+                snippet = first_result.get("snippet", "")
                 
-                # Extract various metadata
-                title = soup.find('title')
-                title_text = title.text.strip() if title else ""
+                # Also try sitelinks if available (product details)
+                sitelinks = first_result.get("sitelinks", {}).get("inline", [])
+                sitelink_text = " ".join([s.get("title", "") for s in sitelinks])
                 
-                # Try to get product name from meta tags
-                og_title = soup.find('meta', property='og:title')
-                og_title_content = og_title.get('content', '').strip() if og_title else ""
-                
-                meta_desc = soup.find('meta', attrs={'name': 'description'})
-                description = meta_desc.get('content', '').strip() if meta_desc else ""
-                
-                # Try to get JSON-LD structured data
-                json_ld = soup.find('script', type='application/ld+json')
-                structured_data = ""
-                if json_ld:
-                    try:
-                        structured_data = json_ld.string[:500]
-                    except:
-                        pass
-                
-                # If we got meaningful content, use it
-                if title_text or og_title_content or description:
+                if title or snippet:
                     extracted_text = f"""
-                    Title: {title_text}
-                    OG Title: {og_title_content}
-                    Description: {description}
-                    Structured Data: {structured_data}
+                    Title: {title}
+                    Description: {snippet}
+                    Additional Info: {sitelink_text}
                     URL: {url}
+                    Domain: {urlparse(url).netloc}
                     """
+                    logger.info("Successfully extracted product info from SerpAPI")
                 else:
-                    scraping_failed = True
+                    serpapi_failed = True
+            else:
+                logger.warning("No results from SerpAPI for this URL")
+                serpapi_failed = True
                     
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Failed to fetch URL: {e}")
-            scraping_failed = True
         except Exception as e:
-            logger.warning(f"Scraping failed: {e}")
-            scraping_failed = True
+            logger.warning(f"SerpAPI fetch failed: {e}")
+            serpapi_failed = True
         
-        # Fallback: Extract from URL path if scraping failed
-        if scraping_failed or not extracted_text.strip():
+        # Fallback: Extract from URL path if SerpAPI failed
+        if serpapi_failed or not extracted_text.strip():
             logger.info("Using fallback: extracting product info from URL path")
             url_product_name = self._extract_from_url_path(url)
             domain = urlparse(url).netloc.replace('www.', '').split('.')[0].title()
@@ -125,7 +109,7 @@ class URLScraperService:
             Product Name from URL: {url_product_name}
             Domain: {domain}
             Full URL: {url}
-            Note: Could not scrape page content (website may block bots), extracted from URL structure instead.
+            Note: Extracted from URL structure (SerpAPI did not return page content).
             """
         
         # Use OpenAI to parse and clean the product info
@@ -136,19 +120,18 @@ class URLScraperService:
                 messages=[
                     {
                         "role": "system",
-                        "content": """You are a product data extraction expert. Extract product details from webpage content or URL.
+                        "content": """You are a product data extraction expert. Extract product details from search result or URL.
                         Return JSON with:
                         - 'brand': Brand name (extract from domain or product name)
                         - 'product_name': Full product name
                         - 'model': Model number/code if present (e.g., MK4740)
-                        - 'category': Product category (e.g., Watch, Handbag, Shoes)
-                        - 'search_query': Optimized search term for finding this product in India (include brand, model, India)
-                        - 'confidence': Your confidence level (high/medium/low)
-                        - 'note': Any relevant notes about extraction method"""
+                        - 'category': Product category (e.g., Watch, Handbag, Shoes, Electronics)
+                        - 'search_query': Optimized search term for finding this product in India (include brand + model + product type + "India")
+                        - 'confidence': Your confidence level (high/medium/low)"""
                     },
                     {
                         "role": "user",
-                        "content": f"Extract product details from this content:\\n{extracted_text}"
+                        "content": f"Extract product details from this content:\n{extracted_text}"
                     }
                 ],
                 response_format={"type": "json_object"},
@@ -158,7 +141,7 @@ class URLScraperService:
             result = json.loads(ai_response.choices[0].message.content)
             result['original_url'] = url
             result['domain'] = urlparse(url).netloc
-            result['scraping_method'] = 'url_path' if scraping_failed else 'html_content'
+            result['extraction_method'] = 'url_path' if serpapi_failed else 'serpapi'
             
             logger.info(f"URL extraction complete: {result.get('search_query', 'N/A')}")
             return result
