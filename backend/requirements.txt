@@ -9,3 +9,5 @@ pandas==2.2.0
 openai
 google-search-results
 beautifulsoup4
+Pillow==10.1.0
+lxml==4.9.3

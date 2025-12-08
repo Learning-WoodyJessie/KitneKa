@@ -153,14 +153,8 @@ class RealScraperService:
                         if is_likely_store or True:
                             seen_handles.add(handle)
                             
-                            # Try to extract price from snippet
-                            price = 0
-                            price_match = re.search(r'[₹Rs\.?\s]*(\d+(?:,\d+)*)', snippet)
-                            if price_match:
-                                try:
-                                    price = float(price_match.group(1).replace(',', ''))
-                                except:
-                                    price = 0
+                            # Don't extract price from snippets - too many false positives (addresses, dates, etc.)
+                            # Instagram sellers typically use "DM for price" model anyway
                             
                             instagram_results.append({
                                 "type": "account",
@@ -170,7 +164,7 @@ class RealScraperService:
                                 "post_url": f"https://instagram.com/{handle}",
                                 "caption": snippet[:150] + "..." if len(snippet) > 150 else snippet,
                                 "image": "https://via.placeholder.com/400x400?text=Instagram+Shop",
-                                "price": price,
+                                "price": 0,  # Always 0 - prices not reliable from search snippets
                                 "likes": 0,
                                 "comments": 0,
                                 "followers": 0

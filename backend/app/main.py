@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.pricing_service import PricingService, MockScraperService
 from app.database import engine, Base
 from pydantic import BaseModel
 from typing import List, Optional
 import datetime
+import base64
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -68,9 +69,13 @@ def refresh_prices():
 
 from app.services.scraper_service import RealScraperService
 from app.services.smart_search_service import SmartSearchService
+from app.services.image_analyzer_service import ImageAnalyzerService
+from app.services.url_scraper_service import URLScraperService
 
 real_scraper = RealScraperService()
 smart_searcher = SmartSearchService()
+image_analyzer = ImageAnalyzerService()
+url_scraper = URLScraperService()
 
 # ...
 
@@ -80,6 +85,80 @@ def search_products(q: str, location: Optional[str] = "Mumbai"):
     Smart Search: Uses LLM to analyze query + SerpApi to fetch results
     """
     return smart_searcher.smart_search(q, location)
+
+
+@app.post("/discovery/search-by-image")
+async def search_by_image(file: UploadFile = File(...), location: Optional[str] = "Mumbai"):
+    """
+    Search by uploading a product image. Uses GPT-4 Vision to analyze the image
+    and extract product details, then performs a smart search.
+    """
+    try:
+        # Read and encode image
+        contents = await file.read()
+        image_base64 = base64.b64encode(contents).decode('utf-8')
+        
+        # Analyze image
+        analysis = image_analyzer.analyze_product_image(image_base64)
+        
+        if "error" in analysis or not analysis.get("search_query"):
+            return {"error": analysis.get("error", "Could not analyze image"), "analysis": analysis}
+        
+        # Perform search with extracted query
+        search_results = smart_searcher.smart_search(analysis["search_query"], location)
+        
+        # Include image analysis in response
+        search_results["image_analysis"] = analysis
+        
+        return search_results
+        
+    except Exception as e:
+        return {"error": f"Image upload failed: {str(e)}"}
+
+
+@app.post("/discovery/search-by-url")
+def search_by_url(url: str, location: Optional[str] = "Mumbai"):
+    """
+    Search by pasting a product URL. Scrapes the page to extract product details,
+    then performs a smart search for Indian alternatives.
+    """
+    try:
+        # Extract product info from URL
+        extraction = url_scraper.extract_product_from_url(url)
+        
+        if "error" in extraction or not extraction.get("search_query"):
+            return {"error": extraction.get("error", "Could not extract product from URL"), "extraction": extraction}
+        
+        # Perform search with extracted query
+        search_results = smart_searcher.smart_search(extraction["search_query"], location)
+        
+        # Include URL extraction in response
+        search_results["url_extraction"] = extraction
+        
+        return search_results
+        
+    except Exception as e:
+        return {"error": f"URL search failed: {str(e)}"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "BharatPricing API"}
+
+@app.get("/test")
+def test():
+    return {
+        "message": "BharatPricing API is running!",
+        "endpoints": [
+            "/products - View all tracked products",
+            "/products (POST) - Add a new product",
+            "/competitors (POST) - Add competitor link",
+            "/refresh-prices (POST) - Manually refresh prices",
+            "/discovery/search?q=iphone - Smart product search",
+            "/discovery/search-by-image (POST) - Search by uploading image",
+            "/discovery/search-by-url (POST) - Search by pasting product URL"
+        ]
+    }
 
 class TrackRequest(BaseModel):
     name: str
@@ -101,3 +180,7 @@ def track_product(request: TrackRequest):
     }
     
     return pricing_service.track_product_from_search(product_data, request.competitors)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

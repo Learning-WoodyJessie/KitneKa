@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, ShoppingBag, Loader2, ArrowRight, ExternalLink, Globe, Check, Plus, ChevronDown } from 'lucide-react';
+import { Search, MapPin, ShoppingBag, Loader2, ArrowRight, ExternalLink, Globe, Check, Plus, ChevronDown, Upload, Link as LinkIcon, Image as ImageIcon, X } from 'lucide-react';
 import axios from 'axios';
 
 const SearchInterface = () => {
@@ -13,6 +13,12 @@ const SearchInterface = () => {
     const [activeTab, setActiveTab] = useState('online');
     const [localSort, setLocalSort] = useState('distance');
     const [selectedStores, setSelectedStores] = useState([]);
+
+    // New states for image/URL search
+    const [searchMode, setSearchMode] = useState('text'); // 'text', 'image', 'url'
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [productUrl, setProductUrl] = useState('');
 
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -68,26 +74,61 @@ const SearchInterface = () => {
     };
 
     const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!query.trim()) return;
+        if (e) e.preventDefault();
+
+        // Validation based on mode
+        if (searchMode === 'text' && !query.trim()) return;
+        if (searchMode === 'image' && !imageFile) return;
+        if (searchMode === 'url' && !productUrl.trim()) return;
 
         setLoading(true);
+        setError(null);
         setSearched(true);
-        setError(null); // Clear previous errors
-        setSearchData(null);
-        setActiveTab('online');
+        setSearchData(null); // Clear previous search data
+        setActiveTab('online'); // Reset tab to online
 
         try {
-            // Call Backend API with location
+            let response;
             const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
-            const response = await axios.get(`${API_BASE}/discovery/search?q=${encodeURIComponent(query)}${locationParam}`);
 
-            if (!response.data || (!response.data.results?.online?.length && !response.data.results?.local?.length)) {
-                setError("No results found. Try a different query or location.");
+            if (searchMode === 'text') {
+                // Text search (existing)
+                response = await axios.get(
+                    `${API_BASE}/discovery/search?q=${encodeURIComponent(query)}${locationParam}`
+                );
+            } else if (searchMode === 'image') {
+                // Image upload search
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                formData.append('location', location || 'Mumbai'); // Default location if not selected
+
+                response = await axios.post(
+                    `${API_BASE}/discovery/search-by-image`,
+                    formData,
+                    {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    }
+                );
+            } else if (searchMode === 'url') {
+                // URL paste search
+                response = await axios.post(
+                    `${API_BASE}/discovery/search-by-url`,
+                    null,
+                    {
+                        params: {
+                            url: productUrl,
+                            location: location || 'Mumbai' // Default location if not selected
+                        }
+                    }
+                );
+            }
+
+            if (!response.data || (!response.data.results?.online?.length && !response.data.results?.local?.length && !response.data.results?.instagram?.length)) {
+                setError("No results found. Try a different query, image, or URL.");
+                setSearchData(null);
             } else {
                 setSearchData(response.data);
             }
-
         } catch (err) {
             console.error("Search failed:", err);
             setError(`Search failed: ${err.message || "Unknown Error"}. Check console.`);
@@ -127,20 +168,88 @@ const SearchInterface = () => {
                     )}
 
                     <form onSubmit={handleSearch} className="group relative">
+                        {/* Search Mode Toggle */}
+                        <div className="flex justify-center gap-2 mb-4">
+                            <button
+                                type="button"
+                                onClick={() => setSearchMode('text')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'text' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <Search size={18} />
+                                Text Search
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSearchMode('image')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'image' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <ImageIcon size={18} />
+                                Image Upload
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSearchMode('url')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'url' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                <LinkIcon size={18} />
+                                URL Paste
+                            </button>
+                        </div>
+
                         <div className={`flex flex-col md:flex-row gap-4 ${searched ? '' : 'p-2'}`}>
-                            {/* Search Input */}
-                            <div className="relative flex-grow">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Search className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
+                            {/* Conditional Input Based on Mode */}
+                            {searchMode === 'text' && (
+                                <div className="relative flex-grow">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
+                                        placeholder="Search for a product..."
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                    />
                                 </div>
-                                <input
-                                    type="text"
-                                    className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
-                                    placeholder="Search for a product..."
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                />
-                            </div>
+                            )}
+
+                            {searchMode === 'image' && (
+                                <div className="relative flex-grow">
+                                    {!imagePreview ? (
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors bg-gray-50">
+                                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                                            <span className="text-sm text-gray-500">Click to upload product image</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                        </label>
+                                    ) : (
+                                        <div className="relative w-full h-32 border-2 border-gray-300 rounded-lg overflow-hidden">
+                                            <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
+                                            <button
+                                                type="button"
+                                                onClick={clearImage}
+                                                className="absolute top-2 right-2 bg-black text-white p-1 rounded-full hover:bg-gray-800"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {searchMode === 'url' && (
+                                <div className="relative flex-grow">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <LinkIcon className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
+                                    </div>
+                                    <input
+                                        type="url"
+                                        className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
+                                        placeholder="Paste product URL (Amazon, Michael Kors, etc.)"
+                                        value={productUrl}
+                                        onChange={(e) => setProductUrl(e.target.value)}
+                                    />
+                                </div>
+                            )}
 
                             {/* Location Dropdown */}
                             <div className="relative md:w-1/3">
