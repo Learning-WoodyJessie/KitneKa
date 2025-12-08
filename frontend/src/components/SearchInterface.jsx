@@ -137,6 +137,23 @@ const SearchInterface = () => {
         }
     };
 
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const clearImage = () => {
+        setImageFile(null);
+        setImagePreview(null);
+    };
+
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
             {/* Navbar */}
