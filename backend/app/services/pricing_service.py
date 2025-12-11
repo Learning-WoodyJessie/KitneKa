@@ -9,6 +9,36 @@ class PricingService:
     def __init__(self):
         self.db = SessionLocal()
 
+    def get_product_price_history(self, product_id: int):
+        """
+        Fetch price history for a specific product's competitors.
+        """
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return None
+            
+        history_data = []
+        for comp in product.competitors:
+            # Fetch history for this competitor
+            history_entries = self.db.query(PriceHistory).filter(
+                PriceHistory.competitor_product_id == comp.id
+            ).order_by(PriceHistory.timestamp).all()
+            
+            history_points = [
+                {"date": h.timestamp.isoformat(), "price": h.price} 
+                for h in history_entries
+            ]
+            
+            history_data.append({
+                "competitor": comp.competitor_name,
+                "data": history_points
+            })
+            
+        return {
+            "product_name": product.name,
+            "history": history_data
+        }
+
     def get_dashboard_metrics(self):
         total_products = self.db.query(Product).count()
         tracked_competitors = self.db.query(CompetitorProduct).count()
@@ -31,6 +61,34 @@ class PricingService:
             "monitored_links": tracked_competitors,
             "average_price_index": 105.2, # Mock value
             "products_cheaper_than_competitors": int(total_products * 0.6)
+        }
+
+    def get_product_by_id(self, product_id: int):
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return None
+            
+        # construct similar response to get_all but for single product
+        competitors = []
+        for c in product.competitors:
+            competitors.append({
+                "name": c.competitor_name,
+                "price": c.last_price,
+                "url": c.url
+            })
+        
+        comp_prices = [c.last_price for c in product.competitors if c.last_price]
+        lowest_market_price = min(comp_prices) if comp_prices else product.selling_price
+        
+        return {
+            "id": product.id,
+            "sku": product.sku,
+            "name": product.name,
+            "your_price": product.selling_price,
+            "image_url": product.image_url,
+            "competitor_prices": competitors,
+            "lowest_market_price": lowest_market_price,
+            "category": product.category
         }
 
     def get_all_products_with_analysis(self):
@@ -85,6 +143,56 @@ class PricingService:
         self.db.commit()
         self.db.refresh(db_link)
         return db_link
+
+    def track_product_from_search(self, product_data: dict, competitors: List[dict]):
+        """
+        Saves a product and its competitor links to the database.
+        product_data: {'name': str, 'sku': str, 'price': float, 'image': str}
+        competitors: [{'name': str, 'url': str, 'price': float}]
+        """
+        # 1. Create the main product (Your selling price)
+        # For this MVP, we assume the user is tracking the "Best Deal" price as their reference,
+        # or we just create the product entry.
+        
+        # Check if already exists
+        existing = self.db.query(Product).filter(Product.sku == product_data['sku']).first()
+        if existing:
+            return {"message": "Product already tracked", "id": existing.id}
+
+        new_product = Product(
+            sku=product_data['sku'],
+            name=product_data['name'],
+            category="Uncategorized", 
+            cost_price=product_data['price'] * 0.8, # Mock cost
+            selling_price=product_data['price'],
+            image_url=product_data.get('image')
+        )
+        self.db.add(new_product)
+        self.db.commit()
+        self.db.refresh(new_product)
+
+        # 2. Add competitor links
+        for comp in competitors:
+            link = CompetitorProduct(
+                product_id=new_product.id,
+                competitor_name=comp['name'],
+                url=comp['url'],
+                last_price=comp['price']
+            )
+            self.db.add(link)
+            self.db.commit() # Commit to get ID
+            self.db.refresh(link)
+            
+            # Initial history point
+            history = PriceHistory(
+                competitor_product_id=link.id,
+                price=comp['price'],
+                timestamp=datetime.utcnow()
+            )
+            self.db.add(history)
+        
+        self.db.commit()
+        return {"message": "Product tracked successfully", "id": new_product.id}
 
 class MockScraperService:
     def __init__(self):
@@ -199,56 +307,6 @@ class MockScraperService:
             "local": local_results
         }
 
-class PricingService:
-    def __init__(self):
-        self.db = SessionLocal()
 
-    def track_product_from_search(self, product_data: dict, competitors: List[dict]):
-        """
-        Saves a product and its competitor links to the database.
-        product_data: {'name': str, 'sku': str, 'price': float, 'image': str}
-        competitors: [{'name': str, 'url': str, 'price': float}]
-        """
-        # 1. Create the main product (Your selling price)
-        # For this MVP, we assume the user is tracking the "Best Deal" price as their reference,
-        # or we just create the product entry.
-        
-        # Check if already exists
-        existing = self.db.query(Product).filter(Product.sku == product_data['sku']).first()
-        if existing:
-            return {"message": "Product already tracked", "id": existing.id}
-
-        new_product = Product(
-            sku=product_data['sku'],
-            name=product_data['name'],
-            category="Uncategorized", 
-            cost_price=product_data['price'] * 0.8, # Mock cost
-            selling_price=product_data['price'],
-            image_url=product_data.get('image')
-        )
-        self.db.add(new_product)
-        self.db.commit()
-        self.db.refresh(new_product)
-
-        # 2. Add competitor links
-        for comp in competitors:
-            link = CompetitorProduct(
-                product_id=new_product.id,
-                competitor_name=comp['name'],
-                url=comp['url'],
-                last_price=comp['price']
-            )
-            self.db.add(link)
-            
-            # Initial history point
-            history = PriceHistory(
-                competitor_product_id=link.id, # Will be assigned on flush, but safer to commit first or use flush
-                price=comp['price'],
-                timestamp=datetime.utcnow()
-            )
-            # To handle ID assignment we need to flush/commit
-        
-        self.db.commit()
-        return {"message": "Product tracked successfully", "id": new_product.id}
 
     # ... existing methods ...

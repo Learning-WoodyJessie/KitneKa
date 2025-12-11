@@ -1,0 +1,32 @@
+services:
+  # 1. The Backend API (Python/FastAPI)
+  - type: web
+    name: kitneka-backend
+    env: python
+    region: singapore # Optional: Choose closest to you
+    plan: free # Optional
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false # You will need to enter this in dashboard
+      - key: SERPAPI_API_KEY
+        sync: false # You will need to enter this in dashboard
+
+  # 2. The Frontend UI (React/Vite)
+  - type: static
+    name: kitneka-frontend
+    env: static
+    region: singapore
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    publishDir: "dist"
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: kitneka-backend
+          property: url

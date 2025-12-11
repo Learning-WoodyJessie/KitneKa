@@ -8,13 +8,24 @@ logger = logging.getLogger(__name__)
 
 class SmartSearchService:
     def __init__(self):
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        try:
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if api_key:
+                self.client = OpenAI(api_key=api_key)
+            else:
+                self.client = None
+        except Exception as e:
+            logger.warning(f"OpenAI Client Init Failed (Smart Search will use fallbacks): {e}")
+            self.client = None
+            
         self.scraper = RealScraperService()
 
     def _analyze_query(self, query: str):
         """
         Uses LLM to understand category and optimize search terms.
         """
+        if not self.client:
+            return {"category": "General", "optimized_term": query, "needs_local": True}
         try:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo", # Using 3.5 for speed/cost, can upgrade to gpt-4
@@ -33,6 +44,12 @@ class SmartSearchService:
         """
         Uses LLM to rank products and generate recommendations.
         """
+        if not self.client:
+             return {
+                "best_value": None,
+                "authenticity_note": "AI Analysis unavailable (No API Key).",
+                "recommendation_text": "Here are the top results we found."
+            }
         # Prepare context for LLM (limit data to avoid token limits)
         context = {
             "query": query,

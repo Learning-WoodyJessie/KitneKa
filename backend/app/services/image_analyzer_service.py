@@ -9,14 +9,28 @@ logger = logging.getLogger(__name__)
 
 class ImageAnalyzerService:
     def __init__(self):
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        try:
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if api_key:
+                self.client = OpenAI(api_key=api_key)
+            else:
+                self.client = None
+        except Exception as e:
+            logger.warning(f"OpenAI Client Init Failed (Image Analysis disabled): {e}")
+            self.client = None
 
-    def analyze_product_image(self, image_base64: str) -> Dict[str, Any]:
+    def analyze_product_image(self, base64_image: str) -> Dict[str, Any]:
+        if not self.client:
+            return {
+                "error": "Image analysis unavailable (No API Key)",
+                "search_query": "",
+                "confidence": "low"
+            }
         """
         Uses GPT-4 Vision to analyze a product image and extract searchable details.
         
         Args:
-            image_base64: Base64 encoded image string
+            base64_image: Base64 encoded image string
             
         Returns:
             Dictionary with extracted product details and search query

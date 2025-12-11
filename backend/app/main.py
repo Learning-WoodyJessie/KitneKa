@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.pricing_service import PricingService, MockScraperService
+from app.services.seasonality_service import SeasonalityService
 from app.database import engine, Base
 from pydantic import BaseModel
 from typing import List, Optional
@@ -24,6 +25,7 @@ app.add_middleware(
 # Services
 pricing_service = PricingService()
 mock_scraper = MockScraperService()
+seasonality_service = SeasonalityService()
 
 # Pydantic Models for Requests
 class ProductCreate(BaseModel):
@@ -61,6 +63,30 @@ def create_product(product: ProductCreate):
 @app.post("/competitors")
 def add_competitor_link(link: CompetitorLink):
     return pricing_service.add_competitor_monitoring(link)
+
+@app.get("/products/{product_id}")
+def get_product(product_id: int):
+    product = pricing_service.get_product_by_id(product_id)
+    if not product:
+        return {"error": "Product not found"}
+    return product
+
+@app.get("/products/{product_id}/history")
+def get_price_history(product_id: int):
+    """
+    Get price history for a specific product
+    """
+    history = pricing_service.get_product_price_history(product_id)
+    if not history:
+        return {"error": "Product not found"}
+    return history
+
+@app.get("/seasonality/tips")
+def get_seasonality_tips():
+    """
+    Get buying tips based on current date
+    """
+    return seasonality_service.get_seasonal_tips()
 
 @app.post("/refresh-prices")
 def refresh_prices():

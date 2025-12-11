@@ -1,27 +1,35 @@
-import React, { useState } from 'react';
-import { Search, MapPin, ShoppingBag, Loader2, ArrowRight, ExternalLink, Globe, Check, Plus, ChevronDown, Upload, Link as LinkIcon, Image as ImageIcon, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const SearchInterface = () => {
-    const [query, setQuery] = useState('');
+const SearchInterface = ({ initialQuery }) => {
+    const navigate = useNavigate();
+    const [query, setQuery] = useState(initialQuery || '');
     const [location, setLocation] = useState('');
-    const [searchData, setSearchData] = useState(null); // Stores full response: { analysis, insight, results }
+    const [searchData, setSearchData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
-    const [error, setError] = useState(null); // New error state
+    const [error, setError] = useState(null);
     const [visibleCount, setVisibleCount] = useState(5);
     const [activeTab, setActiveTab] = useState('online');
     const [localSort, setLocalSort] = useState('distance');
     const [selectedStores, setSelectedStores] = useState([]);
 
-    // New states for image/URL search
-    const [searchMode, setSearchMode] = useState('text'); // 'text', 'image', 'url'
+    // Image/URL search states
+    const [showImageModal, setShowImageModal] = useState(false);
     const [imageFile, setImageFile] = useState(null);
-    const [imagePreview, setImagePreview] = useState(null);
-    const [productUrl, setProductUrl] = useState('');
 
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
+
+    // Trigger search if initialQuery exists
+    useEffect(() => {
+        if (initialQuery) {
+            setQuery(initialQuery);
+            handleSearch(null, 'text', null, '', initialQuery);
+        }
+    }, [initialQuery]);
 
     // Major Indian cities for dropdown
     const INDIAN_CITIES = [
@@ -58,49 +66,52 @@ const SearchInterface = () => {
             }));
 
         try {
-            await axios.post(`${API_BASE}/discovery/track`, {
+            const response = await axios.post(`${API_BASE}/discovery/track`, {
                 name: product.title,
                 price: product.price,
                 image: product.image,
                 competitors: competitors
             });
-            // Show success state briefly (could be improved with a toast)
-            setTimeout(() => setTrackingId(null), 2000);
-            alert(`Started tracking "${product.title}"`);
+
+            // Redirect to product page
+            navigate(`/product/${response.data.id}`);
+
         } catch (error) {
             console.error("Tracking failed:", error);
             setTrackingId(null);
+            alert("Failed to track product");
         }
     };
 
-    const handleSearch = async (e) => {
+    const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null) => {
         if (e) e.preventDefault();
 
-        // Validation based on mode
-        if (searchMode === 'text' && !query.trim()) return;
-        if (searchMode === 'image' && !imageFile) return;
-        if (searchMode === 'url' && !productUrl.trim()) return;
+        const q = overrideQuery || query;
+
+        // Validation
+        if (mode === 'text' && !q.trim()) return;
+        if (mode === 'image' && !file) return;
+        if (mode === 'url' && !url.trim()) return;
 
         setLoading(true);
         setError(null);
         setSearched(true);
-        setSearchData(null); // Clear previous search data
-        setActiveTab('online'); // Reset tab to online
+        setSearchData(null);
+        setActiveTab('online');
+        setShowImageModal(false);
 
         try {
             let response;
             const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
 
-            if (searchMode === 'text') {
-                // Text search (existing)
+            if (mode === 'text') {
                 response = await axios.get(
-                    `${API_BASE}/discovery/search?q=${encodeURIComponent(query)}${locationParam}`
+                    `${API_BASE}/discovery/search?q=${encodeURIComponent(q)}${locationParam}`
                 );
-            } else if (searchMode === 'image') {
-                // Image upload search
+            } else if (mode === 'image') {
                 const formData = new FormData();
-                formData.append('file', imageFile);
-                formData.append('location', location || 'Mumbai'); // Default location if not selected
+                formData.append('file', file);
+                formData.append('location', location || 'Mumbai');
 
                 response = await axios.post(
                     `${API_BASE}/discovery/search-by-image`,
@@ -109,15 +120,14 @@ const SearchInterface = () => {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     }
                 );
-            } else if (searchMode === 'url') {
-                // URL paste search
+            } else if (mode === 'url') {
                 response = await axios.post(
                     `${API_BASE}/discovery/search-by-url`,
                     null,
                     {
                         params: {
-                            url: productUrl,
-                            location: location || 'Mumbai' // Default location if not selected
+                            url: url,
+                            location: location || 'Mumbai'
                         }
                     }
                 );
@@ -137,38 +147,9 @@ const SearchInterface = () => {
         }
     };
 
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const clearImage = () => {
-        setImageFile(null);
-        setImagePreview(null);
-    };
-
     return (
-        <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white">
-            {/* Navbar */}
-            <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-black text-white p-2 rounded-md">
-                            <ShoppingBag size={20} strokeWidth={1.5} />
-                        </div>
-                        <span className="text-xl font-medium tracking-tight text-black">
-                            KitneKa
-                        </span>
-                    </div>
-                </div>
-            </nav>
+        <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
+            {/* Removed internal Navbar */}
 
             {/* Hero / Search Section */}
             <div className={`transition-all duration-700 ease-out ${searched ? 'py-10 border-b border-gray-100' : 'py-32'}`}>
@@ -184,89 +165,31 @@ const SearchInterface = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSearch} className="group relative">
-                        {/* Search Mode Toggle */}
-                        <div className="flex justify-center gap-2 mb-4">
-                            <button
-                                type="button"
-                                onClick={() => setSearchMode('text')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'text' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                <Search size={18} />
-                                Text Search
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSearchMode('image')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'image' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                <ImageIcon size={18} />
-                                Image Upload
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSearchMode('url')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${searchMode === 'url' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                <LinkIcon size={18} />
-                                URL Paste
-                            </button>
-                        </div>
-
+                    <form onSubmit={(e) => handleSearch(e, 'text')} className="group relative">
                         <div className={`flex flex-col md:flex-row gap-4 ${searched ? '' : 'p-2'}`}>
-                            {/* Conditional Input Based on Mode */}
-                            {searchMode === 'text' && (
-                                <div className="relative flex-grow">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
-                                        placeholder="Search for a product..."
-                                        value={query}
-                                        onChange={(e) => setQuery(e.target.value)}
-                                    />
+                            {/* Search Input with Camera Icon */}
+                            <div className="relative flex-grow">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Search className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
                                 </div>
-                            )}
+                                <input
+                                    type="text"
+                                    className="block w-full pl-12 pr-14 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
+                                    placeholder="Search for a product..."
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                />
+                                {/* Camera Icon (Google Lens style) */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowImageModal(true)}
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-lg transition-colors"
+                                    title="Search by image"
+                                >
+                                    <Camera className="h-5 w-5 text-gray-600 hover:text-black transition-colors" />
+                                </button>
+                            </div>
 
-                            {searchMode === 'image' && (
-                                <div className="relative flex-grow">
-                                    {!imagePreview ? (
-                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors bg-gray-50">
-                                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                                            <span className="text-sm text-gray-500">Click to upload product image</span>
-                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                        </label>
-                                    ) : (
-                                        <div className="relative w-full h-32 border-2 border-gray-300 rounded-lg overflow-hidden">
-                                            <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                                            <button
-                                                type="button"
-                                                onClick={clearImage}
-                                                className="absolute top-2 right-2 bg-black text-white p-1 rounded-full hover:bg-gray-800"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {searchMode === 'url' && (
-                                <div className="relative flex-grow">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <LinkIcon className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
-                                    </div>
-                                    <input
-                                        type="url"
-                                        className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
-                                        placeholder="Paste product URL (Amazon, Michael Kors, etc.)"
-                                        value={productUrl}
-                                        onChange={(e) => setProductUrl(e.target.value)}
-                                    />
-                                </div>
-                            )}
 
                             {/* Location Dropdown */}
                             <div className="relative md:w-1/3">
