@@ -1,8 +1,14 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.pricing_service import PricingService, MockScraperService
 from app.services.seasonality_service import SeasonalityService
-from app.database import engine, Base
+from app.services.scraper_service import RealScraperService
+from app.services.smart_search_service import SmartSearchService
+from app.services.image_analyzer_service import ImageAnalyzerService
+from app.services.url_scraper_service import URLScraperService
+from app.services.graph_service import GraphService
+from app.database import engine, Base, get_db
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 import datetime
@@ -92,15 +98,6 @@ def get_seasonality_tips():
 def refresh_prices():
     """Trigger a manual price refresh (mock scraper)"""
     return mock_scraper.refresh_all_prices()
-
-from app.services.scraper_service import RealScraperService
-from app.services.smart_search_service import SmartSearchService
-from app.services.image_analyzer_service import ImageAnalyzerService
-from app.services.url_scraper_service import URLScraperService
-from app.services.graph_service import GraphService
-from app.database import get_db
-from sqlalchemy.orm import Session
-from fastapi import Depends
 
 real_scraper = RealScraperService()
 smart_searcher = SmartSearchService()
