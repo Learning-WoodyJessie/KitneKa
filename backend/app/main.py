@@ -112,14 +112,25 @@ def search_products(q: str, location: Optional[str] = "Mumbai", anonymous_id: Op
     """
     Smart Search: Uses LLM to analyze query + SerpApi to fetch results
     """
-    # Record search in graph
-    if q and q.strip():
+    search_term = q.strip()
+    
+    # If query is a URL, extract product name first
+    if search_term.startswith(('http://', 'https://')):
         try:
-            graph_service.record_search(db, q, anonymous_id)
+            extraction = url_scraper.extract_product_from_url(search_term)
+            if extraction.get("search_query"):
+                search_term = extraction["search_query"]
+        except Exception as e:
+            print(f"URL extraction failed in search: {e}")
+
+    # Record search in graph (using clean term)
+    if search_term:
+        try:
+            graph_service.record_search(db, search_term, anonymous_id)
         except Exception as e:
             print(f"Failed to record search: {e}")
 
-    return smart_searcher.smart_search(q, location)
+    return smart_searcher.smart_search(search_term, location)
 
 @app.get("/graph/popular")
 def get_popular_searches(limit: int = 5, db: Session = Depends(get_db)):
@@ -134,7 +145,7 @@ def get_user_history(anonymous_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/discovery/search-by-image")
-async def search_by_image(file: UploadFile = File(...), location: Optional[str] = "Mumbai"):
+async def search_by_image(file: UploadFile = File(...), location: Optional[str] = "Mumbai", anonymous_id: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Search by uploading a product image. Uses GPT-4 Vision to analyze the image
     and extract product details, then performs a smart search.
@@ -150,6 +161,12 @@ async def search_by_image(file: UploadFile = File(...), location: Optional[str] 
         if "error" in analysis or not analysis.get("search_query"):
             return {"error": analysis.get("error", "Could not analyze image"), "analysis": analysis}
         
+        # Record extracted query
+        try:
+            graph_service.record_search(db, analysis["search_query"], anonymous_id)
+        except Exception as e:
+            print(f"Failed to record image search: {e}")
+
         # Perform search with extracted query
         search_results = smart_searcher.smart_search(analysis["search_query"], location)
         
@@ -163,7 +180,7 @@ async def search_by_image(file: UploadFile = File(...), location: Optional[str] 
 
 
 @app.post("/discovery/search-by-url")
-def search_by_url(url: str, location: Optional[str] = "Mumbai"):
+def search_by_url(url: str, location: Optional[str] = "Mumbai", anonymous_id: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Search by pasting a product URL. Scrapes the page to extract product details,
     then performs a smart search for Indian alternatives.
@@ -175,6 +192,12 @@ def search_by_url(url: str, location: Optional[str] = "Mumbai"):
         if "error" in extraction or not extraction.get("search_query"):
             return {"error": extraction.get("error", "Could not extract product from URL"), "extraction": extraction}
         
+        # Record extracted query
+        try:
+            graph_service.record_search(db, extraction["search_query"], anonymous_id)
+        except Exception as e:
+            print(f"Failed to record url search: {e}")
+
         # Perform search with extracted query
         search_results = smart_searcher.smart_search(extraction["search_query"], location)
         
