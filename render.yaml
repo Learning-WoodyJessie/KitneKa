@@ -16,14 +16,14 @@ services:
       - key: SERPAPI_API_KEY
         sync: false # You will need to enter this in dashboard
 
-  # 2. The Frontend UI (React/Vite)
-  - type: pstatic
+  # 2. The Frontend UI (React/Vite) - Served as a Web Service to avoid "static" type errors
+  - type: web
     name: kitneka-frontend
-    env: static
+    env: node
     region: singapore
     rootDir: frontend
     buildCommand: "npm install && npm run build"
-    publishDir: "dist"
+    startCommand: "npx serve -s dist -l $PORT"
     envVars:
       - key: VITE_API_URL
         fromService:
