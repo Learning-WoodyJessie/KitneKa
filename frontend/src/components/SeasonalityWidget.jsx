@@ -9,8 +9,8 @@ const SeasonalityWidget = () => {
     useEffect(() => {
         const fetchTips = async () => {
             try {
-                // Assuming backend is on localhost:8000
-                const response = await axios.get('http://127.0.0.1:8000/seasonality/tips');
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+                const response = await axios.get(`${apiUrl}/seasonality/tips`);
                 setTips(response.data.tips);
             } catch (error) {
                 console.error("Failed to fetch seasonal tips", error);

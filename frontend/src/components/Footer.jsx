@@ -6,7 +6,7 @@ const Footer = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">BharatPricing</h3>
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">KitneKa</h3>
                         <p className="text-gray-500 text-sm">
                             Your intelligent shopping companion for the best prices in India.
                             Shop smart, save more.
@@ -50,7 +50,7 @@ const Footer = () => {
                 </div>
 
                 <div className="mt-12 pt-8 border-t border-gray-100 text-center text-sm text-gray-400">
-                    © {new Date().getFullYear()} BharatPricing. All rights reserved. Built with ❤️ in India.
+                    © {new Date().getFullYear()} KitneKa. All rights reserved. Built with ❤️ in India.
                 </div>
             </div>
         </footer>

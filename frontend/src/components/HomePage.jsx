@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronRight, Smartphone, Laptop, Tv, Shirt } from 'lucide-react';
+import { Search } from 'lucide-react';
 import SeasonalityWidget from '../components/SeasonalityWidget';
 import { useNavigate } from 'react-router-dom';
 
@@ -55,7 +55,7 @@ const HomePage = () => {
 
                     {/* Quick chips */}
                     <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-gray-400">
-                        <span>Trending:</span>
+                        <span>Popular Searches:</span>
                         <button className="hover:text-white underline decoration-blue-500 decoration-2 underline-offset-4">iPhone 15</button>
                         <button className="hover:text-white underline decoration-pink-500 decoration-2 underline-offset-4">Sony WH-1000XM5</button>
                         <button className="hover:text-white underline decoration-green-500 decoration-2 underline-offset-4">Air Jordans</button>
@@ -63,60 +63,9 @@ const HomePage = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 -mt-16 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Seasonality Widget */}
-                <div className="lg:col-span-1">
-                    <SeasonalityWidget />
-                </div>
-
-                {/* Categories */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-gray-900">Explore Categories</h2>
-                        <a href="#" className="text-blue-600 text-sm font-medium flex items-center hover:underline">
-                            View All <ChevronRight size={16} />
-                        </a>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                        {[
-                            { name: 'Mobiles', icon: Smartphone, color: 'bg-blue-100 text-blue-600' },
-                            { name: 'Laptops', icon: Laptop, color: 'bg-purple-100 text-purple-600' },
-                            { name: 'TV & Appliances', icon: Tv, color: 'bg-green-100 text-green-600' },
-                            { name: 'Fashion', icon: Shirt, color: 'bg-pink-100 text-pink-600' },
-                        ].map((cat) => (
-                            <div key={cat.name} className="flex flex-col items-center group cursor-pointer">
-                                <div className={`w-16 h-16 ${cat.color} rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                                    <cat.icon size={28} />
-                                </div>
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">{cat.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Just Launched Section (Placeholder for now) */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8">Just Launched</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Mock Items */}
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow group">
-                            <div className="h-48 bg-gray-100 relative">
-                                {/* Placeholder Image */}
-                                <img src={`https://placehold.co/400x300?text=Product+${i}`} className="w-full h-full object-cover mix-blend-multiply" alt="Product" />
-                            </div>
-                            <div className="p-4">
-                                <div className="text-xs font-semibold text-blue-600 mb-1">New Arrival</div>
-                                <h3 className="font-bold text-gray-900 mb-2 truncate">Premium Product Name {i}</h3>
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-lg">₹{(10000 * i).toLocaleString()}</span>
-                                    <button className="text-sm border border-gray-200 px-3 py-1 rounded-full group-hover:bg-gray-900 group-hover:text-white transition-colors">View</button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            {/* Content Section */}
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+                <SeasonalityWidget />
             </div>
         </div>
     );
