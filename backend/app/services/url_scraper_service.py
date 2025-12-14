@@ -54,6 +54,25 @@ class URLScraperService:
         # I will stick to the original `self.serpapi_key` line.
         self.serpapi_key = os.environ.get("SERPAPI_API_KEY")
 
+    def _resolve_url(self, url: str) -> str:
+        """
+        Follows redirects to get the final destination URL.
+        Crucial for short links like amzn.in, bit.ly, etc.
+        """
+        try:
+            # Use HEAD to follow redirects without downloading body
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            if response.status_code < 400:
+                logger.info(f"Resolved URL: {url} -> {response.url}")
+                return response.url
+            # Fallback to GET if HEAD fails (some servers deny HEAD)
+            response = requests.get(url, allow_redirects=True, timeout=5, stream=True)
+            logger.info(f"Resolved URL (GET): {url} -> {response.url}")
+            return response.url
+        except Exception as e:
+            logger.warning(f"Could not resolve URL {url}: {e}")
+            return url
+
     def _extract_from_url_path(self, url: str) -> str:
         """
         Fallback: Extract product info from URL path when SerpAPI fails.
@@ -85,6 +104,8 @@ class URLScraperService:
         Uses SerpAPI to fetch product page and extract details.
         Falls back to URL path parsing if SerpAPI fails.
         """
+        # 0. Resolve Short URLs (e.g. amzn.in)
+        url = self._resolve_url(url)
         logger.info(f"Extracting product from URL: {url}")
         
         extracted_text = ""
