@@ -1,7 +1,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const PriceHistoryChart = ({ historyData }) => {
+const PriceHistoryChart = ({ historyData, timeRange }) => {
     if (!historyData || historyData.length === 0) {
         return (
             <div className="h-64 flex items-center justify-center text-gray-400">
@@ -11,31 +11,69 @@ const PriceHistoryChart = ({ historyData }) => {
     }
 
     // Transform data for Recharts
-    // Backend: [{ competitor: "Amazon", data: [{date, price}] }]
-    // Target: [{ date: "2023-10-01", Amazon: 100, Flipkart: 105 }]
+    let chartData = [];
+    const isYearly = timeRange >= 365;
 
-    // 1. Collect all unique dates
-    const allDates = new Set();
-    historyData.forEach(comp => {
-        comp.data.forEach(point => allDates.add(point.date));
-    });
-    const sortedDates = Array.from(allDates).sort();
-
-    // 2. Build chart data
-    const chartData = sortedDates.map(date => {
-        const point = {
-            displayDate: new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }),
-            rawDate: date
-        };
+    if (isYearly) {
+        // Aggregate by Month
+        const monthlyData = {}; // Key: "MMM YY" -> { date: timestamp, counts: {}, sums: {} }
 
         historyData.forEach(comp => {
-            const match = comp.data.find(d => d.date === date);
-            if (match) {
-                point[comp.competitor] = match.price;
-            }
+            comp.data.forEach(point => {
+                const dateObj = new Date(point.date);
+                const key = dateObj.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); // "Dec 24"
+
+                if (!monthlyData[key]) {
+                    monthlyData[key] = {
+                        displayDate: key,
+                        rawDate: dateObj.getTime(), // Use timestamp for sorting
+                        prices: {}
+                    };
+                }
+
+                if (!monthlyData[key].prices[comp.competitor]) {
+                    monthlyData[key].prices[comp.competitor] = { sum: 0, count: 0 };
+                }
+                monthlyData[key].prices[comp.competitor].sum += point.price;
+                monthlyData[key].prices[comp.competitor].count += 1;
+            });
         });
-        return point;
-    });
+
+        // Convert to array and average prices
+        chartData = Object.values(monthlyData)
+            .sort((a, b) => a.rawDate - b.rawDate)
+            .map(item => {
+                const point = { displayDate: item.displayDate };
+                Object.keys(item.prices).forEach(comp => {
+                    const { sum, count } = item.prices[comp];
+                    point[comp] = Math.round(sum / count);
+                });
+                return point;
+            });
+
+    } else {
+        // Daily Data (Existing Logic)
+        const allDates = new Set();
+        historyData.forEach(comp => {
+            comp.data.forEach(point => allDates.add(point.date));
+        });
+        const sortedDates = Array.from(allDates).sort();
+
+        chartData = sortedDates.map(date => {
+            const point = {
+                displayDate: new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                rawDate: date
+            };
+
+            historyData.forEach(comp => {
+                const match = comp.data.find(d => d.date === date);
+                if (match) {
+                    point[comp.competitor] = match.price;
+                }
+            });
+            return point;
+        });
+    }
 
     const colors = ["#2563eb", "#db2777", "#16a34a", "#ca8a04", "#9333ea"];
 
@@ -52,7 +90,8 @@ const PriceHistoryChart = ({ historyData }) => {
                         tick={{ fill: '#9ca3af', fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
-                        minTickGap={30}
+                        minTickGap={isYearly ? 0 : 30} // Show all months if possible, gap for days
+                        interval={isYearly ? 0 : 'preserveStartEnd'}
                     />
                     <YAxis
                         tick={{ fill: '#9ca3af', fontSize: 12 }}

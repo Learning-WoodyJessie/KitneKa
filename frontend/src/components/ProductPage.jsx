@@ -164,8 +164,8 @@ const ProductPage = () => {
                                             key={range.val}
                                             onClick={() => setTimeRange(range.val)}
                                             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${timeRange === range.val
-                                                    ? 'bg-blue-100 text-blue-700'
-                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'text-gray-600 hover:bg-gray-50'
                                                 }`}
                                         >
                                             {range.label}
@@ -202,7 +202,7 @@ const ProductPage = () => {
                                 <div className="animate-in fade-in duration-500">
                                     {viewMode === 'chart' ? (
                                         <>
-                                            <PriceHistoryChart historyData={history} />
+                                            <PriceHistoryChart historyData={history} timeRange={timeRange} />
                                             <p className="text-center text-sm text-gray-400 mt-4">
                                                 * Price history for last {timeRange} days.
                                             </p>
