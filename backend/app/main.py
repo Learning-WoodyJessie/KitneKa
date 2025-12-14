@@ -72,11 +72,11 @@ def get_product(product_id: int):
     return product
 
 @app.get("/products/{product_id}/history")
-def get_price_history(product_id: int):
+def get_price_history(product_id: int, days: int = 30, db: Session = Depends(get_db)):
     """
-    Get price history for a specific product
+    Get price history for a specific product (default last 30 days)
     """
-    history = pricing_service.get_product_price_history(product_id)
+    history = graph_service.get_price_history(db, product_id, days)
     if not history:
         return {"error": "Product not found"}
     return history
@@ -97,20 +97,43 @@ from app.services.scraper_service import RealScraperService
 from app.services.smart_search_service import SmartSearchService
 from app.services.image_analyzer_service import ImageAnalyzerService
 from app.services.url_scraper_service import URLScraperService
+from app.services.graph_service import GraphService
+from app.database import get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
 
 real_scraper = RealScraperService()
 smart_searcher = SmartSearchService()
 image_analyzer = ImageAnalyzerService()
 url_scraper = URLScraperService()
+graph_service = GraphService()
 
 # ...
 
 @app.get("/discovery/search")
-def search_products(q: str, location: Optional[str] = "Mumbai"):
+def search_products(q: str, location: Optional[str] = "Mumbai", anonymous_id: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Smart Search: Uses LLM to analyze query + SerpApi to fetch results
     """
+    # Record search in graph
+    if q and q.strip():
+        try:
+            graph_service.record_search(db, q, anonymous_id)
+        except Exception as e:
+            print(f"Failed to record search: {e}")
+
     return smart_searcher.smart_search(q, location)
+
+@app.get("/graph/popular")
+def get_popular_searches(limit: int = 5, db: Session = Depends(get_db)):
+    """Get most popular search terms"""
+    return graph_service.get_popular_searches(db, limit)
+
+@app.get("/graph/history/user")
+def get_user_history(anonymous_id: str, db: Session = Depends(get_db)):
+    """Get search history for a user"""
+    user = graph_service.get_or_create_user(db, anonymous_id)
+    return user.searches
 
 
 @app.post("/discovery/search-by-image")

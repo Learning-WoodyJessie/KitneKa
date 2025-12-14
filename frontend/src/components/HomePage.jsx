@@ -17,6 +17,7 @@ const HomePage = () => {
     const [localSort, setLocalSort] = useState('distance');
     const [selectedStores, setSelectedStores] = useState([]);
     const [trackingId, setTrackingId] = useState(null);
+    const [popularSearches, setPopularSearches] = useState([]);
 
     // --- UTILS & CONSTANTS ---
     const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -26,6 +27,13 @@ const HomePage = () => {
     ];
 
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Fetch popular searches on load
+        axios.get(`${API_BASE}/graph/popular`)
+            .then(res => setPopularSearches(res.data))
+            .catch(err => console.error("Failed to fetch popular searches", err));
+    }, []);
 
     // --- HANDLERS ---
     const getSortedLocalResults = () => {
@@ -129,7 +137,7 @@ const HomePage = () => {
                                     Shop Smart. <span className="text-blue-400">Save More.</span>
                                 </h1>
                                 <p className="max-w-2xl mx-auto text-xl text-gray-300 mb-10">
-                                    Compare prices across Amazon, Flipkart, & local stores instantly.
+                                    Compare prices across online & local stores instantly.
                                     Track price history and get seasonal buying advice.
                                 </p>
                             </>
@@ -150,10 +158,10 @@ const HomePage = () => {
                                 <input
                                     type="text"
                                     className={`block w-full pl-16 pr-6 py-4 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xl ${searched
-                                            ? 'bg-white text-gray-900 placeholder-gray-500 border-gray-200'
-                                            : 'bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:bg-white/20'
+                                        ? 'bg-white text-gray-900 placeholder-gray-500 border-gray-200'
+                                        : 'bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:bg-white/20'
                                         }`}
-                                    placeholder="Search for 'iPhone 15', 'Sony TV'..."
+                                    placeholder="Search by name, product URL, or image..."
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                 />
@@ -175,8 +183,8 @@ const HomePage = () => {
                                 </div>
                                 <select
                                     className={`block w-full pl-12 pr-8 py-4 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xl appearance-none cursor-pointer ${searched
-                                            ? 'bg-white text-gray-900 border-gray-200'
-                                            : 'bg-white/10 backdrop-blur-md border border-white/20 text-white focus:bg-white/20'
+                                        ? 'bg-white text-gray-900 border-gray-200'
+                                        : 'bg-white/10 backdrop-blur-md border border-white/20 text-white focus:bg-white/20'
                                         }`}
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
@@ -196,8 +204,8 @@ const HomePage = () => {
                                 type="submit"
                                 disabled={loading}
                                 className={`px-8 py-4 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${searched
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
                                     }`}
                             >
                                 {loading ? <Loader2 className="animate-spin" /> : 'Search'}
@@ -208,10 +216,16 @@ const HomePage = () => {
                     {/* Quick chips (Only show when not searched) */}
                     {!searched && (
                         <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-gray-400">
-                            <span>Popular Searches:</span>
-                            <button onClick={() => { setQuery('iPhone 15'); handleSearch(null, 'text', null, '', 'iPhone 15'); }} className="hover:text-white underline decoration-blue-500 decoration-2 underline-offset-4">iPhone 15</button>
-                            <button onClick={() => { setQuery('Sony WH-1000XM5'); handleSearch(null, 'text', null, '', 'Sony WH-1000XM5'); }} className="hover:text-white underline decoration-pink-500 decoration-2 underline-offset-4">Sony WH-1000XM5</button>
-                            <button onClick={() => { setQuery('Air Jordans'); handleSearch(null, 'text', null, '', 'Air Jordans'); }} className="hover:text-white underline decoration-green-500 decoration-2 underline-offset-4">Air Jordans</button>
+                            {popularSearches.length > 0 && <span>Popular Searches:</span>}
+                            {popularSearches.map((term, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => { setQuery(term.term); handleSearch(null, 'text', null, '', term.term); }}
+                                    className="hover:text-white underline decoration-blue-500 decoration-2 underline-offset-4"
+                                >
+                                    {term.term}
+                                </button>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -285,8 +299,8 @@ const HomePage = () => {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`pb-4 text-sm font-medium tracking-wide transition-all whitespace-nowrap ${activeTab === tab.id
-                                            ? 'text-blue-600 border-b-2 border-blue-600'
-                                            : 'text-gray-400 hover:text-gray-800'
+                                        ? 'text-blue-600 border-b-2 border-blue-600'
+                                        : 'text-gray-400 hover:text-gray-800'
                                         }`}
                                 >
                                     {tab.label}
@@ -365,8 +379,8 @@ const HomePage = () => {
                                                             onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
                                                             disabled={trackingId === product.id}
                                                             className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
-                                                                    ? 'bg-green-50 text-green-600'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                ? 'bg-green-50 text-green-600'
+                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                                 }`}
                                                         >
                                                             {trackingId === product.id ? <Check size={14} /> : <Plus size={14} />}

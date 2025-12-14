@@ -38,3 +38,37 @@ class PriceHistory(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     competitor_product = relationship("CompetitorProduct", back_populates="price_history")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    anonymous_id = Column(String, unique=True, index=True) # For tracking non-logged in users
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    searches = relationship("SearchQuery", back_populates="user")
+    views = relationship("ProductView", back_populates="user")
+
+class SearchQuery(Base):
+    __tablename__ = "search_queries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    query_text = Column(String, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="searches")
+
+class ProductView(Base):
+    __tablename__ = "product_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    product_id = Column(Integer, ForeignKey("products.id"))
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="views")
+    product = relationship("Product", back_populates="views")
+
+# Update Product to include views relationship
+Product.views = relationship("ProductView", back_populates="product")
