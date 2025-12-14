@@ -17,7 +17,7 @@ services:
         sync: false # You will need to enter this in dashboard
 
   # 2. The Frontend UI (React/Vite)
-  - type: static
+  - type: pstatic
     name: kitneka-frontend
     env: static
     region: singapore
