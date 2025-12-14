@@ -101,6 +101,9 @@ class SmartSearchService:
         if not query_terms:
             return results
             
+        # Identify potential model numbers (e.g., MK9022, iPhone15, 3080Ti)
+        model_terms = [term for term in query_terms if any(c.isdigit() for c in term) and len(term) > 2]
+        
         scored_results = []
         for item in results:
             title = item.get("title", "").lower()
@@ -114,7 +117,10 @@ class SmartSearchService:
             matches = sum(1 for term in query_terms if term in title)
             score += matches * 10
             
-            # 3. Penalty for competitor names if query is specific? (Advanced, skipping for now)
+            # 3. Model Number Boost (Critical for specific URL searches)
+            for model in model_terms:
+                if model in title:
+                    score += 500 # Massive boost for exact model match
             
             scored_results.append((score, item))
             
@@ -127,8 +133,9 @@ class SmartSearchService:
         has_matches = any(s > 0 for s, _ in scored_results)
         
         if has_matches:
-            # Keep top 80% relevant or just those with score > 0
-            # Let's keep strict checks: score > 0
+            # If we found model matches (score >= 500), return ONLY those? 
+            # No, user might want alternatives. But they should be top.
+            # Let's return the sorted list filtered by > 0
             final_results = [item for s, item in scored_results if s > 0]
             return final_results
         
