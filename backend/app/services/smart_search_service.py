@@ -136,18 +136,10 @@ class SmartSearchService:
         # Sort by score descending
         scored_results.sort(key=lambda x: x[0], reverse=True)
         
-        # Filter Logic:
-        # If we have items with score > 0, keep only those.
-        # If all are 0 (no text match), keep all (fallback).
-        has_matches = any(s > 0 for s, _ in scored_results)
         
-        if has_matches:
-            # If we found model matches (score >= 500), return ONLY those? 
-            # No, user might want alternatives. But they should be top.
-            # Let's return the sorted list filtered by > 0
-            final_results = [item for s, item in scored_results if s > 0]
-            return final_results
-        
+        # Return all results, sorted by score.
+        # We search engine results are usually decent, so we trust them as fallback.
+        # Ranking puts the best ones top, but we stop hiding the rest.
         return [item for _, item in scored_results]
 
     def smart_search(self, query: str, location: str = "Mumbai"):
