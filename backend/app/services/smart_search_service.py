@@ -104,6 +104,10 @@ class SmartSearchService:
         # Identify potential model numbers (e.g., MK9022, iPhone15, 3080Ti)
         model_terms = [term for term in query_terms if any(c.isdigit() for c in term) and len(term) > 2]
         
+        # Identify Phrases (2-word combinations) for specific name boosting
+        # e.g., "mini izzy" needs to be boosted more than just "mini" + "izzy" separately
+        phrases = [" ".join(query_terms[i:i+2]) for i in range(len(query_terms)-1)] if len(query_terms) > 1 else []
+
         scored_results = []
         for item in results:
             title = item.get("title", "").lower()
@@ -117,7 +121,12 @@ class SmartSearchService:
             matches = sum(1 for term in query_terms if term in title)
             score += matches * 10
             
-            # 3. Model Number Boost (Critical for specific URL searches)
+            # 3. Phrase Match Boost (High priority for specific product names)
+            for phrase in phrases:
+                if phrase in title:
+                    score += 200
+            
+            # 4. Model Number Boost (Critical for specific URL searches)
             for model in model_terms:
                 if model in title:
                     score += 500 # Massive boost for exact model match
