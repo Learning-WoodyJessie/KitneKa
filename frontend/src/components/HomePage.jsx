@@ -51,13 +51,14 @@ const HomePage = () => {
 
     const handleTrack = async (product) => {
         setTrackingId(product.id);
-        const competitors = searchData.results.online
-            .filter(p => p.id !== product.id)
-            .map(p => ({
-                name: p.source,
-                url: p.url,
-                price: p.price
-            }));
+
+        // Only track the clicked product (Singleton History)
+        // User requested to NOT show other results as history for this specific item.
+        const competitors = [{
+            name: product.source,
+            url: product.url,
+            price: product.price
+        }];
 
         try {
             const response = await axios.post(`${API_BASE}/discovery/track`, {
@@ -376,8 +377,8 @@ const HomePage = () => {
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
                                                             className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
-                                                                    ? 'bg-blue-50 text-blue-600'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                ? 'bg-blue-50 text-blue-600'
+                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                                 }`}
                                                         >
                                                             {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
