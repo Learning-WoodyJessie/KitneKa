@@ -24,8 +24,7 @@ const Navbar = () => {
 
                     {/* Right Links */}
                     <div className="flex items-center gap-6">
-                        <Link to="/categories" className="text-gray-600 hover:text-blue-600 font-medium text-sm">Target</Link>
-                        <Link to="/deals" className="text-gray-600 hover:text-blue-600 font-medium text-sm">Deals</Link>
+
                         <Link to="/login" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">
                             Sign In
                         </Link>
