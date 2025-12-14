@@ -89,6 +89,51 @@ class SmartSearchService:
                 "recommendation_text": "Here are the top results we found."
             }
 
+    def _rank_results(self, results, query):
+        """
+        Re-rank results to prioritize items matching the query.
+        Filters out completely irrelevant results if good matches exist.
+        """
+        if not results:
+            return []
+            
+        query_terms = query.lower().split()
+        if not query_terms:
+            return results
+            
+        scored_results = []
+        for item in results:
+            title = item.get("title", "").lower()
+            score = 0
+            
+            # 1. Exact Brand Match (First word usually)
+            if title.startswith(query_terms[0]):
+                score += 50
+                
+            # 2. Term Overlap
+            matches = sum(1 for term in query_terms if term in title)
+            score += matches * 10
+            
+            # 3. Penalty for competitor names if query is specific? (Advanced, skipping for now)
+            
+            scored_results.append((score, item))
+            
+        # Sort by score descending
+        scored_results.sort(key=lambda x: x[0], reverse=True)
+        
+        # Filter Logic:
+        # If we have items with score > 0, keep only those.
+        # If all are 0 (no text match), keep all (fallback).
+        has_matches = any(s > 0 for s, _ in scored_results)
+        
+        if has_matches:
+            # Keep top 80% relevant or just those with score > 0
+            # Let's keep strict checks: score > 0
+            final_results = [item for s, item in scored_results if s > 0]
+            return final_results
+        
+        return [item for _, item in scored_results]
+
     def smart_search(self, query: str, location: str = "Mumbai"):
         # 1. Analyze
         logger.info(f"Smart Search Analysis for: {query}")
@@ -101,7 +146,12 @@ class SmartSearchService:
         local_results = self.scraper.search_local_stores(search_term, location)
         instagram_results = self.scraper.search_instagram(search_term, location)
         
-        # 3. Synthesize
+        # 3. Re-Rank / Filter Online Results
+        # Use original query for relevance check to ensure user intent is preserved
+        # (Optimized term might be broad, but ranking should respect original intent)
+        online_results = self._rank_results(online_results, query)
+        
+        # 4. Synthesize
         logger.info("Synthesizing Results...")
         insight = self._synthesize_results(query, online_results, local_results, instagram_results)
         
