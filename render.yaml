@@ -26,7 +26,4 @@ services:
     startCommand: "npx serve -s dist -l $PORT"
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: kitneka-backend
-          property: url
+        value: https://kitneka-backend.onrender.com # Note: Render might append a random suffix to the name. Check dashboard.
