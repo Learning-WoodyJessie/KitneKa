@@ -352,18 +352,14 @@ const HomePage = () => {
                                             .filter(p => selectedStores.length === 0 || selectedStores.includes(p.source))
                                             .slice(0, visibleCount)
                                             .map((product, idx) => (
-                                                <div key={product.id} className="group cursor-pointer">
+                                                <div key={product.id} className="group">
                                                     <div className="relative aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-4 border border-gray-100 group-hover:shadow-lg transition-all">
                                                         {idx === 0 && selectedStores.length === 0 && (
-                                                            <div className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10">BEST PRICE</div>
+                                                            <div className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">BEST PRICE</div>
                                                         )}
-                                                        <img src={product.image} alt={product.title} className="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
-
-                                                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <a href={product.url} target="_blank" rel="noopener noreferrer" className="bg-white text-gray-900 px-4 py-2 rounded-full font-medium shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all text-sm">
-                                                                View Deal
-                                                            </a>
-                                                        </div>
+                                                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                                                            <img src={product.image} alt={product.title} className="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
+                                                        </a>
                                                     </div>
 
                                                     <div className="space-y-1">
@@ -371,20 +367,21 @@ const HomePage = () => {
                                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{product.source}</span>
                                                             <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
                                                         </div>
-                                                        <h3 className="text-sm text-gray-700 font-medium leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
-                                                            {product.title}
+                                                        <h3 className="text-sm text-gray-700 font-medium leading-snug line-clamp-2 transition-colors">
+                                                            <a href={product.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+                                                                {product.title}
+                                                            </a>
                                                         </h3>
 
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
-                                                            disabled={trackingId === product.id}
                                                             className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
-                                                                ? 'bg-green-50 text-green-600'
-                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    ? 'bg-blue-50 text-blue-600'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                                 }`}
                                                         >
-                                                            {trackingId === product.id ? <Check size={14} /> : <Plus size={14} />}
-                                                            {trackingId === product.id ? 'Tracking Added' : 'Track Price'}
+                                                            {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                                                            {trackingId === product.id ? 'Loading History...' : 'View Price History'}
                                                         </button>
                                                     </div>
                                                 </div>
