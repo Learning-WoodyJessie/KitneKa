@@ -84,115 +84,83 @@ class URLScraperService:
         """
         Uses SerpAPI to fetch product page and extract details.
         Falls back to URL path parsing if SerpAPI fails.
-        
-        Args:
-            url: Product URL (e.g., Amazon, Michael Kors, etc.)
-            
-        Returns:
-            Dictionary with extracted product details and search query
         """
-        if not self.client:
-             return {"error": "URL analysis unavailable (No API Key)"}
-        logger.info(f"Fetching product page via SerpAPI: {url}")
+        logger.info(f"Extracting product from URL: {url}")
         
         extracted_text = ""
         serpapi_failed = False
         
-        try:
-            # Use SerpAPI to fetch the URL content
-            params = {
-                "engine": "google",
-                "q": f"site:{urlparse(url).netloc} {url}",  # Search for the specific URL
-                "api_key": self.serpapi_key,
-                "num": 1
-            }
-            
-            search = GoogleSearch(params)
-            results = search.get_dict()
-            
-            # Try to get the first organic result (should be the product page)
-            organic_results = results.get("organic_results", [])
-            
-            if organic_results:
-                first_result = organic_results[0]
-                title = first_result.get("title", "")
-                snippet = first_result.get("snippet", "")
+        # 1. Try SerpAPI if key is present
+        if self.serpapi_key:
+            try:
+                params = {
+                    "engine": "google",
+                    "q": f"site:{urlparse(url).netloc} {url}",
+                    "api_key": self.serpapi_key,
+                    "num": 1
+                }
+                search = GoogleSearch(params)
+                results = search.get_dict()
+                organic_results = results.get("organic_results", [])
                 
-                # Also try sitelinks if available (product details)
-                sitelinks = first_result.get("sitelinks", {}).get("inline", [])
-                sitelink_text = " ".join([s.get("title", "") for s in sitelinks])
-                
-                if title or snippet:
-                    extracted_text = f"""
-                    Title: {title}
-                    Description: {snippet}
-                    Additional Info: {sitelink_text}
-                    URL: {url}
-                    Domain: {urlparse(url).netloc}
-                    """
-                    logger.info("Successfully extracted product info from SerpAPI")
+                if organic_results:
+                    first_result = organic_results[0]
+                    title = first_result.get("title", "")
+                    snippet = first_result.get("snippet", "")
+                    if title or snippet:
+                        extracted_text = f"Title: {title}\nDescription: {snippet}\nURL: {url}"
+                        logger.info("Successfully extracted info from SerpAPI")
+                    else:
+                        serpapi_failed = True
                 else:
                     serpapi_failed = True
-            else:
-                logger.warning("No results from SerpAPI for this URL")
+            except Exception as e:
+                logger.warning(f"SerpAPI fetch failed: {e}")
                 serpapi_failed = True
-                    
-        except Exception as e:
-            logger.warning(f"SerpAPI fetch failed: {e}")
+        else:
             serpapi_failed = True
         
-        # Fallback: Extract from URL path if SerpAPI failed
-        if serpapi_failed or not extracted_text.strip():
-            logger.info("Using fallback: extracting product info from URL path")
+        # 2. Fallback: URL Path Extraction
+        url_product_name = ""
+        if serpapi_failed or not extracted_text:
+            logger.info("Using fallback: extracting from URL path")
             url_product_name = self._extract_from_url_path(url)
             domain = urlparse(url).netloc.replace('www.', '').split('.')[0].title()
-            
-            extracted_text = f"""
-            Product Name from URL: {url_product_name}
-            Domain: {domain}
-            Full URL: {url}
-            Note: Extracted from URL structure (SerpAPI did not return page content).
-            """
+            extracted_text = f"Product Name: {url_product_name}\nDomain: {domain}\nURL: {url}"
+
+        # 3. AI Analysis (if available)
+        if self.client and extracted_text:
+            try:
+                logger.info("Using AI to extract details")
+                ai_response = self.client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Extract: 'product_name', 'brand', 'model', 'search_query' (optimized for India). Return JSON."
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Extract from:\n{extracted_text}"
+                        }
+                    ],
+                    response_format={"type": "json_object"},
+                    max_tokens=300
+                )
+                result = json.loads(ai_response.choices[0].message.content)
+                result['original_url'] = url
+                return result
+            except Exception as e:
+                logger.error(f"AI extraction failed: {e}")
         
-        # Use OpenAI to parse and clean the product info
-        try:
-            logger.info("Using AI to extract product details")
-            ai_response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a product data extraction expert. Extract product details from search result or URL.
-                        Return JSON with:
-                        - 'brand': Brand name (extract from domain or product name)
-                        - 'product_name': Full product name
-                        - 'model': Model number/code if present (e.g., MK4740)
-                        - 'category': Product category (e.g., Watch, Handbag, Shoes, Electronics)
-                        - 'search_query': Optimized search term for finding this product in India (include brand + model + product type + "India")
-                        - 'confidence': Your confidence level (high/medium/low)"""
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Extract product details from this content:\n{extracted_text}"
-                    }
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=300
-            )
-            
-            result = json.loads(ai_response.choices[0].message.content)
-            result['original_url'] = url
-            result['domain'] = urlparse(url).netloc
-            result['extraction_method'] = 'url_path' if serpapi_failed else 'serpapi'
-            
-            logger.info(f"URL extraction complete: {result.get('search_query', 'N/A')}")
-            return result
-            
-        except Exception as e:
-            logger.error(f"AI extraction failed: {e}")
-            return {
-                "error": f"Could not extract product info: {str(e)}",
-                "search_query": "",
-                "confidence": "low",
-                "original_url": url
-            }
+        # 4. Final Fallback (No AI or AI failed)
+        # Use the regex-extracted name as the search query
+        final_query = url_product_name if url_product_name else "Product from URL"
+        return {
+            "search_query": final_query,
+            "product_name": final_query,
+            "brand": "Unknown",
+            "confidence": "low",
+            "original_url": url
+        }
+
