@@ -25,13 +25,23 @@ class GraphService:
         return search
 
     def get_popular_searches(self, db: Session, limit: int = 5):
-        # Aggregation query to find most frequent search terms
-        results = db.query(
+        # Fetch more candidates to allow for filtering
+        candidates = db.query(
             SearchQuery.query_text, 
             func.count(SearchQuery.query_text).label('count')
-        ).group_by(SearchQuery.query_text).order_by(desc('count')).limit(limit).all()
+        ).group_by(SearchQuery.query_text).order_by(desc('count')).limit(limit * 4).all()
         
-        return [{"term": r[0], "count": r[1]} for r in results]
+        results = []
+        for r in candidates:
+            term = r[0]
+            # Filter out URLs and long strings
+            if term and len(term) <= 40 and not term.lower().startswith(('http://', 'https://', 'www.')):
+                results.append({"term": term, "count": r[1]})
+                
+            if len(results) >= limit:
+                break
+                
+        return results
 
     def record_view(self, db: Session, product_id: int, anonymous_id: str = None):
         user_id = None
