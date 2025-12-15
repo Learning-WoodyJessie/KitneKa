@@ -1,5 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from app.services.pricing_service import PricingService, MockScraperService
 from app.services.seasonality_service import SeasonalityService
 from app.services.scraper_service import RealScraperService
