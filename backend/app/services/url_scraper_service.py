@@ -59,14 +59,15 @@ class URLScraperService:
         Follows redirects to get the final destination URL.
         Crucial for short links like amzn.in, bit.ly, etc.
         """
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
         try:
             # Use HEAD to follow redirects without downloading body
-            response = requests.head(url, allow_redirects=True, timeout=5)
+            response = requests.head(url, allow_redirects=True, timeout=5, headers=headers)
             if response.status_code < 400:
                 logger.info(f"Resolved URL: {url} -> {response.url}")
                 return response.url
             # Fallback to GET if HEAD fails (some servers deny HEAD)
-            response = requests.get(url, allow_redirects=True, timeout=5, stream=True)
+            response = requests.get(url, allow_redirects=True, timeout=5, stream=True, headers=headers)
             logger.info(f"Resolved URL (GET): {url} -> {response.url}")
             return response.url
         except Exception as e:
