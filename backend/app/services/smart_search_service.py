@@ -178,13 +178,9 @@ class SmartSearchService:
 
     # Placeholder for the new _generate_ai_insight method
     def _generate_ai_insight(self, ranked_online, query):
-        # This method would typically use the LLM to synthesize results
-        # For now, returning a basic structure to match the new smart_search's expectation
-        return {
-            "best_value": None,
-            "authenticity_note": "AI Analysis unavailable (No API Key).",
-            "recommendation_text": "Here are the top results we found."
-        }
+        # Delegate to the real synthesis method
+        # We pass empty lists for local/instagram for now as the new signature supports them but current flow might not prioritize them for insight
+        return self._synthesize_results(query, ranked_online, [], [])
 
     def smart_search(self, query: str, location: str = "Mumbai"):
         """
