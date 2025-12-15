@@ -30,7 +30,7 @@ class RealScraperService:
                 "hl": "en",
                 "api_key": self.serpapi_key,
                 "num": 100,
-                "direct_link": "true"
+                "direct_link": True
             }
             
             search = GoogleSearch(params)
@@ -247,7 +247,7 @@ class RealScraperService:
                 "gl": "in",
                 "hl": "en",
                 "api_key": self.serpapi_key,
-                "num": 10
+                "num": 20
             }
             
             search = GoogleSearch(params)
