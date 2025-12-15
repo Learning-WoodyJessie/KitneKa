@@ -187,55 +187,64 @@ const HomePage = () => {
                                     onChange={(e) => setQuery(e.target.value)}
                                 />
 
-                                {/* Image Search Modal Overlay */}
+                                {/* Image Search Modal Overlay - FIXED POSITIONING */}
                                 {showImageSearch && (
-                                    <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl p-6 z-50 animate-fade-in border border-gray-100">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-gray-900 font-bold">Search with an image</h3>
-                                            <button onClick={() => setShowImageSearch(false)} className="text-gray-400 hover:text-gray-600">
-                                                <X size={20} />
-                                            </button>
-                                        </div>
+                                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={(e) => {
+                                        if (e.target === e.currentTarget) setShowImageSearch(false);
+                                    }}>
+                                        <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 animate-scale-in relative">
 
-                                        <div
-                                            className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-gray-50 hover:border-blue-400 cursor-pointer"
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={(e) => {
-                                                e.preventDefault();
-                                                const file = e.dataTransfer.files[0];
-                                                if (file) {
-                                                    handleSearch(e, 'image', file);
-                                                    setShowImageSearch(false);
-                                                }
-                                            }}
-                                            onClick={() => fileInputRef.current?.click()}
-                                        >
-                                            <UploadCloud size={48} className="text-blue-500 mb-4" />
-                                            <p className="text-gray-900 font-medium mb-1">Drag an image here or <span className="text-blue-600 underline">upload a file</span></p>
-                                            <p className="text-gray-400 text-sm">Supported formats: JPG, PNG, WEBP</p>
-                                        </div>
+                                            <div className="flex justify-between items-center mb-6">
+                                                <h3 className="text-xl font-bold text-gray-900">Search with an image</h3>
+                                                <button
+                                                    onClick={() => setShowImageSearch(false)}
+                                                    className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-gray-700 transition-colors"
+                                                >
+                                                    <X size={24} />
+                                                </button>
+                                            </div>
 
-                                        <div className="mt-6 flex items-center gap-4">
-                                            <div className="h-px bg-gray-200 flex-1"></div>
-                                            <span className="text-gray-400 text-sm">OR</span>
-                                            <div className="h-px bg-gray-200 flex-1"></div>
-                                        </div>
-
-                                        <div className="mt-6">
-                                            <input
-                                                type="text"
-                                                placeholder="Paste image link..."
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.target.value) {
-                                                        e.preventDefault();
-                                                        // Fallback to text search if it's a URL, or implement specific URL search if backend supports
-                                                        // Using 'image-url' mode logic or simple query if plain
-                                                        handleSearch(e, 'text', null, '', e.target.value);
+                                            <div
+                                                className="border-2 border-dashed border-gray-300 rounded-xl py-12 px-8 flex flex-col items-center justify-center text-center transition-all bg-gray-50 hover:bg-white hover:border-blue-500 group cursor-pointer"
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const file = e.dataTransfer.files[0];
+                                                    if (file) {
+                                                        handleSearch(e, 'image', file);
                                                         setShowImageSearch(false);
                                                     }
                                                 }}
-                                            />
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                    <UploadCloud size={40} className="text-blue-500" />
+                                                </div>
+                                                <p className="text-lg text-gray-900 font-semibold mb-2">Drag an image here or <span className="text-blue-600 underline">upload a file</span></p>
+                                                <p className="text-gray-500">Supported formats: JPG, PNG, WEBP</p>
+                                            </div>
+
+                                            <div className="mt-8">
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                        <Image size={20} className="text-gray-400" />
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Paste image link..."
+                                                        className="block w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && e.target.value) {
+                                                                e.preventDefault();
+                                                                // Handle URL Search logic here if explicit endpoint exists, else text search fallback
+                                                                // For now, treat as text query or need separate URL handler
+                                                                handleSearch(e, 'text', null, '', e.target.value);
+                                                                setShowImageSearch(false);
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
