@@ -105,6 +105,7 @@ class URLScraperService:
             # Split and filter segments
             raw_segments = [s for s in path.split('/') if s and len(s) > 1]
             clean_segments = []
+            asin = ""
             if brand:
                 clean_segments.append(brand)
             
@@ -117,8 +118,11 @@ class URLScraperService:
                     continue
                 
                 # Check for ASIN (B0...)
+                # Check for ASIN (B0...)
                 if re.match(r'^B0[A-Z0-9]{8}$', seg):
+                    asin = seg
                     continue # Skip ASIN in name to ensure broader competitor search
+
                 
                 # Clean normal text
                 cleaned = seg.replace('-', ' ').replace('_', ' ')
@@ -131,6 +135,10 @@ class URLScraperService:
             if clean_segments:
                  # Use first 2 segments (Brand + Short Name)
                  base_query = ' '.join(clean_segments[:2])
+            elif asin:
+                 # If no name segments but we have ASIN, use ASIN for precise search
+                 base_query = asin
+                 product_name = f"Amazon Product ({asin})"
 
             # Truncate to max 5 words to prevent overly specific queries on SerpApi
             words = base_query.split()
