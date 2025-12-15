@@ -227,6 +227,11 @@ def health_check():
 def test():
     return {
         "message": "BharatPricing API is running!",
+        "env_check": {
+            "openai_api_key_detected": bool(os.environ.get("OPENAI_API_KEY")),
+            "serpapi_api_key_detected": bool(os.environ.get("SERPAPI_API_KEY")),
+            "python_version": os.environ.get("PYTHON_VERSION", "Unknown")
+        },
         "endpoints": [
             "/products - View all tracked products",
             "/products (POST) - Add a new product",
