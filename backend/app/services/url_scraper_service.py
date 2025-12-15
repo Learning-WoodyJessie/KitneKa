@@ -5,7 +5,8 @@ import logging
 import os
 import re
 from typing import Dict, Any
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -77,28 +78,71 @@ class URLScraperService:
     def _extract_from_url_path(self, url: str) -> str:
         """
         Fallback: Extract product info from URL path when SerpAPI fails.
-        Example: /petite-lexington-pave-two-tone-watch/MK4740.html
-        Returns: "Petite Lexington Pave Two Tone Watch MK4740"
+        Handles Amazon paths and query params for Brand.
         """
         try:
             parsed = urlparse(url)
             path = unquote(parsed.path)
+            query_params = parse_qs(parsed.query)
             
-            # Remove file extensions and split by slashes
+            # Extract Brand from query params (Amazon uses p_89)
+            brand = ""
+            if 'p_89' in query_params:
+                brand = query_params['p_89'][0]
+            elif 'brand' in query_params:
+                 brand = query_params['brand'][0]
+            elif 'refinements' in query_params:
+                 # Check inside refinements for p_89:Brand
+                 refs = query_params['refinements'][0]
+                 import re # Ensure re is available here if needed or use global
+                 match = re.search(r'p_89:([^,]+)', refs)
+                 if match:
+                     brand = match.group(1)
+
+            # Remove file extensions
             path = re.sub(r'\.(html?|php|asp|jsp).*$', '', path, flags=re.IGNORECASE)
-            segments = [s for s in path.split('/') if s and len(s) > 2]
             
-            # Convert dashes/underscores to spaces and title case
-            product_parts = []
-            for segment in segments:
-                cleaned = segment.replace('-', ' ').replace('_', ' ')
-                product_parts.append(cleaned.title())
+            # Split and filter segments
+            raw_segments = [s for s in path.split('/') if s and len(s) > 1]
+            clean_segments = []
+            if brand:
+                clean_segments.append(brand)
             
-            product_name = ' '.join(product_parts)
-            logger.info(f"Extracted from URL path: {product_name}")
-            return product_name
+            # Segments to ignore (Amazon/generic artifacts)
+            ignored_prefixes = ('ref=', 'sr=', 'qid=', 'pf_rd', 'dib', 'dib_tag')
+            ignored_exact = ('dp', 'gp', 'product', 'd')
+            
+            for seg in raw_segments:
+                if seg.lower() in ignored_exact or seg.lower().startswith(ignored_prefixes):
+                    continue
+                
+                # Check for ASIN (B0...)
+                if re.match(r'^B0[A-Z0-9]{8}$', seg):
+                    continue # Skip ASIN in name to ensure broader competitor search
+                
+                # Clean normal text
+                cleaned = seg.replace('-', ' ').replace('_', ' ')
+                clean_segments.append(cleaned.title())
+            
+            product_name = ' '.join(clean_segments)
+            
+            # Construct concise search query (Brand + First Segment)
+            base_query = product_name
+            if clean_segments:
+                 # Use first 2 segments (Brand + Short Name)
+                 base_query = ' '.join(clean_segments[:2])
+
+            # Truncate to max 5 words to prevent overly specific queries on SerpApi
+            words = base_query.split()
+            if len(words) > 5:
+                search_query = ' '.join(words[:5])
+            else:
+                search_query = base_query
+
+            logger.info(f"Extracted: Name='{product_name}', Query='{search_query}'")
+            return search_query, product_name
         except:
-            return ""
+            return "", ""
 
     def extract_product_from_url(self, url: str) -> Dict[str, Any]:
         """
@@ -144,9 +188,10 @@ class URLScraperService:
         
         # 2. Fallback: URL Path Extraction
         url_product_name = ""
+        url_search_query = ""
         if serpapi_failed or not extracted_text:
             logger.info("Using fallback: extracting from URL path")
-            url_product_name = self._extract_from_url_path(url)
+            url_search_query, url_product_name = self._extract_from_url_path(url)
             domain = urlparse(url).netloc.replace('www.', '').split('.')[0].title()
             extracted_text = f"Product Name: {url_product_name}\nDomain: {domain}\nURL: {url}"
 
@@ -177,10 +222,11 @@ class URLScraperService:
         
         # 4. Final Fallback (No AI or AI failed)
         # Use the regex-extracted name as the search query
-        final_query = url_product_name if url_product_name else "Product from URL"
+        final_query = url_search_query if url_search_query else "Product from URL"
+        final_name = url_product_name if url_product_name else final_query
         return {
             "search_query": final_query,
-            "product_name": final_query,
+            "product_name": final_name,
             "brand": "Unknown",
             "confidence": "low",
             "original_url": url
