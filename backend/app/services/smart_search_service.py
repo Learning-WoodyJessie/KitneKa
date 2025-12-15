@@ -204,8 +204,10 @@ class SmartSearchService:
         
         logger.info(f"Fetching Data for: {query}")
         
-        # 2. Results Fetching (Parallel placeholders)
-        serp_results = self.scraper.search_serpapi(query) # Using correct scraper reference
+        # 2. Results Fetching
+        # Use search_products which handles the fallback to organic search if shopping fails
+        scraper_response = self.scraper.search_products(query)
+        serp_results = scraper_response.get("online", [])
         local_results = self.scraper.search_local_stores(query, location)
         instagram_results = self.scraper.search_instagram(query, location)
         
