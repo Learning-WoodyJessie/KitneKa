@@ -348,66 +348,104 @@ const HomePage = () => {
 
                                 {/* Product Grid */}
                                 <div className="lg:col-span-3">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-10">
+                                    <div className="space-y-12">
                                         {(() => {
                                             const filteredProducts = searchData.results.online
                                                 .filter(p => selectedStores.length === 0 || selectedStores.includes(p.source));
 
-                                            // Calculate lowest price among visible filtered products
-                                            const prices = filteredProducts
-                                                .map(p => p.price)
-                                                .filter(p => p > 0);
+                                            const directMatches = filteredProducts.filter(p => p.match_quality === 'exact');
+                                            const relatedMatches = filteredProducts.filter(p => p.match_quality !== 'exact');
+
+                                            // Calculate global min price for badge logic
+                                            const prices = filteredProducts.map(p => p.price).filter(p => p > 0);
                                             const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
 
-                                            return filteredProducts
-                                                .slice(0, visibleCount)
-                                                .map((product) => (
-                                                    <div key={product.id} className="group">
-                                                        <div className="relative aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-4 border border-gray-100 group-hover:shadow-lg transition-all">
-                                                            {product.price === minPrice && minPrice > 0 && (
-                                                                <div className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">LOWEST PRICE</div>
-                                                            )}
-                                                            <a href={product.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                                                                <img src={product.image} alt={product.title} className="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
-                                                            </a>
-                                                        </div>
-
-                                                        <div className="space-y-1">
-                                                            <div className="flex justify-between items-start">
-                                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{product.source}</span>
-                                                                <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                                                            </div>
-                                                            <h3 className="text-sm text-gray-700 font-medium leading-snug line-clamp-2 transition-colors">
-                                                                <a href={product.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
-                                                                    {product.title}
-                                                                </a>
-                                                            </h3>
-
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
-                                                                className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
-                                                                    ? 'bg-blue-50 text-blue-600'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                    }`}
-                                                            >
-                                                                {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                                                                {trackingId === product.id ? 'Loading History...' : 'View Price History'}
-                                                            </button>
-                                                        </div>
+                                            const renderProductCard = (product) => (
+                                                <div key={product.id} className="group">
+                                                    <div className="relative aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-4 border border-gray-100 group-hover:shadow-lg transition-all">
+                                                        {product.price === minPrice && minPrice > 0 && (
+                                                            <div className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">LOWEST PRICE</div>
+                                                        )}
+                                                        {product.match_quality === 'exact' && (
+                                                            <div className="absolute top-3 right-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">TOP MATCH</div>
+                                                        )}
+                                                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                                                            <img src={product.image} alt={product.title} className="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
+                                                        </a>
                                                     </div>
-                                                ));
+
+                                                    <div className="space-y-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{product.source}</span>
+                                                            <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
+                                                        </div>
+                                                        <h3 className="text-sm text-gray-700 font-medium leading-snug line-clamp-2 transition-colors">
+                                                            <a href={product.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+                                                                {product.title}
+                                                            </a>
+                                                        </h3>
+
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
+                                                            className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
+                                                                ? 'bg-blue-50 text-blue-600'
+                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                }`}
+                                                        >
+                                                            {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                                                            {trackingId === product.id ? 'Loading History...' : 'View Price History'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+
+                                            return (
+                                                <>
+                                                    {directMatches.length > 0 && (
+                                                        <div className="mb-10">
+                                                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                                                <Check size={20} className="text-green-500" />
+                                                                Found this product
+                                                            </h3>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-10">
+                                                                {directMatches.map(renderProductCard)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {relatedMatches.length > 0 && (
+                                                        <div>
+                                                            {directMatches.length > 0 && (
+                                                                <h3 className="text-lg font-bold text-gray-500 mb-6 border-t border-gray-100 pt-10">
+                                                                    Related Results
+                                                                </h3>
+                                                            )}
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-10">
+                                                                {relatedMatches.slice(0, visibleCount).map(renderProductCard)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
                                         })()}
                                     </div>
-                                    {visibleCount < searchData.results.online.length && (
-                                        <div className="text-center pt-12">
-                                            <button
-                                                onClick={() => setVisibleCount(prev => prev + 6)}
-                                                className="text-sm font-bold text-blue-600 hover:text-blue-800 border-b-2 border-transparent hover:border-blue-600 transition-all pb-1 uppercase tracking-wide"
-                                            >
-                                                Show More Results
-                                            </button>
-                                        </div>
-                                    )}
+
+                                    {/* Pagination Button (Logic simplified to just check total vs visible of related) */}
+                                    {(() => {
+                                        const filteredCount = searchData.results.online
+                                            .filter(p => selectedStores.length === 0 || selectedStores.includes(p.source)).length;
+                                        // This simple check might be slightly off if direct matches take up space, but it's acceptable UX for "Show More"
+                                        return visibleCount < filteredCount && (
+                                            <div className="text-center pt-12">
+                                                <button
+                                                    onClick={() => setVisibleCount(prev => prev + 6)}
+                                                    className="text-sm font-bold text-blue-600 hover:text-blue-800 border-b-2 border-transparent hover:border-blue-600 transition-all pb-1 uppercase tracking-wide"
+                                                >
+                                                    Show More Results
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         )}

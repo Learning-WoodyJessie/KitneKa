@@ -131,15 +131,19 @@ class SmartSearchService:
                 if model in title:
                     score += 500 # Massive boost for exact model match
             
+            # Determine match quality based on score
+            # Score >= 200 implies a Phrase Match (200) or Model Match (500)
+            if score >= 200:
+                item['match_quality'] = 'exact'
+            else:
+                item['match_quality'] = 'related'
+
             scored_results.append((score, item))
             
         # Sort by score descending
         scored_results.sort(key=lambda x: x[0], reverse=True)
         
-        
         # Return all results, sorted by score.
-        # We search engine results are usually decent, so we trust them as fallback.
-        # Ranking puts the best ones top, but we stop hiding the rest.
         return [item for _, item in scored_results]
 
     def smart_search(self, query: str, location: str = "Mumbai"):
