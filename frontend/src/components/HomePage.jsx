@@ -258,7 +258,7 @@ const HomePage = () => {
                         {/* AI INSIGHT CARD */}
                         {searchData?.insight && (
                             <div className="bg-gradient-to-br from-gray-900 to-black text-white p-6 md:p-8 rounded-2xl shadow-2xl flex flex-col lg:flex-row gap-8 lg:gap-10 items-start justify-between border border-gray-800">
-                                <div className="flex-1 space-y-6 w-full">
+                                <div className="flex-1 space-y-6 w-full min-w-0">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 text-blue-400 text-xs font-bold tracking-widest uppercase">
                                             <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
@@ -277,12 +277,12 @@ const HomePage = () => {
                                     </div>
                                 </div>
 
-                                <div className="w-full lg:w-auto mt-2 lg:mt-0 lg:text-right border-t lg:border-t-0 lg:border-l border-white/10 pt-6 lg:pt-0 lg:pl-10">
+                                <div className="w-full lg:w-96 lg:flex-shrink-0 mt-6 lg:mt-0 lg:text-right border-t lg:border-t-0 lg:border-l border-white/10 pt-6 lg:pt-0 lg:pl-10">
                                     <p className="text-gray-400 text-sm mb-2">Best Market Price</p>
                                     <p className="text-4xl md:text-5xl font-medium tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
                                         ₹{searchData.results?.online?.[0]?.price?.toLocaleString() || "---"}
                                     </p>
-                                    <p className="text-gray-500 mt-2 text-sm">
+                                    <p className="text-gray-500 mt-2 text-sm leading-relaxed">
                                         Available on {searchData.insight.best_value?.reason || "Online Stores"}
                                     </p>
                                 </div>
