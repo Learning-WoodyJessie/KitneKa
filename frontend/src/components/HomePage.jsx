@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Image, UploadCloud } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Image, UploadCloud, ArrowUpRight } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import SeasonalityWidget from '../components/SeasonalityWidget';
@@ -467,7 +467,11 @@ const HomePage = () => {
                                             const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
 
                                             const renderProductCard = (product) => (
-                                                <div key={product.id} className="group">
+                                                <div
+                                                    key={product.id}
+                                                    className="group cursor-pointer"
+                                                    onClick={() => window.open(product.url, '_blank')}
+                                                >
                                                     <div className="relative aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-4 border border-gray-100 group-hover:shadow-lg transition-all">
                                                         {product.price === minPrice && minPrice > 0 && (
                                                             <div className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">LOWEST PRICE</div>
@@ -491,16 +495,27 @@ const HomePage = () => {
                                                             </a>
                                                         </h3>
 
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
-                                                            className={`mt-2 w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
-                                                                ? 'bg-blue-50 text-blue-600'
-                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                }`}
-                                                        >
-                                                            {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                                                            {trackingId === product.id ? 'Loading History...' : 'View Price History'}
-                                                        </button>
+                                                        <div className="mt-2 flex gap-2">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleTrack(product); }}
+                                                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${trackingId === product.id
+                                                                    ? 'bg-blue-50 text-blue-600'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    }`}
+                                                            >
+                                                                {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                                                                {trackingId === product.id ? 'Loading...' : 'History'}
+                                                            </button>
+                                                            <a
+                                                                href={product.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                                            >
+                                                                Visit <ArrowUpRight size={14} />
+                                                            </a>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
