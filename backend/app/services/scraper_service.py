@@ -38,15 +38,36 @@ class RealScraperService:
             shopping_results = results.get("shopping_results", [])
             
             cleaned_results = []
+            valid_count = 0
+            
             for item in shopping_results:
                 url = item.get("link")
                 if not url:
                     url = item.get("product_link")
                 
-                # If still no URL, skip this item or use a fallback google search
                 if not url:
                     continue
 
+                # URL Cleaning & Filtering
+                if "google.com" in url or "google.co.in" in url:
+                    # 1. Try to extract real URL from redirect (e.g. url?q=)
+                    url = self._clean_google_url(url)
+                    
+                    # 2. Filtering Logic
+                    # Allow 'aclk' (Ad Click) redirects as they go to the product (User Option A)
+                    if "/aclk" in url:
+                        pass 
+                    # Discard 'search' pages (Shopping Viewer, e.g. ibp=oshop) which are bad UX
+                    elif "/search" in url or "ibp=oshop" in url:
+                        continue
+                    # Any other google links that weren't cleaned? Maybe keep them if they aren't search pages.
+                    # But to be safe, if it's still a raw google link and not aclk, we might want to skip it 
+                    # to strictly avoid search pages.
+                    elif "google.com" in url or "google.co.in" in url:
+                         # If it's just a google domain but not aclk, it's likely a search page or profile
+                         continue
+
+                valid_count += 1
                 cleaned_results.append({
                     "id": item.get("product_id", f"serp_{random.randint(1000,9999)}"),
                     "source": item.get("source", "Google Shopping"),
@@ -58,10 +79,33 @@ class RealScraperService:
                     "reviews": item.get("reviews", 0),
                     "delivery": item.get("delivery", "Check Site")
                 })
+            
+            # If we found very few direct links, return empty to trigger strict fallback
+            if valid_count < 3:
+                logger.warning(f"Only found {valid_count} valid direct links. Triggering fallback.")
+                return []
+
             return cleaned_results
         except Exception as e:
             logger.error(f"SerpApi Failed: {e}")
             return []
+
+    def _clean_google_url(self, url: str) -> str:
+        """
+        Extracts the destination URL from a Google redirect link.
+        e.g., https://www.google.com/url?q=https://example.com/...
+        """
+        try:
+            if "url?q=" in url:
+                start = url.find("url?q=") + len("url?q=")
+                end = url.find("&", start)
+                if end != -1:
+                    return requests.utils.unquote(url[start:end])
+                else:
+                    return requests.utils.unquote(url[start:])
+            return url
+        except:
+            return url
 
     async def search_playwright(self, query: str):
         # ... (Implementation kept as fallback)
