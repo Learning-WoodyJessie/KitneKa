@@ -7,6 +7,7 @@ import re
 from typing import Dict, Any
 from urllib.parse import urlparse, unquote, parse_qs
 import requests
+from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ class URLScraperService:
             logger.warning(f"Could not resolve URL {url}: {e}")
             return url
 
-    def _extract_from_url_path(self, url: str) -> str:
+    def _extract_from_url_path(self, url: str) -> tuple:
         """
         Fallback: Extract product info from URL path when SerpAPI fails.
         Handles Amazon paths and query params for Brand.
@@ -94,7 +95,6 @@ class URLScraperService:
             elif 'refinements' in query_params:
                  # Check inside refinements for p_89:Brand
                  refs = query_params['refinements'][0]
-                 import re # Ensure re is available here if needed or use global
                  match = re.search(r'p_89:([^,]+)', refs)
                  if match:
                      brand = match.group(1)
@@ -118,11 +118,9 @@ class URLScraperService:
                     continue
                 
                 # Check for ASIN (B0...)
-                # Check for ASIN (B0...)
                 if re.match(r'^B0[A-Z0-9]{8}$', seg):
                     asin = seg
                     continue # Skip ASIN in name to ensure broader competitor search
-
                 
                 # Clean normal text
                 cleaned = seg.replace('-', ' ').replace('_', ' ')
@@ -149,8 +147,50 @@ class URLScraperService:
 
             logger.info(f"Extracted: Name='{product_name}', Query='{search_query}'")
             return search_query, product_name
-        except:
+        except Exception as e:
+            logger.error(f"Error in _extract_from_url_path: {e}")
             return "", ""
+
+    def _scrape_dom_title(self, url: str) -> str:
+        """
+        Uses Playwright to scrape the actual title from the page DOM.
+        Useful for Amazon URLs that don't have the product name in the path.
+        """
+        try:
+            logger.info(f"DOM Scraping fallback initiated for: {url}")
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                # Desktop viewport and User-Agent to avoid mobile/accessibility views
+                context = browser.new_context(
+                    viewport={'width': 1920, 'height': 1080},
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+                page = context.new_page()
+                
+                # Navigate
+                page.goto(url, timeout=45000, wait_until="domcontentloaded")
+                
+                title = ""
+                # Priority selectors for Amazon/Flipkart
+                selectors = ["#productTitle", "h1#title", "#title", "h1", ".B_NuCI"] # .B_NuCI is Flipkart
+                
+                for selector in selectors:
+                    try:
+                        if page.locator(selector).count() > 0:
+                            # Verify visibility or text content quality
+                            text = page.locator(selector).first.inner_text().strip()
+                            # Filter garbage
+                            if text and "keyboard shortcut" not in text.lower() and "product summary" not in text.lower():
+                                title = text
+                                break
+                    except:
+                        continue
+                
+                browser.close()
+                return title
+        except Exception as e:
+            logger.error(f"Playwright scraping failed: {e}")
+            return ""
 
     def extract_product_from_url(self, url: str) -> Dict[str, Any]:
         """
@@ -158,18 +198,25 @@ class URLScraperService:
         Falls back to URL path parsing if SerpAPI fails.
         """
         # 0. Resolve Short URLs (e.g. amzn.in)
-        url = self._resolve_url(url)
-        logger.info(f"Extracting product from URL: {url}")
+        clean_url = self._resolve_url(url) # Renamed to clean_url for clarity with new logic
+        logger.info(f"Extracting product from URL: {clean_url}")
         
         extracted_text = ""
         serpapi_failed = False
         
+        # Initialize variables for fallback
+        url_product_name = ""
+        url_search_query = ""
+        product_name = ""
+        search_query = ""
+        brand = "Unknown" # Default brand
+
         # 1. Try SerpAPI if key is present
         if self.serpapi_key:
             try:
                 params = {
                     "engine": "google",
-                    "q": f"site:{urlparse(url).netloc} {url}",
+                    "q": f"site:{urlparse(clean_url).netloc} {clean_url}",
                     "api_key": self.serpapi_key,
                     "num": 1
                 }
@@ -182,8 +229,12 @@ class URLScraperService:
                     title = first_result.get("title", "")
                     snippet = first_result.get("snippet", "")
                     if title or snippet:
-                        extracted_text = f"Title: {title}\nDescription: {snippet}\nURL: {url}"
+                        extracted_text = f"Title: {title}\nDescription: {snippet}\nURL: {clean_url}"
                         logger.info("Successfully extracted info from SerpAPI")
+                        # Use SerpAPI results as initial product_name and search_query
+                        product_name = title if title else snippet.split('.')[0]
+                        search_query = product_name.split(' ')[0:5] # Take first 5 words
+                        search_query = ' '.join(search_query)
                     else:
                         serpapi_failed = True
                 else:
@@ -194,14 +245,30 @@ class URLScraperService:
         else:
             serpapi_failed = True
         
-        # 2. Fallback: URL Path Extraction
-        url_product_name = ""
-        url_search_query = ""
+        # 2. Fallback: URL Path Extraction if SerpAPI failed or yielded no useful text
         if serpapi_failed or not extracted_text:
             logger.info("Using fallback: extracting from URL path")
-            url_search_query, url_product_name = self._extract_from_url_path(url)
-            domain = urlparse(url).netloc.replace('www.', '').split('.')[0].title()
-            extracted_text = f"Product Name: {url_product_name}\nDomain: {domain}\nURL: {url}"
+            url_search_query, url_product_name = self._extract_from_url_path(clean_url)
+            domain = urlparse(clean_url).netloc.replace('www.', '').split('.')[0].title()
+            extracted_text = f"Product Name: {url_product_name}\nDomain: {domain}\nURL: {clean_url}"
+            product_name = url_product_name
+            search_query = url_search_query
+
+        # --- DOM SCRAPING ENHANCEMENT ---
+        # If extraction is weak (e.g. just generic "Amazon Product (ASIN)"), try to get real title from DOM
+        # This check should happen after initial extraction attempts but before AI,
+        # so AI gets the best possible input.
+        if "Amazon Product (" in product_name or search_query.startswith("B0"):
+            dom_title = self._scrape_dom_title(clean_url)
+            if dom_title:
+                product_name = dom_title
+                # Smart truncate for search query
+                words = dom_title.split()
+                search_query = ' '.join(words[:5])
+                logger.info(f"Enhanced with DOM Title: {product_name}")
+                # Update extracted_text for AI if DOM scraping was successful
+                extracted_text = f"Product Name: {product_name}\nURL: {clean_url}"
+
 
         # 3. AI Analysis (if available)
         if self.client and extracted_text:
@@ -223,20 +290,29 @@ class URLScraperService:
                     max_tokens=300
                 )
                 result = json.loads(ai_response.choices[0].message.content)
-                result['original_url'] = url
+                result['original_url'] = clean_url
                 return result
             except Exception as e:
                 logger.error(f"AI extraction failed: {e}")
+                # If AI fails, we fall through to the final fallback using previously gathered info
+                # The instruction snippet for this part was a bit confusing,
+                # so I'm integrating it into the existing flow.
+                # If AI fails, we retain the best product_name/search_query we got so far.
+                if not product_name or product_name == "Unknown":
+                    # Just retry path extraction or simple defaults if product_name is still weak
+                    url_search_query, url_product_name = self._extract_from_url_path(clean_url)
+                    search_query = url_search_query if url_search_query else search_query
+                    product_name = url_product_name if url_product_name else product_name
         
         # 4. Final Fallback (No AI or AI failed)
-        # Use the regex-extracted name as the search query
-        final_query = url_search_query if url_search_query else "Product from URL"
-        final_name = url_product_name if url_product_name else final_query
+        # Use the best available product_name and search_query
+        final_query = search_query if search_query else "Product from URL"
+        final_name = product_name if product_name else final_query
+        
         return {
             "search_query": final_query,
             "product_name": final_name,
-            "brand": "Unknown",
-            "confidence": "low",
-            "original_url": url
+            "brand": brand, # Keep default "Unknown" or if AI set it
+            "confidence": "high" if "Amazon Product" not in final_name else "medium", # Adjust confidence based on name quality
+            "original_url": clean_url
         }
-
