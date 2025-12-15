@@ -11,3 +11,4 @@ google-search-results
 beautifulsoup4
 Pillow==10.1.0
 lxml==4.9.3
+playwright==1.41.0
