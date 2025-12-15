@@ -5,6 +5,7 @@ import logging
 import os
 from serpapi import GoogleSearch
 import asyncio
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,8 @@ class RealScraperService:
                 "gl": "in",
                 "hl": "en",
                 "api_key": self.serpapi_key,
-                "num": 100
+                "num": 100,
+                "direct_link": "true"
             }
             
             search = GoogleSearch(params)
@@ -188,11 +190,77 @@ class RealScraperService:
             logger.error(f"Google Instagram search failed: {e}")
             return []
 
+    def search_organic(self, query: str):
+        """
+        Fallback: Uses Google Organic Search to find direct product pages (Amazon, Nykaa, etc.)
+        when Google Shopping fails to provide direct links (returns only 'Compare' pages).
+        """
+        logger.info(f"Searching Organic Fallback for: {query}")
+        try:
+            params = {
+                "engine": "google",
+                "q": query,
+                "gl": "in",
+                "hl": "en",
+                "api_key": self.serpapi_key,
+                "num": 10
+            }
+            
+            search = GoogleSearch(params)
+            results = search.get_dict()
+            organic_results = results.get("organic_results", [])
+            
+            cleaned_results = []
+            for item in organic_results:
+                title = item.get("title")
+                link = item.get("link")
+                snippet = item.get("snippet", "")
+                rich_snippet = item.get("rich_snippet", {})
+                
+                # Try to extract price from text (e.g. "₹450")
+                price = 0
+                text_blob = f"{title} {snippet} {str(rich_snippet)}"
+                price_match = re.search(r'₹\s?([\d,]+\.?\d*)', text_blob)
+                if price_match:
+                    try:
+                        price = float(price_match.group(1).replace(",", ""))
+                    except:
+                        pass
+                else:
+                    # Alternative regex for "Rs."
+                    price_match_rs = re.search(r'(?:Rs\.?|INR)\s?([\d,]+\.?\d*)', text_blob, re.IGNORECASE)
+                    if price_match_rs:
+                         try:
+                            price = float(price_match_rs.group(1).replace(",", ""))
+                         except:
+                            pass
+
+                cleaned_results.append({
+                    "id": f"org_{random.randint(1000,9999)}",
+                    "source": item.get("source", "Web Result"), # Often extracted from domain
+                    "title": title,
+                    "price": price,
+                    "url": link,
+                    "image": "https://via.placeholder.com/150?text=Web+Result", # Organic results lack thumbnails usually
+                    "rating": 0,
+                    "reviews": 0,
+                    "delivery": "Check Site"
+                })
+            
+            return cleaned_results
+        except Exception as e:
+            logger.error(f"Organic Fallback Failed: {e}")
+            return []
 
 
     def search_products(self, query: str):
-        # Primary: SerpApi
+        # Primary: SerpApi Google Shopping
         online_results = self.search_serpapi(query)
+        
+        # Fallback: If no valid shopping results (likely due to strict link filtering), use Organic
+        if not online_results:
+            logger.warning("Google Shopping returned 0 valid links. Switching to Organic Search.")
+            online_results = self.search_organic(query)
         
         # If SerpApi returns nothing or fails, we could try Playwright (async handling needed)
         # For now, let's just return SerpApi results as they are high quality.
