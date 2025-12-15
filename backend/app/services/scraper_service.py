@@ -285,7 +285,7 @@ class RealScraperService:
                     "title": title,
                     "price": price,
                     "url": link,
-                    "image": "https://via.placeholder.com/150?text=Web+Result", # Organic results lack thumbnails usually
+                    "image": item.get("thumbnail", "https://via.placeholder.com/150?text=Web+Result"),
                     "rating": 0,
                     "reviews": 0,
                     "delivery": "Check Site"
