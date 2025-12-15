@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,7 @@ const HomePage = () => {
     ];
 
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         // Fetch popular searches on load
@@ -75,6 +76,13 @@ const HomePage = () => {
         }
     };
 
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleSearch(e, 'image', file);
+        }
+    };
+
     const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null) => {
         if (e) e.preventDefault();
 
@@ -91,15 +99,26 @@ const HomePage = () => {
             let response;
             const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
 
-            // Currently only implemented TEXT search in this refactor for simplicity as per requirement
-            response = await axios.get(
-                `${API_BASE}/discovery/search?q=${encodeURIComponent(q)}${locationParam}`
-            );
+            if (mode === 'image' && file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                if (location) formData.append('location', location);
+
+                response = await axios.post(`${API_BASE}/discovery/search-by-image`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                // Text Search
+                response = await axios.get(
+                    `${API_BASE}/discovery/search?q=${encodeURIComponent(q)}${locationParam}`
+                );
+            }
 
             if (!response.data || (!response.data.results?.online?.length && !response.data.results?.local?.length && !response.data.results?.instagram?.length)) {
                 setError("No results found. Try a different query.");
             } else {
                 setSearchData(response.data);
+                if (response.data.query) setQuery(response.data.query); // Update search bar with detected query
             }
         } catch (err) {
             console.error("Search failed:", err);
@@ -158,7 +177,7 @@ const HomePage = () => {
                                 </div>
                                 <input
                                     type="text"
-                                    className={`block w-full pl-16 pr-6 py-4 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xl ${searched
+                                    className={`block w-full pl-16 pr-24 py-4 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-xl ${searched
                                         ? 'bg-white text-gray-900 placeholder-gray-500 border-gray-200'
                                         : 'bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:bg-white/20'
                                         }`}
@@ -166,15 +185,36 @@ const HomePage = () => {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                 />
-                                {searched && (
+                                {/* Hidden File Input */}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                />
+
+                                <div className="absolute inset-y-0 right-4 flex items-center gap-2">
+                                    {/* Camera Icon */}
                                     <button
                                         type="button"
-                                        onClick={clearSearch}
-                                        className="absolute inset-y-0 right-4 flex items-center text-gray-400 hover:text-gray-600"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={`p-2 rounded-full transition-colors ${searched ? 'text-gray-400 hover:text-blue-600 hover:bg-gray-100' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+                                        title="Search by Image"
                                     >
-                                        <X size={20} />
+                                        <Camera size={20} />
                                     </button>
-                                )}
+
+                                    {searched && (
+                                        <button
+                                            type="button"
+                                            onClick={clearSearch}
+                                            className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Location Dropdown */}
