@@ -37,12 +37,20 @@ class RealScraperService:
             
             cleaned_results = []
             for item in shopping_results:
+                url = item.get("link")
+                if not url:
+                    url = item.get("product_link")
+                
+                # If still no URL, skip this item or use a fallback google search
+                if not url:
+                    continue
+
                 cleaned_results.append({
                     "id": item.get("product_id", f"serp_{random.randint(1000,9999)}"),
                     "source": item.get("source", "Google Shopping"),
                     "title": item.get("title"),
                     "price": float(item.get("price", "0").replace("₹", "").replace(",", "").strip()) if item.get("price") else 0,
-                    "url": item.get("link"),
+                    "url": url,
                     "image": item.get("thumbnail"),
                     "rating": item.get("rating", 0),
                     "reviews": item.get("reviews", 0),
