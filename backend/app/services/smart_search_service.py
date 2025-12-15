@@ -16,21 +16,39 @@ class SmartSearchService:
                 self.client = OpenAI(api_key=api_key)
             else:
                 self.client = None
+                logger.warning("OPENAI_API_KEY not found at startup. Smart Search running in limited mode.")
         except Exception as e:
-            logger.warning(f"OpenAI Client Init Failed (Smart Search will use fallbacks): {e}")
+            logger.warning(f"OpenAI Client Init Failed: {e}")
             self.client = None
             
         self.scraper = RealScraperService()
         self.url_service = URLScraperService()
 
+    def _get_client(self):
+        """Lazy load client"""
+        if self.client:
+            return self.client
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            try:
+                self.client = OpenAI(api_key=api_key)
+                logger.info("OpenAI Client successfully lazy-loaded.")
+                return self.client
+            except Exception as e:
+                logger.error(f"Lazy load failed: {e}")
+        return None
+
+
     def _analyze_query(self, query: str):
         """
         Uses LLM to understand category and optimize search terms.
         """
-        if not self.client:
+        client = self._get_client()
+        if not client:
             return {"category": "General", "optimized_term": query, "needs_local": True}
         try:
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo", # Using 3.5 for speed/cost, can upgrade to gpt-4
                 messages=[
                     {"role": "system", "content": "You are a Shopping Assistant. Analyze the query. Return JSON with: 'category' (e.g., Electronics, Fashion), 'optimized_term' (better search keywords), 'needs_local' (boolean, true if user might want to buy offline e.g. appliances, false for digital goods)."},
@@ -47,7 +65,8 @@ class SmartSearchService:
         """
         Uses LLM to rank products and generate recommendations.
         """
-        if not self.client:
+        client = self._get_client()
+        if not client:
              return {
                 "best_value": None,
                 "authenticity_note": "AI Analysis unavailable (No API Key).",
@@ -62,7 +81,7 @@ class SmartSearchService:
         }
         
         try:
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": """You are a Pricing Expert. Analyze the provided product data.

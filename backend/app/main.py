@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 load_dotenv()
+import os
+print(f"DEBUG: STARTUP ENV CHECK")
+print(f"DEBUG: OPENAI_API_KEY Present: {bool(os.environ.get('OPENAI_API_KEY'))}")
+print(f"DEBUG: SERPAPI_API_KEY Present: {bool(os.environ.get('SERPAPI_API_KEY'))}")
+print(f"DEBUG: PYTHON_VERSION: {os.environ.get('PYTHON_VERSION', 'Unknown')}")
 
 from app.services.pricing_service import PricingService, MockScraperService
 from app.services.seasonality_service import SeasonalityService
