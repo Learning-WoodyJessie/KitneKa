@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Image, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import SeasonalityWidget from '../components/SeasonalityWidget';
@@ -18,6 +18,7 @@ const HomePage = () => {
     const [selectedStores, setSelectedStores] = useState([]);
     const [trackingId, setTrackingId] = useState(null);
     const [popularSearches, setPopularSearches] = useState([]);
+    const [showImageSearch, setShowImageSearch] = useState(false);
 
     // --- UTILS & CONSTANTS ---
     const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -185,6 +186,60 @@ const HomePage = () => {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                 />
+
+                                {/* Image Search Modal Overlay */}
+                                {showImageSearch && (
+                                    <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl p-6 z-50 animate-fade-in border border-gray-100">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-gray-900 font-bold">Search with an image</h3>
+                                            <button onClick={() => setShowImageSearch(false)} className="text-gray-400 hover:text-gray-600">
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+
+                                        <div
+                                            className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-gray-50 hover:border-blue-400 cursor-pointer"
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const file = e.dataTransfer.files[0];
+                                                if (file) {
+                                                    handleSearch(e, 'image', file);
+                                                    setShowImageSearch(false);
+                                                }
+                                            }}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <UploadCloud size={48} className="text-blue-500 mb-4" />
+                                            <p className="text-gray-900 font-medium mb-1">Drag an image here or <span className="text-blue-600 underline">upload a file</span></p>
+                                            <p className="text-gray-400 text-sm">Supported formats: JPG, PNG, WEBP</p>
+                                        </div>
+
+                                        <div className="mt-6 flex items-center gap-4">
+                                            <div className="h-px bg-gray-200 flex-1"></div>
+                                            <span className="text-gray-400 text-sm">OR</span>
+                                            <div className="h-px bg-gray-200 flex-1"></div>
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <input
+                                                type="text"
+                                                placeholder="Paste image link..."
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.target.value) {
+                                                        e.preventDefault();
+                                                        // Fallback to text search if it's a URL, or implement specific URL search if backend supports
+                                                        // Using 'image-url' mode logic or simple query if plain
+                                                        handleSearch(e, 'text', null, '', e.target.value);
+                                                        setShowImageSearch(false);
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Hidden File Input */}
                                 <input
                                     type="file"
@@ -198,8 +253,8 @@ const HomePage = () => {
                                     {/* Camera Icon */}
                                     <button
                                         type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className={`p-2 rounded-full transition-colors ${searched ? 'text-gray-400 hover:text-blue-600 hover:bg-gray-100' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+                                        onClick={() => setShowImageSearch(!showImageSearch)}
+                                        className={`p-2 rounded-full transition-colors ${searched || showImageSearch ? 'text-gray-400 hover:text-blue-600 hover:bg-gray-100' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
                                         title="Search by Image"
                                     >
                                         <Camera size={20} />
