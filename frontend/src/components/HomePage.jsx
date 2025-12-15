@@ -81,6 +81,7 @@ const HomePage = () => {
         const file = e.target.files[0];
         if (file) {
             handleSearch(e, 'image', file);
+            setShowImageSearch(false);
         }
     };
 
@@ -197,6 +198,7 @@ const HomePage = () => {
                                             <div className="flex justify-between items-center mb-6">
                                                 <h3 className="text-xl font-bold text-gray-900">Search with an image</h3>
                                                 <button
+                                                    type="button"
                                                     onClick={() => setShowImageSearch(false)}
                                                     className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-gray-700 transition-colors"
                                                 >
