@@ -376,3 +376,45 @@ class RealScraperService:
             ]
             
         return items
+
+    def resolve_viewer_link(self, url: str) -> str:
+        """
+        Scrapes the Google Shopping Viewer page to extract the direct retailer link.
+        Used when the API only returns 'ibp=oshop' links.
+        """
+        if "google.com" not in url and "google.co.in" not in url:
+            return url
+            
+        try:
+            logger.info(f"Resolving Viewer Link: {url}")
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code != 200:
+                logger.warning(f"Failed to fetch viewer page: {resp.status_code}")
+                return url
+
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            # Look for "Visit site" button or similar
+            links = soup.find_all('a')
+            
+            # Prioritize links with "Visit site" text
+            for link in links:
+                if "Visit site" in link.get_text():
+                    href = link.get('href')
+                    if href and href.startswith("http"):
+                        logger.info(f"Resolved to: {href}")
+                        return href
+            
+            # Fallback: Look for the first external link that isn't Google
+            for link in links:
+                href = link.get('href')
+                if href and href.startswith("http") and "google" not in href:
+                    logger.info(f"Resolved to fallback: {href}")
+                    return href
+                    
+            return url
+        except Exception as e:
+            logger.error(f"Error resolving link: {e}")
+            return url

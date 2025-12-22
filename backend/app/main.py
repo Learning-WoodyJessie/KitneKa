@@ -278,6 +278,19 @@ def search_by_url(url: str, location: Optional[str] = "Mumbai", anonymous_id: Op
         return {"error": f"URL search failed: {str(e)}"}
 
 
+@app.get("/discovery/resolve-link")
+def resolve_link(url: str):
+    """
+    Resolve a Google Shopping Viewer link (ibp=oshop) to the actual retailer URL.
+    Scrapes the viewer page for the 'Visit site' link.
+    """
+    try:
+        resolved_url = real_scraper.resolve_viewer_link(url)
+        return {"url": resolved_url}
+    except Exception as e:
+        print(f"Error resolving link: {e}")
+        return {"url": url} # Fallback to original
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "BharatPricing API"}

@@ -165,6 +165,46 @@ const HomePage = () => {
         navigate('/'); // This will trigger the reset via useEffect
     };
 
+    // --- LINK RESOLUTION ---
+    const [resolvingId, setResolvingId] = useState(null);
+
+    const handleVisit = async (product, e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const url = product.url;
+        if (!url) return;
+
+        // If it's already a direct link, just open
+        if (!url.includes('google.com/search')) {
+            window.open(url, '_blank');
+            return;
+        }
+
+        // Needs resolution
+        setResolvingId(product.id);
+        try {
+            // fast feedback
+            const newWindow = window.open('', '_blank');
+
+            const res = await axios.get(`${API_URL}/discovery/resolve-link?url=${encodeURIComponent(url)}`);
+            const finalUrl = res.data.url;
+
+            if (newWindow) {
+                newWindow.location.href = finalUrl;
+            } else {
+                window.open(finalUrl, '_blank');
+            }
+        } catch (err) {
+            console.error("Link resolution failed", err);
+            window.open(url, '_blank'); // Fallback
+        } finally {
+            setResolvingId(null);
+        }
+    };
+
     // --- CATEGORY DATA ---
     const categories = [
         { id: 'clothing', title: 'Clothing', image: 'https://images.unsplash.com/photo-1549570186-6e6b0d99042b?auto=format&fit=crop&q=80&w=800', query: 'Women Clothing' },
@@ -355,7 +395,7 @@ const HomePage = () => {
                                             <div
                                                 key={product.id}
                                                 className="group cursor-pointer"
-                                                onClick={() => window.open(product.url, '_blank')}
+                                                onClick={(e) => handleVisit(product, e)}
                                             >
                                                 <div className="relative aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-4 border border-gray-100 group-hover:shadow-lg transition-all">
                                                     {product.price === minPrice && minPrice > 0 && (
@@ -391,15 +431,21 @@ const HomePage = () => {
                                                             {trackingId === product.id ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                                                             {trackingId === product.id ? 'Loading...' : 'History'}
                                                         </button>
-                                                        <a
-                                                            href={product.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
+                                                        <button
+                                                            onClick={(e) => handleVisit(product, e)}
                                                             className="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
                                                         >
-                                                            Visit <ArrowUpRight size={14} />
-                                                        </a>
+                                                            {resolvingId === product.id ? (
+                                                                <>
+                                                                    <Loader2 size={14} className="animate-spin" />
+                                                                    Opening...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    Visit <ArrowUpRight size={14} />
+                                                                </>
+                                                            )}
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
