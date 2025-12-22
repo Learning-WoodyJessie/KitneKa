@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Menu, ShoppingBag, User, Heart, ChevronDown } from 'lucide-react';
+import { Search, Menu, ShoppingBag, User, Bell } from 'lucide-react';
 
 const Navbar = () => {
     const [query, setQuery] = useState('');
@@ -29,68 +29,77 @@ const Navbar = () => {
         { name: 'Beauty', path: '/?q=Beauty+Products' },
         { name: 'Electronics', path: '/?q=Electronics' },
         { name: 'Home', path: '/?q=Home+Decor' },
+        { name: 'Offers', path: '/?q=Offers' },
     ];
 
     return (
-        <header className="bg-white shadow-sm sticky top-0 z-50 font-sans">
-            {/* TOP ROW: Logo, Search, Actions */}
-            <div className="border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center gap-8 justify-between">
+        <header className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] sticky top-0 z-50 font-sans">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-14 md:h-20 gap-4">
 
-                    {/* LOGO */}
+                    {/* --- MOBILE: LEFT MENU --- */}
+                    <div className="md:hidden">
+                        <button className="p-2 -ml-2 text-gray-700">
+                            <Menu size={24} />
+                        </button>
+                    </div>
+
+                    {/* --- LOGO (Centers on Mobile, Left on Desktop) --- */}
                     <Link to="/" className="flex-shrink-0 flex items-center gap-2 group">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:shadow-blue-200 transition-all">
+                        <div className="hidden md:flex w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:shadow-blue-200 transition-all">
                             K
                         </div>
-                        <span className="text-2xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
+                        <span className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
                             KitneKa
                         </span>
                     </Link>
 
-                    {/* SEARCH BAR (CENTER) */}
-                    <div className="flex-1 max-w-2xl hidden md:block">
+                    {/* --- MOBILE: RIGHT BELL --- */}
+                    <div className="md:hidden">
+                        <button className="p-2 -mr-2 text-gray-700 relative">
+                            <Bell size={24} />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                        </button>
+                    </div>
+
+                    {/* --- DESKTOP: SEARCH BAR --- */}
+                    <div className="flex-1 max-w-2xl hidden md:block px-8">
                         <form onSubmit={handleSearch} className="relative group">
                             <input
                                 type="text"
-                                className="w-full pl-5 pr-14 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm group-hover:shadow-md"
+                                className="w-full pl-5 pr-14 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm group-hover:shadow-md"
                                 placeholder="Search for products, brands, or categories..."
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
                             <button
                                 type="submit"
-                                className="absolute right-2 top-1.5 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
+                                className="absolute right-1 top-1 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
                             >
-                                <Search size={20} />
+                                <Search size={18} />
                             </button>
                         </form>
                     </div>
 
-                    {/* RIGHT ACTIONS */}
-                    <div className="flex items-center gap-6">
-                        <Link to="/login" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium">
+                    {/* --- DESKTOP: ACTIONS --- */}
+                    <div className="hidden md:flex items-center gap-6">
+                        <Link to="/login" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium text-sm">
                             <User size={20} />
                             <span className="hidden lg:inline">Sign In</span>
                         </Link>
-                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium relative">
-                            <Heart size={20} />
+                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium relative text-sm">
+                            <ShoppingBag size={20} />
                             <span className="hidden lg:inline">Wishlist</span>
-                        </button>
-                    </div>
-
-                    {/* MOBILE MENU */}
-                    <div className="md:hidden">
-                        <button className="p-2 text-gray-600">
-                            <Menu size={24} />
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white">0</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* BOTTOM ROW: Categories */}
-            <div className="bg-white hidden md:block">
+            {/* --- DESKTOP: CATEGORIES ROW --- */}
+            <div className="hidden md:block border-t border-gray-100 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <nav className="flex items-center gap-8 h-12 overflow-x-auto">
+                    <nav className="flex items-center gap-8 h-12 overflow-x-auto no-scrollbar">
                         <div className="flex items-center gap-2 text-sm font-bold text-gray-900 mr-4 cursor-pointer hover:text-blue-600">
                             <Menu size={16} />
                             <span>All Categories</span>
@@ -99,27 +108,13 @@ const Navbar = () => {
                             <Link
                                 key={cat.name}
                                 to={cat.path}
-                                className="text-sm font-medium text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 h-full flex items-center transition-colors px-1"
+                                className="text-sm font-medium text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 h-full flex items-center transition-colors px-1 whitespace-nowrap"
                             >
                                 {cat.name}
                             </Link>
                         ))}
                     </nav>
                 </div>
-            </div>
-
-            {/* MOBILE SEARCH (Visible only on mobile below header) */}
-            <div className="md:hidden p-4 bg-white border-b border-gray-100">
-                <form onSubmit={handleSearch} className="relative">
-                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
-                        placeholder="Search..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                </form>
             </div>
         </header>
     );

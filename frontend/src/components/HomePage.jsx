@@ -210,7 +210,7 @@ const HomePage = () => {
                                 </button>
                             )) : (
                                 // Fallback if no popular searches loaded
-                                ["Sunscreen", "Kurti", "Smartwatch", "Sneakers", "Lipstick", "Headphones"].map(term => (
+                                ["Kurti Set", "Saree", "Tops for Women", "Handbags", "Earrings", "Heels"].map(term => (
                                     <button
                                         key={term}
                                         onClick={() => navigate(`/?q=${encodeURIComponent(term)}`)}
@@ -235,38 +235,57 @@ const HomePage = () => {
                             {(landingFeed.length > 0 ? landingFeed : [
                                 { title: 'Loading Deals...', price: '---', source: '---', image: '' }
                             ]).map((item, i) => (
-                                <div key={i} className="snap-start flex-shrink-0 w-40 md:w-auto bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group cursor-pointer" onClick={() => item.title !== 'Loading Deals...' && navigate(`/?q=${encodeURIComponent(item.title)}`)}>
-                                    <div className="aspect-square bg-gray-50 relative p-4">
+                                <div key={i} className="snap-start flex-shrink-0 w-48 md:w-60 bg-white border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-shadow duration-200 rounded-sm" onClick={() => item.title !== 'Loading Deals...' && navigate(`/?q=${encodeURIComponent(item.title)}`)}>
+                                    <div className="relative aspect-[3/4] bg-white p-4 pb-0 flex items-center justify-center">
                                         {item.badges && item.badges.length > 0 && (
-                                            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                                {item.badges.map((badge, bIdx) => (
-                                                    <span key={bIdx} className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${badge.includes("Value") ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
-                                                        }`}>
-                                                        {badge}
-                                                    </span>
-                                                ))}
+                                            <div className="absolute top-0 left-0 z-10 flex flex-col items-start gap-1 p-2">
+                                                {item.badges.map((badge, bIdx) => {
+                                                    const isBestValue = badge.includes("Value");
+                                                    return (
+                                                        <span key={bIdx} className={`text-[11px] font-bold px-2 py-1 shadow-sm ${isBestValue ? "bg-[#C7511F] text-white skew-x-[-10deg]" : "bg-[#B12704] text-white"}`}>
+                                                            {isBestValue ? "Best Seller" : badge}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         )}
-                                        <img src={item.image || item.thumbnail} alt={item.title} className="w-full h-full object-contain mix-blend-multiply" />
+                                        <img src={item.image || item.thumbnail} alt={item.title} className="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-105" />
                                     </div>
-                                    <div className="p-3">
-                                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 h-10 leading-tight">{item.title}</h4>
-                                        <div className="flex items-center justify-between mt-2">
-                                            <span className="text-sm font-bold text-gray-900">{typeof item.price === 'number' ? `₹${item.price.toLocaleString()}` : item.price}</span>
-                                            <span className="text-[10px] text-gray-500 truncate max-w-[50%]">{item.source}</span>
-                                        </div>
-                                        {item.rating > 0 && (
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <div className="flex text-yellow-400">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <svg key={i} className={`w-3 h-3 ${i < Math.round(item.rating) ? 'fill-current' : 'text-gray-200'}`} viewBox="0 0 20 20">
-                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                        </svg>
-                                                    ))}
-                                                </div>
-                                                <span className="text-[10px] text-gray-400">({item.reviews || 0})</span>
+                                    <div className="p-3 flex flex-col h-auto">
+                                        <h4 className="text-[15px] font-medium text-[#0F1111] leading-snug line-clamp-3 group-hover:text-[#C7511F] mb-1 min-h-[4.5em] tracking-tight">
+                                            {item.title}
+                                        </h4>
+                                        <div className="mt-auto">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-[10px] relative top-[-0.3em]">₹</span>
+                                                <span className="text-2xl font-medium text-[#0F1111]">{typeof item.price === 'number' ? item.price.toLocaleString() : item.price}</span>
+                                                <span className="text-[10px] text-gray-500">M.R.P.</span>
+                                                <span className="text-xs text-gray-500 line-through">₹{typeof item.price === 'number' ? (item.price * 1.25).toFixed(0) : '---'}</span>
                                             </div>
-                                        )}
+
+                                            {item.rating > 0 && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <div className="flex text-[#FFA41C]">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <svg key={i} className={`w-4 h-4 ${i < Math.round(item.rating) ? 'fill-current' : 'text-gray-200 stroke-gray-400 stroke-1'}`} viewBox="0 0 24 24">
+                                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                            </svg>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-[#007185] hover:text-[#C7511F] cursor-pointer hover:underline font-medium">
+                                                        {item.reviews ? item.reviews.toLocaleString() : 0}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="mt-2 text-xs text-gray-500">
+                                                FREE Delivery by <span className="font-bold text-[#0F1111]">{item.source || "Amazon"}</span>
+                                            </div>
+
+                                            <button className="mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] hover:border-[#F2C200] text-[#0F1111] text-[13px] py-1.5 rounded-full shadow-sm hover:shadow transition-all font-normal">
+                                                Add to Cart
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

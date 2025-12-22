@@ -15,25 +15,25 @@ class CuratedFeedService:
     def __init__(self):
         self.scraper = RealScraperService()
         self.verticals = {
-            "Cosmetics": {
-                "queries": ["best lipstick rating 4+", "kajal eyeliner rating 4+", "face wash rating 4+"],
-                "weights": {"rating": 0.50, "reviews": 0.30, "price": 0.15},
+            "Women's Ethnic Wear": {
+                "queries": ["cotton kurtas for women under 499", "party wear sarees for women", "women kurta set with dupatta"],
+                "weights": {"rating": 0.40, "reviews": 0.35, "price": 0.25},
                 "slots": 3
             },
-            "Handbags": {
-                "queries": ["women sling bag", "women tote bag"],
-                "weights": {"rating": 0.40, "reviews": 0.35, "price": 0.20},
+            "Jewellery (Silver & Fashion)": {
+                "queries": ["silver oxidised earrings for women", "fashion necklace set for women", "gold plated bangles"],
+                "weights": {"rating": 0.35, "reviews": 0.45, "price": 0.20},
                 "slots": 2
             },
-            "Jewelry": {
-                "queries": ["earrings set", "fashion necklace set"],
-                "weights": {"rating": 0.35, "reviews": 0.45, "price": 0.15},
+            "Handbags & Clutches": {
+                "queries": ["branded tote bags for women", "stylish sling bags for women", "ladies purse under 500"],
+                "weights": {"rating": 0.30, "reviews": 0.30, "price": 0.40},
                 "slots": 2
             },
-            "Watches": {
-                "queries": ["women analog watch", "women smart watch"],
-                "weights": {"rating": 0.40, "reviews": 0.40, "price": 0.15},
-                "slots": 2
+            "Beauty Bestsellers": {
+                "queries": ["face wash for glowing skin", "sunscreen spf 50", "moisturizer for face"],
+                "weights": {"rating": 0.50, "reviews": 0.40, "price": 0.10},
+                "slots": 3
             }
         }
 
@@ -157,7 +157,7 @@ class CuratedFeedService:
             # Score
             score = (norm_rating * weights['rating']) + \
                     (norm_reviews * weights['reviews']) + \
-                    (fairness * weights['weights'].get('price', 0.2) if 'weights' in weights else fairness * weights['price']) + \
+                    (fairness * weights.get('price', 0.2)) + \
                     (0.05) # Availability bonus (assumed available if scraped)
             
             item['score'] = score
