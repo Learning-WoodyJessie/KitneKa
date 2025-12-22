@@ -211,8 +211,8 @@ const HomePage = () => {
                                     {term.term}
                                 </button>
                             )) : (
-                                // Fallback if no popular searches loaded
-                                ["Kurti Set", "Saree", "Tops for Women", "Handbags", "Earrings", "Heels"].map(term => (
+                                // Fallback: Specific trending items instead of categories to avoid duplication
+                                ["iPhone 15", "Nike Jordan", "Banarasi Saree", "Sony WH-1000XM5", "Fossil Gen 6", "Puma Sneakers"].map(term => (
                                     <button
                                         key={term}
                                         onClick={() => navigate(`/?q=${encodeURIComponent(term)}`)}
@@ -285,7 +285,7 @@ const HomePage = () => {
                                             </div>
 
                                             <button className="mt-3 w-full bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] hover:border-[#F2C200] text-[#0F1111] text-[13px] py-1.5 rounded-full shadow-sm hover:shadow transition-all font-normal">
-                                                Add to Cart
+                                                Visit Website
                                             </button>
                                         </div>
                                     </div>
