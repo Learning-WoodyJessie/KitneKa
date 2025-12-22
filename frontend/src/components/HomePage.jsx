@@ -18,6 +18,7 @@ const HomePage = () => {
     const [selectedStores, setSelectedStores] = useState([]);
     const [trackingId, setTrackingId] = useState(null);
     const [popularSearches, setPopularSearches] = useState([]);
+    const [landingFeed, setLandingFeed] = useState([]);
     const [showImageSearch, setShowImageSearch] = useState(false);
 
     // --- UTILS & CONSTANTS ---
@@ -55,6 +56,11 @@ const HomePage = () => {
         axios.get(`${API_BASE}/graph/popular`)
             .then(res => setPopularSearches(res.data))
             .catch(err => console.error("Failed to fetch popular searches", err));
+
+        // Fetch curated landing feed
+        axios.get(`${API_BASE}/discovery/landing`)
+            .then(res => setLandingFeed(res.data.feed))
+            .catch(err => console.error("Failed to fetch landing feed", err));
     }, []);
 
     // --- HANDLERS ---
@@ -172,59 +178,133 @@ const HomePage = () => {
 
             {/* LANDING PAGE CONTENT (When NOT searched) */}
             {!searched && (
-                <div className="animate-fade-in">
+                <div className="animate-fade-in space-y-8 pb-12">
 
-                    {/* 1. Category Highlight Grid (The Request) */}
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                        <div className="text-center mb-10">
-                            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Explore Top Categories</h2>
-                            <p className="text-gray-500 mt-2">Curated collections just for you</p>
+                    {/* --- MOBILE: SEARCH INPUT --- */}
+                    <div className="md:hidden px-4 pt-4">
+                        <form onSubmit={(e) => handleSearch(e)} className="relative drop-shadow-sm">
+                            <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+                            <input
+                                type="text"
+                                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-xl text-gray-900 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:text-gray-400 font-medium"
+                                placeholder="Search products & brands"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                        </form>
+                    </div>
+
+                    {/* --- SECTION 1: POPULAR IN INDIA (Chips) --- */}
+                    <div className="px-4 md:px-8 max-w-7xl mx-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Popular in India</h3>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {categories.map((cat) => (
-                                <div
-                                    key={cat.id}
-                                    onClick={() => navigate(`/?q=${encodeURIComponent(cat.query)}`)}
-                                    className="group relative h-80 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all"
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+                            {popularSearches.length > 0 ? popularSearches.map((term, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => navigate(`/?q=${encodeURIComponent(term.term)}`)}
+                                    className="flex-shrink-0 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all"
                                 >
-                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors z-10" />
-                                    <img
-                                        src={cat.image}
-                                        alt={cat.title}
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                    />
-                                    <div className="absolute bottom-0 left-0 right-0 p-6 z-20 bg-gradient-to-t from-black/80 to-transparent">
-                                        <h3 className="text-2xl font-bold text-white mb-1">{cat.title}</h3>
-                                        <span className="text-sm text-gray-200 font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-                                            Shop Now <ArrowRight size={14} />
-                                        </span>
+                                    {term.term}
+                                </button>
+                            )) : (
+                                // Fallback if no popular searches loaded
+                                ["Sunscreen", "Kurti", "Smartwatch", "Sneakers", "Lipstick", "Headphones"].map(term => (
+                                    <button
+                                        key={term}
+                                        onClick={() => navigate(`/?q=${encodeURIComponent(term)}`)}
+                                        className="flex-shrink-0 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap hover:border-blue-500 hover:text-blue-600 shadow-sm transition-all"
+                                    >
+                                        {term}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* --- SECTION 2: TRENDING DEALS (Horizontal Cards) --- */}
+                    <div className="px-4 md:px-8 max-w-7xl mx-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-gray-900">Trending Deals</h3>
+                            <span className="text-xs font-medium text-blue-600">View all</span>
+                        </div>
+                        {/* Using SeasonalityWidget content but styled as horizontal scroll if possible, or just keeping the widget logic if it fits. 
+                             For MVP, let's mock a "Trending" scroll to match wireframe exactly. */}
+                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 snap-x md:grid md:grid-cols-5 md:mx-0 md:px-0 md:gap-6">
+                            {(landingFeed.length > 0 ? landingFeed : [
+                                { title: 'Loading Deals...', price: '---', source: '---', image: '' }
+                            ]).map((item, i) => (
+                                <div key={i} className="snap-start flex-shrink-0 w-40 md:w-auto bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group cursor-pointer" onClick={() => item.title !== 'Loading Deals...' && navigate(`/?q=${encodeURIComponent(item.title)}`)}>
+                                    <div className="aspect-square bg-gray-50 relative p-4">
+                                        {item.badges && item.badges.length > 0 && (
+                                            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                                {item.badges.map((badge, bIdx) => (
+                                                    <span key={bIdx} className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${badge.includes("Value") ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+                                                        }`}>
+                                                        {badge}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <img src={item.image || item.thumbnail} alt={item.title} className="w-full h-full object-contain mix-blend-multiply" />
+                                    </div>
+                                    <div className="p-3">
+                                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 h-10 leading-tight">{item.title}</h4>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-sm font-bold text-gray-900">{typeof item.price === 'number' ? `₹${item.price.toLocaleString()}` : item.price}</span>
+                                            <span className="text-[10px] text-gray-500 truncate max-w-[50%]">{item.source}</span>
+                                        </div>
+                                        {item.rating > 0 && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <div className="flex text-yellow-400">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <svg key={i} className={`w-3 h-3 ${i < Math.round(item.rating) ? 'fill-current' : 'text-gray-200'}`} viewBox="0 0 20 20">
+                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                        </svg>
+                                                    ))}
+                                                </div>
+                                                <span className="text-[10px] text-gray-400">({item.reviews || 0})</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* 2. Seasonality Widget (Kept as high value feature) */}
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-                        <SeasonalityWidget />
-                    </div>
-
-                    {/* 3. Popular Searches Cloud */}
-                    <div className="max-w-4xl mx-auto px-4 text-center pb-20">
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Trending Searches</h3>
-                        <div className="flex flex-wrap justify-center gap-3">
-                            {popularSearches.map((term, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => navigate(`/?q=${encodeURIComponent(term.term)}`)}
-                                    className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors shadow-sm"
+                    {/* --- SECTION 3: TOP CATEGORIES (Horizontal Cards) --- */}
+                    <div className="px-4 md:px-8 max-w-7xl mx-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-gray-900">Explore Categories</h3>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 snap-x md:grid md:grid-cols-4 md:mx-0 md:px-0 md:gap-6">
+                            {categories.map((cat) => (
+                                <div
+                                    key={cat.id}
+                                    onClick={() => navigate(`/?q=${encodeURIComponent(cat.query)}`)}
+                                    className="snap-center flex-shrink-0 w-64 h-36 md:h-64 md:w-auto relative rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all"
                                 >
-                                    {term.term}
-                                </button>
+                                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors z-10" />
+                                    <img
+                                        src={cat.image}
+                                        alt={cat.title}
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    />
+                                    <div className="absolute bottom-0 left-0 p-4 z-20">
+                                        <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{cat.title}</h3>
+                                        <p className="text-xs text-gray-200 font-medium">View Collection</p>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>
+
+                    {/* --- SECTION 4: SEASONAL WIDGET --- */}
+                    <div className="px-4 md:px-8 max-w-7xl mx-auto">
+                        <SeasonalityWidget />
+                    </div>
+
                 </div>
             )}
 

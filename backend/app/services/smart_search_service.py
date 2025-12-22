@@ -182,13 +182,14 @@ class SmartSearchService:
         # We pass empty lists for local/instagram for now as the new signature supports them but current flow might not prioritize them for insight
         return self._synthesize_results(query, ranked_online, [], [])
 
-    def smart_search(self, query: str, location: str = "Mumbai"):
+    def smart_search(self, query: str, location: str = "Mumbai", db=None):
         """
         Orchestrates the search:
         1. Analyzes query (is it a URL?)
         2. Extracts product info if URL
         3. Searches Google/SerpAPI
         4. Ranks Results
+        5. (Passive) Saves results to DB for History
         """
         logger.info(f"Smart Search Analysis for: {query}")
         
@@ -217,6 +218,17 @@ class SmartSearchService:
         
         # Rank Results
         ranked_online = self._rank_results(final_results, query, original_url=original_url)
+
+        # 4. Passive History Recording (New)
+        if db:
+            from app.services.db_utils import save_product_snapshot
+            try:
+                # We save the top 5 most relevant results to avoid spamming DB with low quality matches
+                # Only save results that are 'exact' matches or top ranked
+                for item in ranked_online[:5]:
+                    save_product_snapshot(db, item)
+            except Exception as e:
+                logger.error(f"Passive History Save Failed: {e}")
         
         return {
             "query": query,

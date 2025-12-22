@@ -15,7 +15,9 @@ from app.services.scraper_service import RealScraperService
 from app.services.smart_search_service import SmartSearchService
 from app.services.image_analyzer_service import ImageAnalyzerService
 from app.services.url_scraper_service import URLScraperService
+from app.services.url_scraper_service import URLScraperService
 from app.services.graph_service import GraphService
+from app.services.curated_feed_service import CuratedFeedService
 from app.database import engine, Base, get_db
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -89,12 +91,59 @@ def get_product(product_id: int):
 @app.get("/products/{product_id}/history")
 def get_price_history(product_id: int, days: int = 30, db: Session = Depends(get_db)):
     """
-    Get price history for a specific product (default last 30 days)
+    Get price history with 'Buy/Wait' recommendation.
     """
     history = graph_service.get_price_history(db, product_id, days)
     if not history:
-        return {"error": "Product not found"}
-    return history
+        # Check if product exists at all
+        product = pricing_service.get_product_by_id(product_id)
+        if not product:
+            return {"error": "Product not found"}
+        return {"history": [], "recommendation": "Neutral", "reason": "No history data available yet."}
+    
+    # Calculate Analytics from ALL competitors combined (simplified for MVP)
+    all_prices = []
+    current_price = 0
+    latest_date = None
+    
+    for comp in history:
+        for point in comp['data']:
+            all_prices.append(point['price'])
+            # Track latest price
+            p_date = datetime.datetime.fromisoformat(point['date'])
+            if latest_date is None or p_date > latest_date:
+                latest_date = p_date
+                current_price = point['price']
+
+    if not all_prices:
+        return {"history": history, "recommendation": "Neutral", "reason": "Insufficient data."}
+
+    avg_price = sum(all_prices) / len(all_prices)
+    min_price = min(all_prices)
+    
+    recommendation = "Neutral"
+    reason = "Price is stable."
+    
+    if current_price <= min_price:
+        recommendation = "Great Buy"
+        reason = "Lowest price in last 30 days!"
+    elif current_price < avg_price * 0.95:
+        recommendation = "Buy Now"
+        reason = f"Price is {int((1 - current_price/avg_price)*100)}% below average."
+    elif current_price > avg_price * 1.05:
+        recommendation = "Wait"
+        reason = f"Price is {int((current_price/avg_price - 1)*100)}% above average."
+
+    return {
+        "history": history,
+        "recommendation": recommendation,
+        "reason": reason,
+        "stats": {
+            "current_price": current_price,
+            "average_price": round(avg_price, 2),
+            "lowest_price": min_price
+        }
+    }
 
 @app.get("/seasonality/tips")
 def get_seasonality_tips():
@@ -112,7 +161,9 @@ real_scraper = RealScraperService()
 smart_searcher = SmartSearchService()
 image_analyzer = ImageAnalyzerService()
 url_scraper = URLScraperService()
+url_scraper = URLScraperService()
 graph_service = GraphService()
+feed_service = CuratedFeedService()
 
 # ...
 
@@ -139,7 +190,7 @@ def search_products(q: str, location: Optional[str] = "Mumbai", anonymous_id: Op
         except Exception as e:
             print(f"Failed to record search: {e}")
 
-    return smart_searcher.smart_search(search_term, location)
+    return smart_searcher.smart_search(search_term, location, db=db)
 
 @app.get("/graph/popular")
 def get_popular_searches(limit: int = 5, db: Session = Depends(get_db)):
@@ -151,6 +202,14 @@ def get_user_history(anonymous_id: str, db: Session = Depends(get_db)):
     """Get search history for a user"""
     user = graph_service.get_or_create_user(db, anonymous_id)
     return user.searches
+
+
+@app.get("/discovery/landing")
+def get_landing_feed():
+    """
+    Get the curated 10-item default feed for the homepage.
+    """
+    return {"feed": feed_service.get_landing_feed()}
 
 
 @app.post("/discovery/search-by-image")
@@ -177,7 +236,7 @@ async def search_by_image(file: UploadFile = File(...), location: Optional[str] 
             print(f"Failed to record image search: {e}")
 
         # Perform search with extracted query
-        search_results = smart_searcher.smart_search(analysis["search_query"], location)
+        search_results = smart_searcher.smart_search(analysis["search_query"], location, db=db)
         
         # Include image analysis in response
         search_results["image_analysis"] = analysis
@@ -208,7 +267,7 @@ def search_by_url(url: str, location: Optional[str] = "Mumbai", anonymous_id: Op
             print(f"Failed to record url search: {e}")
 
         # Perform search with extracted query
-        search_results = smart_searcher.smart_search(extraction["search_query"], location)
+        search_results = smart_searcher.smart_search(extraction["search_query"], location, db=db)
         
         # Include URL extraction in response
         search_results["url_extraction"] = extraction

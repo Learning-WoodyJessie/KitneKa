@@ -9,6 +9,7 @@ const ProductPage = () => {
     const { id } = useParams();
     const [product, setProduct] = useState(null);
     const [history, setHistory] = useState(null);
+    const [historyResData, setHistoryResData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -33,6 +34,7 @@ const ProductPage = () => {
 
                 // Fetch Price History with Range
                 const historyRes = await axios.get(`${API_BASE}/products/${id}/history?days=${timeRange}`);
+                setHistoryResData(historyRes.data);
                 setHistory(historyRes.data.history);
             } catch (err) {
                 console.error("Failed to load product", err);
@@ -193,6 +195,26 @@ const ProductPage = () => {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Recommendation Widget */}
+                            {historyResData?.recommendation && historyResData.recommendation !== "Neutral" && (
+                                <div className={`mb-6 p-4 rounded-xl border flex items-center justify-between shadow-sm ${historyResData.recommendation === "Great Buy" || historyResData.recommendation === "Buy Now"
+                                    ? "bg-green-50 border-green-200 text-green-800"
+                                    : "bg-amber-50 border-amber-200 text-amber-800"
+                                    }`}>
+                                    <div>
+                                        <h4 className="font-bold text-lg flex items-center gap-2">
+                                            {historyResData.recommendation === "Wait" ? "⚠️" : "✅"}
+                                            Recommendation: {historyResData.recommendation}
+                                        </h4>
+                                        <p className="text-sm opacity-90 mt-1">{historyResData.reason}</p>
+                                    </div>
+                                    <div className="text-right hidden sm:block">
+                                        <div className="text-xs font-semibold uppercase tracking-wider opacity-70">Current Average</div>
+                                        <div className="text-xl font-bold">₹{historyResData.stats?.average_price?.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            )}
 
                             {loading && !history ? (
                                 <div className="h-64 flex items-center justify-center">
