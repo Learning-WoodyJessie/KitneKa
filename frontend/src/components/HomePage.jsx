@@ -167,10 +167,12 @@ const HomePage = () => {
 
     // --- CATEGORY DATA ---
     const categories = [
-        { id: 'women', title: 'Women', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800', query: 'Women Fashion' },
-        { id: 'fashion', title: 'Fashion', image: 'https://images.unsplash.com/photo-1445205170230-05328324f377?auto=format&fit=crop&q=80&w=800', query: 'Latest Fashion Trends' },
+        { id: 'clothing', title: 'Clothing', image: 'https://images.unsplash.com/photo-1549570186-6e6b0d99042b?auto=format&fit=crop&q=80&w=800', query: 'Women Clothing' },
+        { id: 'footwear', title: 'Footwear', image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&q=80&w=800', query: 'Women Footwear' },
+        { id: 'handbags', title: 'Handbags', image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=800', query: 'Handbags for Women' },
+        { id: 'jewellery', title: 'Jewellery', image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=800', query: 'Fashion Jewellery' },
+        { id: 'watches', title: 'Watches', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=800', query: 'Women Watches' },
         { id: 'beauty', title: 'Beauty', image: 'https://images.unsplash.com/photo-1596462502278-27bfdd403348?auto=format&fit=crop&q=80&w=800', query: 'Beauty Products' },
-        { id: 'health', title: 'Health', image: 'https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&q=80&w=800', query: 'Health & Wellness' },
     ];
 
     return (

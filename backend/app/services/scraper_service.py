@@ -54,11 +54,14 @@ class RealScraperService:
                     url = self._clean_google_url(url)
                     
                     # 2. Filtering Logic
-                    # Allow 'aclk' (Ad Click) redirects as they go to the product (User Option A)
+                    # Allow 'aclk' (Ad Click) redirects
                     if "/aclk" in url:
                         pass 
-                    # Discard 'search' pages (Shopping Viewer, e.g. ibp=oshop) which are bad UX
-                    elif "/search" in url or "ibp=oshop" in url:
+                    # ALLOW 'ibp=oshop' (Shopping Viewer) because direct links are failing
+                    elif "ibp=oshop" in url:
+                        pass
+                    # Still discard generic search pages if they aren't product viewer
+                    elif "/search" in url and "ibp=oshop" not in url:
                         continue
                     # Any other google links that weren't cleaned? Maybe keep them if they aren't search pages.
                     # But to be safe, if it's still a raw google link and not aclk, we might want to skip it 
@@ -301,16 +304,75 @@ class RealScraperService:
         # Primary: SerpApi Google Shopping
         online_results = self.search_serpapi(query)
         
-        # Fallback: If no valid shopping results (likely due to strict link filtering), use Organic
         if not online_results:
             logger.warning("Google Shopping returned 0 valid links. Switching to Organic Search.")
             online_results = self.search_organic(query)
-        
-        # If SerpApi returns nothing or fails, we could try Playwright (async handling needed)
-        # For now, let's just return SerpApi results as they are high quality.
-        # To truly use both, we'd need to run parsing logic which is complex to sync.
-        
+            
+        # Fallback: DEMO MODE (If API is exhausted/fails)
+        if not online_results:
+             logger.warning("All APIs failed (likely quota exhausted). Using MOCK fallback for demo.")
+             online_results = self._get_mock_fallback(query)
+
         return {
             "online": online_results,
             "local": [] 
         }
+
+    def _get_mock_fallback(self, query: str):
+        """Standardized mock data for demoing when API is down"""
+        q = query.lower()
+        items = []
+        
+        # Generic Template
+        def make_item(i, title, price, img, source="Amazon"):
+            return {
+                "id": f"mock_{random.randint(1000,99999)}",
+                "source": source,
+                "title": title,
+                "price": price,
+                "url": "https://www.amazon.in",
+                "image": img,
+                "rating": 4.5,
+                "reviews": 1250,
+                "delivery": "Free Delivery"
+            }
+
+        # Context-Aware Mocks
+        if "kurta" in q or "ethnic" in q:
+            items = [
+                make_item(1, "GoSriKi Women's Cotton Blend Straight Printed Kurta with Pant & Dupatta", 699, "https://m.media-amazon.com/images/I/611b+iB+9ZL._SY741_.jpg"),
+                make_item(2, "ANNI DESIGNER Women's Cotton Blend Printed Straight Kurta", 489, "https://m.media-amazon.com/images/I/61p3lA4N3uL._SY741_.jpg", "Myntra"),
+                make_item(3, "Women's Rayon Printed Straight Kurta", 399, "https://m.media-amazon.com/images/I/61s-dI5+aDL._SY741_.jpg")
+            ]
+        elif "saree" in q:
+             items = [
+                make_item(1, "Glory Sarees Women's Kanchipuram Art Silk Saree With Blouse Piece", 899, "https://m.media-amazon.com/images/I/91J9-w+WcWL._SY741_.jpg"),
+                make_item(2, "Satyamev Jayate Women's Banarasi Soft Lichi Silk Saree", 1299, "https://m.media-amazon.com/images/I/61Yy7-e5dSL._SY741_.jpg")
+            ]
+        elif "watch" in q:
+            items = [
+                make_item(1, "Fossil Gen 6 Smartwatch for Women", 18995, "https://m.media-amazon.com/images/I/61JtVmcxb0L._SX679_.jpg"),
+                make_item(2, "Titan Raga Women's Watch - Rose Gold", 4500, "https://m.media-amazon.com/images/I/71G1M9F5c+L._SX679_.jpg", "Titan")
+            ]
+        elif "bag" in q or "handbag" in q:
+            items = [
+                make_item(1, "Lavie Women's Beech Satchel Bag", 1499, "https://m.media-amazon.com/images/I/81x-M6+zWnL._SY695_.jpg", "Lavie"),
+                make_item(2, "ZOUK Women's Handcrafted Office Bag for Women", 1899, "https://m.media-amazon.com/images/I/71WF7Y+CgFL._SY695_.jpg")
+            ]
+        elif "jewel" in q or "earring" in q:
+             items = [
+                make_item(1, "Zaveri Pearls Gold Plated Kundan Necklace Set", 450, "https://m.media-amazon.com/images/I/71X8+g-XjIL._SY695_.jpg"),
+                make_item(2, "GIVA 925 Sterling Silver Zircon Earrings", 1699, "https://m.media-amazon.com/images/I/51+P+jXg+dL._SY695_.jpg", "GIVA")
+            ]
+        elif "beauty" in q or "lip" in q or "face" in q:
+             items = [
+                make_item(1, "Maybelline New York Liquid Matte Lipstick", 399, "https://m.media-amazon.com/images/I/41-9F-7+MGL._SX522_.jpg", "Nykaa"),
+                make_item(2, "Cetaphil Gentle Skin Cleanser", 350, "https://m.media-amazon.com/images/I/61g+2M+g+oL._SX522_.jpg")
+            ]
+        else:
+             items = [
+                make_item(1, f"Best Seller: {query.title()}", 999, "https://via.placeholder.com/300x400?text=Product+Image"),
+                make_item(2, f"Premium {query.title()}", 1499, "https://via.placeholder.com/300x400?text=Premium+Item")
+            ]
+            
+        return items

@@ -22,14 +22,12 @@ const Navbar = () => {
     };
 
     const categories = [
-        { name: 'Women', path: '/?q=Women+Fashion' },
-        { name: 'Men', path: '/?q=Men+Fashion' },
-        { name: 'Fashion', path: '/?q=Fashion' },
-        { name: 'Health', path: '/?q=Health+Products' },
+        { name: 'Clothing', path: '/?q=Women+Clothing' },
+        { name: 'Footwear', path: '/?q=Women+Footwear' },
+        { name: 'Handbags', path: '/?q=Handbags' },
+        { name: 'Watches', path: '/?q=Watches+for+Women' },
+        { name: 'Jewellery', path: '/?q=Jewellery+Sets' },
         { name: 'Beauty', path: '/?q=Beauty+Products' },
-        { name: 'Electronics', path: '/?q=Electronics' },
-        { name: 'Home', path: '/?q=Home+Decor' },
-        { name: 'Offers', path: '/?q=Offers' },
     ];
 
     return (
