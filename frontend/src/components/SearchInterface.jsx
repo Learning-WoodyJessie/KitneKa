@@ -453,8 +453,4 @@ const SearchInterface = ({ initialQuery }) => {
 };
 
 export default SearchInterface;
-        </div >
-    );
-};
 
-export default SearchInterface;
