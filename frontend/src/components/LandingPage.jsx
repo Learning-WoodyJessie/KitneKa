@@ -108,21 +108,11 @@ const LandingPage = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.3 }}
-                            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+                            className="flex justify-center"
                         >
-                            <form onSubmit={handleHeroSearch} className="relative w-full max-w-md group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-white transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for shoes, mobiles, handbags..."
-                                    className="w-full pl-12 pr-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-lg focus:ring-4 focus:ring-white/10 focus:border-white/50 transition-all outline-none text-lg text-white placeholder:text-gray-300"
-                                    value={heroQuery}
-                                    onChange={(e) => setHeroQuery(e.target.value)}
-                                />
-                            </form>
                             <button
                                 onClick={handleGetStarted}
-                                className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                className="px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
                             >
                                 Get Started <ArrowRight className="h-4 w-4" />
                             </button>
