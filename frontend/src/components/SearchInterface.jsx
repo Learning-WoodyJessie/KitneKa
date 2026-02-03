@@ -224,13 +224,7 @@ const SearchInterface = ({ initialQuery }) => {
                         </div>
                     </form>
 
-                    {/* Verified by Deal Scanner Badge */}
-                    <div className="flex justify-center mt-4">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-medium uppercase tracking-wide">
-                            <Check className="h-3 w-3" />
-                            Verified by Deal Scanner
-                        </div>
-                    </div>
+
                 </div>
             </div>
 
