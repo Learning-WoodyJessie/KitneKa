@@ -59,45 +59,49 @@ const LandingPage = () => {
         <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
 
             {/* HERO SECTION */}
-            <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-                {/* Background Decor */}
-                <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-                    <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-br from-blue-100/40 to-purple-100/40 rounded-full blur-3xl mix-blend-multiply filter opacity-70 animate-blob"></div>
-                    <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-gradient-to-br from-amber-100/40 to-pink-100/40 rounded-full blur-3xl mix-blend-multiply filter opacity-70 animate-blob animation-delay-2000"></div>
+            <section className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
+                {/* Background Image */}
+                <div className="absolute inset-0 z-0">
+                    <img
+                        src="/src/assets/hero-fashion.png"
+                        alt="Background"
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
                 </div>
 
-                <div className="container mx-auto px-6 relative z-10">
-                    <div className="max-w-4xl mx-auto text-center">
+                <div className="container mx-auto px-6 relative z-10 pt-20">
+                    <div className="max-w-4xl mx-auto text-center text-white">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6 }}
-                            className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5 mb-8 shadow-sm"
+                            className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 mb-8 shadow-sm"
                         >
                             <span className="flex h-2 w-2 relative">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                             </span>
-                            <span className="text-xs font-semibold tracking-wide uppercase text-slate-600">The Future of Shopping is Here</span>
+                            <span className="text-xs font-semibold tracking-wide uppercase text-blue-50">The Future of Shopping is Here</span>
                         </motion.div>
 
                         <motion.h1
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.1 }}
-                            className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-8 leading-[1.1]"
+                            className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.1]"
                         >
                             Right Price. <br className="hidden md:block" />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Right Store.</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Right Store.</span>
                         </motion.h1>
 
                         <motion.p
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.2 }}
-                            className="text-lg md:text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed"
+                            className="text-lg md:text-xl text-gray-200 mb-12 max-w-2xl mx-auto leading-relaxed font-light"
                         >
-                            Stop overpaying. Compare prices across online giants, Instagram sellers, and your local neighborhood stores instantly with KitneKa.
+                            Stop overpaying. Compare prices across online giants, Instagram sellers, and your local neighborhood stores instantly.
                         </motion.p>
 
                         <motion.div
@@ -107,42 +111,21 @@ const LandingPage = () => {
                             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
                         >
                             <form onSubmit={handleHeroSearch} className="relative w-full max-w-md group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-blue-500 transition-colors" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-white transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Search for shoes, mobiles, handbags..."
-                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-100 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-lg"
+                                    className="w-full pl-12 pr-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-lg focus:ring-4 focus:ring-white/10 focus:border-white/50 transition-all outline-none text-lg text-white placeholder:text-gray-300"
                                     value={heroQuery}
                                     onChange={(e) => setHeroQuery(e.target.value)}
                                 />
                             </form>
                             <button
                                 onClick={handleGetStarted}
-                                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
                             >
                                 Get Started <ArrowRight className="h-4 w-4" />
                             </button>
-                        </motion.div>
-
-                        {/* Social Proof / Stats */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 1, delay: 0.8 }}
-                            className="mt-16 pt-8 border-t border-slate-100 flex flex-wrap justify-center gap-8 md:gap-16 grayscale opacity-80"
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-2xl text-slate-900">50K+</span>
-                                <span className="text-sm text-slate-500 text-left leading-tight">Products<br />Tracked</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-2xl text-slate-900">1.2K+</span>
-                                <span className="text-sm text-slate-500 text-left leading-tight">Local<br />Stores</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-2xl text-slate-900">₹2Cr+</span>
-                                <span className="text-sm text-slate-500 text-left leading-tight">Money<br />Saved</span>
-                            </div>
                         </motion.div>
                     </div>
                 </div>
