@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const SearchInterface = ({ initialQuery }) => {
     const navigate = useNavigate();
-    const [query, setQuery] = useState(initialQuery || '');
+    const [searchParams] = useSearchParams();
+    const [query, setQuery] = useState(initialQuery || searchParams.get('q') || '');
     const [location, setLocation] = useState('');
     const [searchData, setSearchData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -23,18 +24,29 @@ const SearchInterface = ({ initialQuery }) => {
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
 
-    // Trigger search if initialQuery exists
+    // Trigger search if initialQuery or URL param exists
     useEffect(() => {
-        if (initialQuery) {
-            setQuery(initialQuery);
-            handleSearch(null, 'text', null, '', initialQuery);
+        const targetQuery = initialQuery || searchParams.get('q');
+        if (targetQuery) {
+            setQuery(targetQuery);
+            handleSearch(null, 'text', null, '', targetQuery);
         }
-    }, [initialQuery]);
+    }, [initialQuery, searchParams]);
 
     // Major Indian cities for dropdown
     const INDIAN_CITIES = [
         "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai",
         "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat"
+    ];
+
+    // Categories
+    const categories = [
+        { id: 'clothing', title: 'Clothing', image: 'https://images.unsplash.com/photo-1549570186-6e6b0d99042b?auto=format&fit=crop&q=80&w=800', query: 'Women Clothing' },
+        { id: 'footwear', title: 'Footwear', image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&q=80&w=800', query: 'Women Footwear' },
+        { id: 'handbags', title: 'Handbags', image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=800', query: 'Handbags for Women' },
+        { id: 'jewellery', title: 'Jewellery', image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=800', query: 'Fashion Jewellery' },
+        { id: 'watches', title: 'Watches', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=800', query: 'Women Watches' },
+        { id: 'beauty', title: 'Beauty', image: 'https://images.unsplash.com/photo-1596462502278-27bfdd403348?auto=format&fit=crop&q=80&w=800', query: 'Beauty Products' },
     ];
 
     // Helper to get sorted local results
@@ -100,6 +112,11 @@ const SearchInterface = ({ initialQuery }) => {
         setActiveTab('online');
         setShowImageModal(false);
 
+        // Update URL if text search
+        if (mode === 'text' && !overrideQuery) {
+            // navigate(`?q=${encodeURIComponent(q)}`); // Optional: keep URL in sync
+        }
+
         try {
             let response;
             const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
@@ -145,6 +162,11 @@ const SearchInterface = ({ initialQuery }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCategoryClick = (catQuery) => {
+        setQuery(catQuery);
+        handleSearch(null, 'text', null, '', catQuery);
     };
 
     return (
@@ -223,6 +245,34 @@ const SearchInterface = ({ initialQuery }) => {
                     </form>
                 </div>
             </div>
+
+            {/* CATEGORIES GRID (Only when NOT searched) */}
+            {!searched && (
+                <div className="px-4 md:px-8 max-w-7xl mx-auto pb-20">
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-xl font-bold text-gray-900 border-l-4 border-black pl-3 rounded-l-sm">Explore Categories</h3>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 snap-x md:grid md:grid-cols-3 lg:grid-cols-6 md:mx-0 md:px-0 md:gap-6">
+                        {categories.map((cat) => (
+                            <div
+                                key={cat.id}
+                                onClick={() => handleCategoryClick(cat.query)}
+                                className="snap-center flex-shrink-0 w-40 h-48 relative rounded-xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all group"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img
+                                    src={cat.image}
+                                    alt={cat.title}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                />
+                                <div className="absolute bottom-0 left-0 p-4 z-20">
+                                    <h3 className="text-base font-bold text-white leading-tight">{cat.title}</h3>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Results Section */}
             {searched && (

@@ -404,9 +404,9 @@ const HomePage = () => {
                                                     {product.match_quality === 'exact' && (
                                                         <div className="absolute top-3 right-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 pointer-events-none">TOP MATCH</div>
                                                     )}
-                                                    <a href={product.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                                                    <div className="block w-full h-full">
                                                         <img src={product.image} alt={product.title} className="w-full h-full object-contain p-6 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
-                                                    </a>
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-1">
@@ -415,9 +415,9 @@ const HomePage = () => {
                                                         <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
                                                     </div>
                                                     <h3 className="text-sm text-gray-700 font-medium leading-snug line-clamp-2 transition-colors">
-                                                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+                                                        <div className="hover:text-blue-600">
                                                             {product.title}
-                                                        </a>
+                                                        </div>
                                                     </h3>
 
                                                     <div className="mt-2 flex gap-2">
