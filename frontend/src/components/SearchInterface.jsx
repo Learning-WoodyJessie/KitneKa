@@ -174,103 +174,138 @@ const SearchInterface = ({ initialQuery }) => {
             {/* Removed internal Navbar */}
 
             {/* Hero / Search Section */}
-            <div className={`transition-all duration-700 ease-out ${searched ? 'py-10 border-b border-gray-100' : 'py-32'}`}>
-                <div className="max-w-3xl mx-auto px-6">
-                    {!searched && (
-                        <div className="text-center mb-12">
-                            <h1 className="text-5xl font-light tracking-tight text-black mb-4">
-                                <span className="font-semibold">KitneKa?</span> Sahi Daam, Sahi Dukaan.
-                            </h1>
-                            <p className="text-gray-400 text-lg font-light">
-                                Compare prices across online & local stores instantly.
-                            </p>
-                        </div>
-                    )}
+            <div className={`transition-all duration-700 ease-out py-8 border-b border-gray-100 bg-white sticky top-0 z-50 shadow-sm`}>
+                <div className="max-w-5xl mx-auto px-6">
+                    <form onSubmit={(e) => handleSearch(e, 'text')} className="group relative max-w-4xl mx-auto">
+                        <div className="flex flex-col md:flex-row shadow-sm rounded-xl overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
 
-                    <form onSubmit={(e) => handleSearch(e, 'text')} className="group relative">
-                        <div className={`flex flex-col md:flex-row gap-4 ${searched ? '' : 'p-2'}`}>
-                            {/* Search Input with Camera Icon */}
-                            <div className="relative flex-grow">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Search className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
-                                </div>
-                                <input
-                                    type="text"
-                                    className="block w-full pl-12 pr-14 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all"
-                                    placeholder="Search for a product..."
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                />
-                                {/* Camera Icon (Google Lens style) */}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowImageModal(true)}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-50 rounded-r-lg transition-colors"
-                                    title="Search by image"
-                                >
-                                    <Camera className="h-5 w-5 text-gray-600 hover:text-black transition-colors" />
-                                </button>
-                            </div>
-
-
-                            {/* Location Dropdown */}
-                            <div className="relative md:w-1/3">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                                    <MapPin className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
+                            {/* Location Dropdown - Simpler */}
+                            <div className="relative md:w-48 bg-gray-50 border-r border-gray-200">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <MapPin className="h-4 w-4 text-gray-500" />
                                 </div>
                                 <select
-                                    className="block w-full pl-12 pr-10 py-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-black placeholder-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-all appearance-none cursor-pointer"
+                                    className="block w-full pl-9 pr-8 py-3 bg-transparent text-sm font-medium text-gray-700 focus:outline-none cursor-pointer appearance-none h-full"
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                 >
-                                    <option value="">Select City</option>
+                                    <option value="">Select State</option>
                                     {INDIAN_CITIES.map(city => (
                                         <option key={city} value={city}>{city}</option>
                                     ))}
                                 </select>
-                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <ChevronDown className="h-3 w-3 text-gray-400" />
                                 </div>
                             </div>
 
-                            {/* Button */}
+                            {/* Search Input */}
+                            <div className="relative flex-grow bg-white">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Search className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    className="block w-full pl-12 pr-4 py-3 bg-transparent text-base text-gray-900 placeholder-gray-400 focus:outline-none h-full"
+                                    placeholder="Search for products, brands, or categories..."
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Search Button */}
                             <button
                                 type="submit"
-                                className="bg-black text-white px-10 py-4 rounded-lg font-medium hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 border-2 border-black"
+                                className="bg-blue-600 text-white px-8 py-3 font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                                 disabled={loading}
                             >
                                 {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Search'}
                             </button>
                         </div>
                     </form>
+
+                    {/* Verified by Deal Scanner Badge */}
+                    <div className="flex justify-center mt-4">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-medium uppercase tracking-wide">
+                            <Check className="h-3 w-3" />
+                            Verified by Deal Scanner
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* CATEGORIES GRID (Only when NOT searched) */}
+            {/* CATEGORIES SECTIONS (Only when NOT searched) */}
             {!searched && (
-                <div className="px-4 md:px-8 max-w-7xl mx-auto pb-20">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-gray-900 border-l-4 border-black pl-3 rounded-l-sm">Explore Categories</h3>
-                    </div>
-                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 snap-x md:grid md:grid-cols-3 lg:grid-cols-6 md:mx-0 md:px-0 md:gap-6">
-                        {categories.map((cat) => (
-                            <div
-                                key={cat.id}
-                                onClick={() => handleCategoryClick(cat.query)}
-                                className="snap-center flex-shrink-0 w-40 h-48 relative rounded-xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all group"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-                                <img
-                                    src={cat.image}
-                                    alt={cat.title}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
-                                <div className="absolute bottom-0 left-0 p-4 z-20">
-                                    <h3 className="text-base font-bold text-white leading-tight">{cat.title}</h3>
+                <div className="max-w-6xl mx-auto px-6 py-12 space-y-16">
+
+                    {/* Apparel Section */}
+                    <section>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-bold text-slate-800">Apparel</h3>
+                            <button onClick={() => handleCategoryClick('Apparel')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                                { title: "Men's Wear", img: "https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?auto=format&fit=crop&q=80&w=400", q: "Men's Clothing" },
+                                { title: "Women's Wear", img: "https://images.unsplash.com/photo-1550614000-4b9519e0926d?auto=format&fit=crop&q=80&w=400", q: "Women's Clothing" },
+                                { title: "Kids' Wear", img: "https://images.unsplash.com/photo-1622290291314-883f947392a5?auto=format&fit=crop&q=80&w=400", q: "Kids Clothing" },
+                                { title: "Ethnic Wear", img: "https://images.unsplash.com/photo-1610030469983-98e55041d04f?auto=format&fit=crop&q=80&w=400", q: "Ethnic Wear" }
+                            ].map((item, idx) => (
+                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
+                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
+                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Fashion & Beauty Section */}
+                    <section>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-bold text-slate-800">Fashion & Beauty</h3>
+                            <button onClick={() => handleCategoryClick('Fashion and Beauty')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                                { title: "Footwear", img: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=400", q: "Footwear" },
+                                { title: "Handbags", img: "https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&q=80&w=400", q: "Handbags" },
+                                { title: "Watches", img: "https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&q=80&w=400", q: "Watches" },
+                                { title: "Beauty & Makeup", img: "https://images.unsplash.com/photo-1522335789203-abd652327216?auto=format&fit=crop&q=80&w=400", q: "Beauty Products" }
+                            ].map((item, idx) => (
+                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
+                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
+                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* Health & Wellness Section */}
+                    <section>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-bold text-slate-800">Health & Wellness</h3>
+                            <button onClick={() => handleCategoryClick('Health and Wellness')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                                { title: "Supplements", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400", q: "Health Supplements" },
+                                { title: "Skincare", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&q=80&w=400", q: "Skincare" },
+                                { title: "Fitness Gear", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400", q: "Fitness Equipment" },
+                                { title: "Personal Care", img: "https://images.unsplash.com/photo-1556228720-1987df6a588b?auto=format&fit=crop&q=80&w=400", q: "Personal Care" }
+                            ].map((item, idx) => (
+                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
+                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
+                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
                 </div>
             )}
 
