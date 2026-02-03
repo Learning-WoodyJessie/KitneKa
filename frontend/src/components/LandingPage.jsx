@@ -87,8 +87,8 @@ const LandingPage = () => {
                             transition={{ duration: 0.6, delay: 0.1 }}
                             className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-8 leading-[1.1]"
                         >
-                            Sahi Daam. <br className="hidden md:block" />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Sahi Dukaan.</span>
+                            Right Price. <br className="hidden md:block" />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Right Store.</span>
                         </motion.h1>
 
                         <motion.p
