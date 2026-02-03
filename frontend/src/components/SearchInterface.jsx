@@ -173,11 +173,28 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Navigate to Product Page (New Tab)
     const handleProductClick = (product) => {
-        // For this demo/mock setup, we save the product to localStorage so the new tab can read it
-        // In a real app, the ID would be enough to fetch data
+        // Generate real competitors from the current search results
+        const otherResults = searchData?.results?.online
+            ?.filter(p => p.id !== product.id)
+            .map(p => ({
+                name: p.source,
+                price: p.price,
+                url: p.url, // Ensure the real URL is passed
+                source: p.source
+            })) || [];
+
+        // Add the current product itself to the availability list if needed, 
+        // or rely on ProductPage to display it.
+        // Let's attach this list as 'competitors' so ProductPage displays them.
+        const competitors = otherResults.length > 0 ? otherResults : (product.competitors || []);
+
         const productId = product.id || `mock-${Date.now()}`;
-        // Ensure ID is consistent
-        const productWithId = { ...product, id: productId };
+        // Ensure ID is consistent and attach competitors
+        const productWithId = {
+            ...product,
+            id: productId,
+            competitors: competitors
+        };
 
         localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productWithId));
         window.open(`/product/${productId}`, '_blank');

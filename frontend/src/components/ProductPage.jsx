@@ -19,12 +19,6 @@ const ProductPage = () => {
                 const cachedData = localStorage.getItem(`product_shared_${id}`);
                 if (cachedData) {
                     const parsed = JSON.parse(cachedData);
-                    // Add mock details if needed
-                    parsed.competitors = parsed.competitors || [
-                        { name: 'Amazon', price: parsed.price * 1.1, url: '#' },
-                        { name: 'Flipkart', price: parsed.price * 1.05, url: '#' },
-                        { name: 'Myntra', price: parsed.price * 1.02, url: '#' },
-                    ];
                     setProduct(parsed);
                     setLoading(false);
                     return;
@@ -113,10 +107,20 @@ const ProductPage = () => {
                                 <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Best Price</p>
                                 <div className="text-5xl font-bold text-black">₹{product.price?.toLocaleString()}</div>
                             </div>
-                            <div className="mb-2">
+                            <div className="flex flex-col gap-2 mb-1">
                                 <span className="text-green-600 text-sm font-bold bg-green-50 px-2 py-1 rounded">Save 15%</span>
                             </div>
                         </div>
+
+                        {/* Primary Buy Button */}
+                        <a
+                            href={product.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-full text-center bg-black text-white font-bold py-4 rounded-xl mb-8 hover:bg-gray-800 transition-colors"
+                        >
+                            Visit {product.source || "Store"} &rarr;
+                        </a>
 
                         {/* COMPARISON LINKS */}
                         <div className="border-t border-gray-100 pt-8">
@@ -124,7 +128,12 @@ const ProductPage = () => {
                                 <ShoppingCart size={20} /> Available Stores
                             </h3>
                             <div className="space-y-4">
-                                {(product.competitors || product.competitor_prices || []).map((comp, idx) => (
+                                {(product.competitors || product.competitor_prices || [
+                                    // Fallbacks with smart search links
+                                    { name: 'Amazon', price: (product.price || 0) * 1.1, url: `https://www.amazon.in/s?k=${encodeURIComponent(product.title || product.name)}` },
+                                    { name: 'Flipkart', price: (product.price || 0) * 1.05, url: `https://www.flipkart.com/search?q=${encodeURIComponent(product.title || product.name)}` },
+                                    { name: 'Myntra', price: (product.price || 0) * 1.02, url: `https://www.myntra.com/${encodeURIComponent(product.title || product.name)}` },
+                                ]).slice(0, 5).map((comp, idx) => (
                                     <div key={idx} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-blue-600 hover:shadow-md transition-all group">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-500 text-xs">
