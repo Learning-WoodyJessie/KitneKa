@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, Menu, ShoppingBag, User, Bell } from 'lucide-react';
 
 const Navbar = () => {
     const [query, setQuery] = useState('');
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const location = useLocation();
 
     // Sync local state with URL param on mount/update
     React.useEffect(() => {
@@ -14,20 +15,22 @@ const Navbar = () => {
         if (q) setQuery(q);
     }, [searchParams]);
 
+    const isSearchPage = location.pathname === '/search';
+
     const handleSearch = (e) => {
         e.preventDefault();
         if (query.trim()) {
-            navigate(`/?q=${encodeURIComponent(query)}`);
+            navigate(`/search?q=${encodeURIComponent(query)}`);
         }
     };
 
     const categories = [
-        { name: 'Clothing', path: '/?q=Women+Clothing' },
-        { name: 'Footwear', path: '/?q=Women+Footwear' },
-        { name: 'Handbags', path: '/?q=Handbags' },
-        { name: 'Watches', path: '/?q=Watches+for+Women' },
-        { name: 'Jewellery', path: '/?q=Jewellery+Sets' },
-        { name: 'Beauty', path: '/?q=Beauty+Products' },
+        { name: 'Clothing', path: '/search?q=Women+Clothing' },
+        { name: 'Footwear', path: '/search?q=Women+Footwear' },
+        { name: 'Handbags', path: '/search?q=Handbags' },
+        { name: 'Watches', path: '/search?q=Watches+for+Women' },
+        { name: 'Jewellery', path: '/search?q=Jewellery+Sets' },
+        { name: 'Beauty', path: '/search?q=Beauty+Products' },
     ];
 
     return (
@@ -60,24 +63,26 @@ const Navbar = () => {
                         </button>
                     </div>
 
-                    {/* --- DESKTOP: SEARCH BAR --- */}
-                    <div className="flex-1 max-w-2xl hidden md:block px-8">
-                        <form onSubmit={handleSearch} className="relative group">
-                            <input
-                                type="text"
-                                className="w-full pl-5 pr-14 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm group-hover:shadow-md"
-                                placeholder="Search for products, brands, or categories..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
-                            <button
-                                type="submit"
-                                className="absolute right-1 top-1 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
-                            >
-                                <Search size={18} />
-                            </button>
-                        </form>
-                    </div>
+                    {/* --- DESKTOP: SEARCH BAR (Hidden on Search Page) --- */}
+                    {!isSearchPage && (
+                        <div className="flex-1 max-w-2xl hidden md:block px-8">
+                            <form onSubmit={handleSearch} className="relative group">
+                                <input
+                                    type="text"
+                                    className="w-full pl-5 pr-14 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm group-hover:shadow-md"
+                                    placeholder="Search for products, brands, or categories..."
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                />
+                                <button
+                                    type="submit"
+                                    className="absolute right-1 top-1 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
+                                >
+                                    <Search size={18} />
+                                </button>
+                            </form>
+                        </div>
+                    )}
 
                     {/* --- DESKTOP: ACTIONS --- */}
                     <div className="hidden md:flex items-center gap-6">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -13,9 +13,10 @@ const SearchInterface = ({ initialQuery }) => {
     const [searched, setSearched] = useState(false);
     const [error, setError] = useState(null);
     const [visibleCount, setVisibleCount] = useState(5);
-    const [activeTab, setActiveTab] = useState('online');
+    const [activeTab, setActiveTab] = useState('Apparel');
     const [localSort, setLocalSort] = useState('distance');
     const [selectedStores, setSelectedStores] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     // Image/URL search states
     const [showImageModal, setShowImageModal] = useState(false);
@@ -109,8 +110,9 @@ const SearchInterface = ({ initialQuery }) => {
         setError(null);
         setSearched(true);
         setSearchData(null);
-        setActiveTab('online');
-        setShowImageModal(false);
+        if (mode === 'text' && !overrideQuery) {
+            setActiveTab('online');
+        }
 
         // Update URL if text search
         if (mode === 'text' && !overrideQuery) {
@@ -228,78 +230,126 @@ const SearchInterface = ({ initialQuery }) => {
                 </div>
             </div>
 
-            {/* CATEGORIES SECTIONS (Only when NOT searched) */}
+            {/* CATEGORIES TABS SECTION */}
             {!searched && (
-                <div className="max-w-6xl mx-auto px-6 py-12 space-y-16">
+                <div className="max-w-7xl mx-auto px-6 py-12">
 
-                    {/* Apparel Section */}
-                    <section>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-bold text-slate-800">Apparel</h3>
-                            <button onClick={() => handleCategoryClick('Apparel')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { title: "Men's Wear", img: "https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?auto=format&fit=crop&q=80&w=400", q: "Men's Clothing" },
-                                { title: "Women's Wear", img: "https://images.unsplash.com/photo-1550614000-4b9519e0926d?auto=format&fit=crop&q=80&w=400", q: "Women's Clothing" },
-                                { title: "Kids' Wear", img: "https://images.unsplash.com/photo-1622290291314-883f947392a5?auto=format&fit=crop&q=80&w=400", q: "Kids Clothing" },
-                                { title: "Ethnic Wear", img: "https://images.unsplash.com/photo-1610030469983-98e55041d04f?auto=format&fit=crop&q=80&w=400", q: "Ethnic Wear" }
-                            ].map((item, idx) => (
-                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
-                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
-                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
+                    {/* CUSTOM TABS */}
+                    <div className="flex border-b border-gray-200 mb-8 overflow-x-auto no-scrollbar">
+                        {['Apparel', 'Fashion and Beauty', 'Health and Wellness'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-6 py-4 text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all border-b-2 ${activeTab === tab
+                                    ? 'border-black text-black'
+                                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                                    }`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
+                    </div>
 
-                    {/* Fashion & Beauty Section */}
-                    <section>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-bold text-slate-800">Fashion & Beauty</h3>
-                            <button onClick={() => handleCategoryClick('Fashion and Beauty')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { title: "Footwear", img: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=400", q: "Footwear" },
-                                { title: "Handbags", img: "https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&q=80&w=400", q: "Handbags" },
-                                { title: "Watches", img: "https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&q=80&w=400", q: "Watches" },
-                                { title: "Beauty & Makeup", img: "https://images.unsplash.com/photo-1522335789203-abd652327216?auto=format&fit=crop&q=80&w=400", q: "Beauty Products" }
-                            ].map((item, idx) => (
-                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
-                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
-                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                    </div>
-                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
+                    {/* TAB CONTENT (MOCKED 50 items logic - simplified for display) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {/* Dynamic Mock Content based on Tab */}
+                        {Array.from({ length: 10 }).map((_, i) => {
+                            const getTabImage = () => {
+                                if (activeTab === 'Apparel') return `https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=400&text=${i + 1}`;
+                                if (activeTab === 'Fashion and Beauty') return `https://images.unsplash.com/photo-1522335789203-abd652327216?auto=format&fit=crop&q=80&w=400&text=${i + 1}`;
+                                return `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&text=${i + 1}`;
+                            };
 
-                    {/* Health & Wellness Section */}
-                    <section>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-bold text-slate-800">Health & Wellness</h3>
-                            <button onClick={() => handleCategoryClick('Health and Wellness')} className="text-blue-600 font-medium text-sm hover:underline">View All</button>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { title: "Supplements", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400", q: "Health Supplements" },
-                                { title: "Skincare", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&q=80&w=400", q: "Skincare" },
-                                { title: "Fitness Gear", img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400", q: "Fitness Equipment" },
-                                { title: "Personal Care", img: "https://images.unsplash.com/photo-1556228720-1987df6a588b?auto=format&fit=crop&q=80&w=400", q: "Personal Care" }
-                            ].map((item, idx) => (
-                                <div key={idx} onClick={() => handleCategoryClick(item.q)} className="group cursor-pointer">
-                                    <div className="rounded-lg overflow-hidden aspect-[3/4] mb-3">
-                                        <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            return (
+                                <div key={i} className="group cursor-pointer" onClick={() => handleCategoryClick(`${activeTab} Product ${i + 1}`)}>
+                                    <div className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden mb-3">
+                                        <img
+                                            src={getTabImage()}
+                                            alt="Product"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold">
+                                            ₹{(1500 + i * 120).toLocaleString()}
+                                        </div>
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                                    <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                                        Premium {activeTab} Item #{i + 1}
+                                    </h3>
+                                    <p className="text-xs text-gray-500">Trending Now</p>
                                 </div>
-                            ))}
+                            )
+                        })}
+                    </div>
+
+                    <div className="mt-12 text-center">
+                        <button className="px-8 py-3 border border-gray-300 rounded-full text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            Load More Results
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* PRODUCT DETAIL MODAL (Overlay) */}
+            {selectedProduct && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProduct(null)}></div>
+                    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-10 shadow-2xl flex flex-col md:flex-row overflow-hidden">
+                        <button
+                            onClick={() => setSelectedProduct(null)}
+                            className="absolute top-4 right-4 p-2 bg-white/80 rounded-full hover:bg-gray-100 z-20"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* Left: Image */}
+                        <div className="w-full md:w-1/2 bg-gray-50 p-8 flex items-center justify-center">
+                            <img src={selectedProduct.image} alt={selectedProduct.title} className="max-h-[60vh] object-contain mix-blend-multiply" />
                         </div>
-                    </section>
+
+                        {/* Right: Details */}
+                        <div className="w-full md:w-1/2 p-8 overflow-y-auto">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedProduct.title}</h2>
+                            <div className="flex items-center gap-4 mb-6">
+                                <span className="text-3xl font-bold text-black">₹{selectedProduct.price.toLocaleString()}</span>
+                                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold uppercase">Best Price</span>
+                            </div>
+
+                            {/* Comparison Table */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Compare Prices</h3>
+                                <div className="space-y-3">
+                                    {/* Mock Competitor Data if not real */}
+                                    {(selectedProduct.competitors || [
+                                        { name: 'Amazon', price: selectedProduct.price * 1.1 },
+                                        { name: 'Flipkart', price: selectedProduct.price * 1.05 },
+                                        { name: 'Myntra', price: selectedProduct.price * 1.15 },
+                                    ]).map((comp, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-blue-100 transition-colors">
+                                            <span className="font-medium text-gray-700">{comp.name || comp.source}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-gray-900">₹{Math.round(comp.price).toLocaleString()}</span>
+                                                <a href={comp.url || '#'} className="text-blue-600 text-xs font-bold uppercase hover:underline">Buy</a>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Similar Results */}
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Similar Products</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[1, 2, 3].map((s) => (
+                                        <div key={s} className="bg-gray-50 rounded-lg p-2 cursor-pointer hover:opacity-80">
+                                            <div className="aspect-square bg-white rounded mb-2"></div>
+                                            <div className="h-3 w-3/4 bg-gray-200 rounded mb-1"></div>
+                                            <div className="h-3 w-1/2 bg-gray-300 rounded"></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -315,71 +365,10 @@ const SearchInterface = ({ initialQuery }) => {
                         </div>
                     )}
 
-                    {/* AI INSIGHT CARD (Minimalist Black) */}
-                    {!error && searchData?.insight && (
-                        <div className="bg-black text-white p-8 rounded-xl shadow-2xl flex flex-col md:flex-row gap-10 items-start justify-between">
-                            <div className="flex-1 space-y-6">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-gray-400 text-xs font-bold tracking-widest uppercase">
-                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                                        AI Recommendation
-                                    </div>
-                                    <h2 className="text-3xl font-light">
-                                        {searchData.insight.best_value?.title || "Top Pick"}
-                                    </h2>
-                                </div>
-                                <p className="text-gray-300 text-lg font-light leading-relaxed max-w-2xl">
-                                    {searchData.insight.recommendation_text}
-                                </p>
-                                <div className="inline-block border border-white/20 px-4 py-3 rounded-lg">
-                                    <p className="text-sm text-gray-400 uppercase tracking-wider text-xs mb-1">Authenticity Tip</p>
-                                    <p className="text-white text-sm">{searchData.insight.authenticity_note}</p>
-                                </div>
-                            </div>
-
-                            <div className="text-right border-l border-white/10 pl-10 hidden md:block">
-                                <p className="text-gray-400 text-sm mb-2">Best Market Price</p>
-                                <p className="text-6xl font-medium tracking-tighter">
-                                    ₹{searchData.results?.online?.[0]?.price?.toLocaleString() || "---"}
-                                </p>
-                                <p className="text-gray-500 mt-2 text-sm">
-                                    Available on {searchData.insight.best_value?.reason || "Online Stores"}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* TABS (Subtle Underline) */}
-                    {!error && searchData && (
-                        <div className="flex items-center gap-8 border-b border-gray-100 pb-1">
-                            <button
-                                onClick={() => setActiveTab('online')}
-                                className={`pb-4 text-sm font-medium tracking-wide transition-all ${activeTab === 'online' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-black'}`}
-                            >
-                                ONLINE RETAIL
-                                {searchData?.results?.online?.length > 0 && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{searchData.results.online.length}</span>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('instagram')}
-                                className={`pb-4 text-sm font-medium tracking-wide transition-all ${activeTab === 'instagram' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-black'}`}
-                            >
-                                INSTAGRAM
-                                {searchData?.results?.instagram?.length > 0 && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{searchData.results.instagram.length}</span>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('local')}
-                                className={`pb-4 text-sm font-medium tracking-wide transition-all ${activeTab === 'local' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-black'}`}
-                            >
-                                LOCAL STORES
-                                {searchData?.results?.local?.length > 0 && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{searchData.results.local.length}</span>}
-                            </button>
-                        </div>
-                    )}
-
                     {/* ONLINE RESULTS GRID + SIDEBAR */}
                     {!error && activeTab === 'online' && searchData?.results?.online && searchData.results.online.length > 0 ? (
                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                            {/* SIDEBAR FILTERS */}
+                            {/* SIDEBAR FILTERS (Existing) */}
                             <div className="hidden lg:block space-y-8">
                                 <div>
                                     <h3 className="font-bold text-sm tracking-wide text-black mb-4 uppercase">Stores</h3>
@@ -417,7 +406,7 @@ const SearchInterface = ({ initialQuery }) => {
                                         .filter(p => selectedStores.length === 0 || selectedStores.includes(p.source))
                                         .slice(0, visibleCount)
                                         .map((product, idx) => (
-                                            <div key={product.id} className="group cursor-pointer">
+                                            <div key={product.id} className="group cursor-pointer" onClick={() => setSelectedProduct(product)}>
                                                 <div className="relative aspect-[4/3] bg-gray-50 rounded-lg overflow-hidden mb-5 border border-gray-100">
                                                     {idx === 0 && selectedStores.length === 0 && <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full z-10 tracking-wider">BEST PRICE</div>}
                                                     <img src={product.image} alt={product.title} className="w-full h-full object-contain p-8 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
@@ -432,25 +421,8 @@ const SearchInterface = ({ initialQuery }) => {
                                                         {product.title}
                                                     </h3>
 
-                                                    <div className="flex items-center justify-between mt-4">
-                                                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-black transition-colors">
-                                                            View Details <ArrowRight size={14} />
-                                                        </a>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleTrack(product);
-                                                            }}
-                                                            disabled={trackingId === product.id}
-                                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${trackingId === product.id
-                                                                ? 'bg-gray-100 text-gray-700'
-                                                                : 'bg-black text-white hover:bg-neutral-800'
-                                                                }`}
-                                                        >
-                                                            {trackingId === product.id ? <Check size={12} /> : <Plus size={12} />}
-                                                            {trackingId === product.id ? 'Tracking' : 'Track'}
-                                                        </button>
-                                                    </div>
+                                                    {/* Comparison Link */}
+                                                    <button className="text-sm text-blue-600 hover:underline mt-1 font-medium">Compare Prices &rarr;</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -474,170 +446,13 @@ const SearchInterface = ({ initialQuery }) => {
                             <div className="text-center py-20 text-slate-500">No online results found.</div>
                         ))
                     )}
-
-                    {/* LOCAL RESULTS TAB */}
-                    {
-                        !error && activeTab === 'local' && (
-                            searchData?.results?.local && searchData.results.local.length > 0 ? (
-                                <div>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-xl font-bold text-slate-800">
-                                            Stores in {location}
-                                        </h2>
-                                        <div className="flex items-center gap-2 text-sm bg-white border border-slate-200 rounded-lg p-1">
-                                            <button
-                                                onClick={() => setLocalSort('distance')}
-                                                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${localSort === 'distance' ? 'bg-slate-100 text-slate-900' : 'text-slate-500'}`}
-                                            >
-                                                Sort by Distance
-                                            </button>
-                                            <button
-                                                onClick={() => setLocalSort('price')}
-                                                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${localSort === 'price' ? 'bg-slate-100 text-slate-900' : 'text-slate-500'}`}
-                                            >
-                                                Sort by Price
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {getSortedLocalResults().map((place) => (
-                                            <div key={place.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:border-amber-400 transition-colors flex flex-col group">
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div>
-                                                        <h3 className="font-bold text-lg text-slate-900 group-hover:text-amber-600 transition-colors">{place.source}</h3>
-                                                        <p className="text-slate-500 text-sm">{place.address}</p>
-                                                    </div>
-                                                    <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
-                                                        <MapPin size={12} /> {place.distance}
-                                                    </span>
-                                                </div>
-
-                                                <div className="flex items-center gap-3 mb-6">
-                                                    <span className="text-sm font-medium text-slate-700">Rating: <span className="text-amber-500 font-bold">{place.rating} ★</span></span>
-                                                </div>
-
-                                                <div className="mt-auto grid grid-cols-2 gap-3">
-                                                    <a href={`tel:${place.phone}`} className="flex items-center justify-center gap-2 border border-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm">
-                                                        Call Store
-                                                    </a>
-                                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.source + " " + place.address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-amber-500 text-white py-2 rounded-lg hover:bg-amber-600 transition-colors font-medium text-sm">
-                                                        Get Directions
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-slate-50 rounded-xl p-8 text-center border-2 border-dashed border-slate-200">
-                                    <div className="max-w-md mx-auto">
-                                        <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">📍</div>
-                                        <h3 className="text-lg font-bold text-slate-800 mb-2">No nearby stores found</h3>
-                                        <p className="text-slate-500 mb-4">We couldn't find any stores in "{location}" matching this product.</p>
-                                        <button
-                                            onClick={() => {
-                                                console.log("Switching to online tab");
-                                                setActiveTab('online');
-                                            }}
-                                            className="text-white bg-black px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-colors"
-                                        >
-                                            Check Online Options &rarr;
-                                        </button>
-                                    </div>
-                                </div>
-                            )
-                        )
-                    }
-
-                    {/* INSTAGRAM RESULTS TAB */}
-                    {!error && activeTab === 'instagram' && (
-                        searchData?.results?.instagram && searchData.results.instagram.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {searchData.results.instagram.map((item) => (
-                                    <div key={item.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow flex flex-col">
-                                        {/* Profile Avatar at Top */}
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="relative">
-                                                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                                    {item.username.charAt(0).toUpperCase()}
-                                                </div>
-                                                {item.type === 'account' && (
-                                                    <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
-                                                        ✓
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <a
-                                                    href={item.profile_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="font-bold text-gray-900 hover:text-purple-600 transition-colors block"
-                                                >
-                                                    @{item.username}
-                                                </a>
-                                                {item.followers > 0 && (
-                                                    <div className="text-xs text-gray-500">
-                                                        {item.followers.toLocaleString()} followers
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Description */}
-                                        <p className="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">{item.caption}</p>
-
-                                        {/* Price if available */}
-                                        {item.price > 0 && (
-                                            <div className="mb-4 text-2xl font-bold text-gray-900">
-                                                ₹{item.price.toLocaleString()}
-                                            </div>
-                                        )}
-
-                                        {/* Action Button */}
-                                        <div className="mt-auto">
-                                            <a
-                                                href={item.post_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 rounded-lg font-medium text-sm text-center hover:from-purple-600 hover:to-pink-600 transition-all block"
-                                            >
-                                                View Profile
-                                            </a>
-                                            {!item.price && (
-                                                <div className="text-center text-xs text-gray-500 mt-2">
-                                                    DM for Price
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-8 text-center border-2 border-dashed border-purple-200">
-                                <div className="max-w-md mx-auto">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">📸</div>
-                                    <h3 className="text-lg font-bold text-gray-800 mb-2">No Instagram sellers found</h3>
-                                    <p className="text-gray-600 mb-4">Try searching for fashion or handmade products popular on Instagram.</p>
-                                </div>
-                            </div>
-                        )
-                    )}
-
-                    {
-                        searchData && (!searchData.results?.online?.length && !searchData.results?.local?.length) && !loading && searched && (
-                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                                <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Search className="text-slate-300" size={32} />
-                                </div>
-                                <h3 className="text-lg font-medium text-slate-900">No results found</h3>
-                                <p className="text-slate-500">Try searching for a simpler term</p>
-                            </div>
-                        )
-                    }
                 </div >
             )}
+        </div >
+    );
+};
+
+export default SearchInterface;
         </div >
     );
 };
