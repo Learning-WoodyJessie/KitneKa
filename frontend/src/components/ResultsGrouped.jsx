@@ -39,6 +39,7 @@ const rankResults = (items) => {
 const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'CATEGORY'
     const [results, setResults] = useState({}); // { "Women's Wear": [items...] }
     const [loading, setLoading] = useState({});
+    const [errors, setErrors] = useState({}); // New error state
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -76,6 +77,7 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
 
         } catch (err) {
             console.error(`Failed to fetch ${category} for ${brand}`, err);
+            setErrors(prev => ({ ...prev, [category]: "Failed to load results." }));
         } finally {
             setLoading(prev => ({ ...prev, [category]: false }));
         }
@@ -109,22 +111,28 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
                 const isLoading = loading[category];
                 const items = results[category];
 
-                // Don't show empty sections if finished loading
-                if (!isLoading && (!items || items.length === 0)) return null;
+                // Don't show empty sections if finished loading and no error
+                if (!isLoading && !errors[category] && (!items || items.length === 0)) return null;
 
                 return (
                     <div key={category} className="space-y-4">
                         <div className="flex items-center justify-between px-6 border-b border-gray-100 pb-2">
                             <h3 className="text-xl font-bold text-gray-800">{category}</h3>
-                            <button
-                                onClick={() => handleViewAll(category)}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                            >
-                                View All <ArrowRight size={14} />
-                            </button>
+                            {!errors[category] && (
+                                <button
+                                    onClick={() => handleViewAll(category)}
+                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                >
+                                    View All <ArrowRight size={14} />
+                                </button>
+                            )}
                         </div>
 
-                        {isLoading ? (
+                        {errors[category] ? (
+                            <div className="px-6 py-8 text-center text-red-500 bg-red-50 rounded-lg mx-6">
+                                <p>{errors[category]}</p>
+                            </div>
+                        ) : isLoading ? (
                             <div className="px-6 flex gap-4 overflow-hidden">
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={i} className="w-48 h-64 bg-gray-100 animate-pulse rounded-lg flex-shrink-0" />
