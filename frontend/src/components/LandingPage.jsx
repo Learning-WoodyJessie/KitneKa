@@ -39,16 +39,6 @@ const LandingPage = () => {
             description: "Track price history across major retailers to buy at the perfect moment."
         },
         {
-            icon: <MapPin className="w-8 h-8 text-purple-600" />,
-            title: "Local Store Discovery",
-            description: "Find the best deals in your neighborhood stores, not just online giants."
-        },
-        {
-            icon: <ShieldCheck className="w-8 h-8 text-green-600" />,
-            title: "AI Authenticity Checks",
-            description: "Our AI verifies seller credibility so you can shop with total confidence."
-        },
-        {
             icon: <Zap className="w-8 h-8 text-amber-500" />,
             title: "Instant Comparison",
             description: "Compare prices from Amazon, Flipkart, Instagram, and local shops in one click."
