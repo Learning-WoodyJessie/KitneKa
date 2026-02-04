@@ -169,70 +169,112 @@ const SearchInterface = ({ initialQuery }) => {
                             <span className="text-xl font-bold text-gray-900 tracking-tight hidden md:block">KitneKa</span>
                         </div>
 
-                        {/* All Categories Menu */}
+                        {/* All Categories Menu Trigger */}
                         <div className="relative" ref={categoryMenuRef}>
                             <button
                                 onClick={() => setShowCategories(!showCategories)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${showCategories ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                             >
-                                <Menu size={18} />
-                                <span className="hidden md:inline">All Categories</span>
-                                <ChevronDown size={16} className={`transition-transform duration-200 ${showCategories ? 'rotate-180' : ''}`} />
+                                <Menu size={20} />
+                                <span className="hidden md:block">All Categories</span>
+                                <ChevronDown size={14} className={`transition-transform duration-200 ${showCategories ? 'rotate-180' : ''}`} />
                             </button>
-
-                            {/* Dropdown */}
-                            {showCategories && (
-                                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="grid grid-cols-1 gap-1">
-                                        {CATEGORIES.map(cat => (
-                                            <button
-                                                key={cat}
-                                                onClick={() => handleCategoryClick(cat)}
-                                                className="text-left px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Search Bar */}
                         <div className="flex-1 max-w-2xl relative group">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                            </div>
-                            <input
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
-                                placeholder="Search for products, brands, or categories..."
-                                className="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none transition-all placeholder-gray-400 font-medium"
-                            />
-                            {query && (
-                                <button
-                                    onClick={() => setQuery('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
-                                >
-                                    <X size={14} />
-                                </button>
-                            )}
+                            <form onSubmit={(e) => handleSearch(e, 'text')} className="relative z-10">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="Search for products, brands and more"
+                                        className="w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm hover:bg-white"
+                                    />
+                                    <Search className="absolute left-4 text-gray-400" size={20} />
+
+                                    {/* Image Search Trigger */}
+                                    <label className="absolute right-3 p-1.5 text-gray-400 hover:text-blue-600 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files?.[0]) handleSearch(null, 'image', e.target.files[0]);
+                                            }}
+                                        />
+                                        <Camera size={20} />
+                                    </label>
+                                </div>
+                            </form>
                         </div>
 
                         {/* User Actions */}
                         <div className="flex items-center gap-3 md:gap-6 flex-shrink-0">
-                            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors">
-                                <User size={20} />
-                                <span className="hidden lg:inline">Sign In</span>
+                            <button className="hidden md:flex flex-col items-center gap-0.5 group">
+                                <User size={20} className="text-gray-600 group-hover:text-blue-600 transition-colors" />
+                                <span className="text-xs font-semibold text-gray-700 group-hover:text-blue-600">Sign In</span>
                             </button>
-                            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors relative">
-                                <Heart size={20} />
-                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                                <span className="hidden lg:inline">Wishlist</span>
+                            <button className="flex flex-col items-center gap-0.5 group relative">
+                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
+                                <Heart size={20} className="text-gray-600 group-hover:text-red-500 transition-colors" />
+                                <span className="text-[10px] font-medium text-gray-500 hidden md:block group-hover:text-red-500">Wishlist</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* SIDE DRAWER: All Categories */}
+            {/* Backdrop */}
+            {showCategories && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-[60] backdrop-blur-sm transition-opacity"
+                    onClick={() => setShowCategories(false)}
+                />
+            )}
+
+            {/* Drawer Panel */}
+            <div className={`fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out ${showCategories ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex flex-col h-full">
+                    {/* Drawer Header */}
+                    <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-lg">
+                            <div className="bg-white/20 p-1.5 rounded">K</div>
+                            KitneKa
+                        </div>
+                        <button
+                            onClick={() => setShowCategories(false)}
+                            className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Categories List */}
+                    <div className="flex-1 overflow-y-auto py-2">
+                        <div className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                            Shop By Category
+                        </div>
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => handleCategoryClick(cat)}
+                                className="w-full text-left px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition-colors flex items-center justify-between group"
+                            >
+                                {cat}
+                                <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-400" />
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Drawer Footer */}
+                    <div className="p-5 border-t border-gray-100 bg-gray-50">
+                        <button className="flex items-center gap-2 text-gray-600 hover:text-black font-medium text-sm">
+                            <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">?</span>
+                            Help & Support
+                        </button>
                     </div>
                 </div>
             </div>
