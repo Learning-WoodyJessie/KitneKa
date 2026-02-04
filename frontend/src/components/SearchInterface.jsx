@@ -33,10 +33,24 @@ const SearchInterface = ({ initialQuery }) => {
     // Trigger search if initialQuery or URL param exists
     useEffect(() => {
         const brandParam = searchParams.get('brand');
+        const categoryParam = searchParams.get('category');
+
         if (brandParam) {
             setBrandContext(brandParam);
             setSearched(true);
-            return; // Skip standard query search if brand context is active
+            return;
+        }
+
+        if (categoryParam) {
+            // "Browsing Mode": Search for category, but keep search box empty
+            setBrandContext(null); // Clear brand context
+            setSearched(true); // Switch to results view
+            // We need to trigger the search fetch manually since we aren't setting 'query' state
+            // and thus not triggering any effect dependent on 'query'.
+            // However, handleSearch usually uses 'query' state. 
+            // We will modify handleSearch or call it with override.
+            handleSearch(null, 'text', null, '', categoryParam);
+            return;
         }
 
         const targetQuery = initialQuery || searchParams.get('q');
@@ -255,6 +269,14 @@ const SearchInterface = ({ initialQuery }) => {
                         {/* CASE 2: Standard Search Results */}
                         {!error && !brandContext && searchData?.results?.online && (
                             <div className="px-6 pb-24 space-y-12">
+                                {/* Category Browse Header */}
+                                {searchParams.get('category') && (
+                                    <div className="flex items-center gap-2 mb-[-2rem]">
+                                        <span className="text-gray-500">Browsing:</span>
+                                        <h2 className="text-2xl font-bold text-gray-900">{searchParams.get('category')}</h2>
+                                    </div>
+                                )}
+
                                 {/* ONLINE RESULTS GRID + SIDEBAR */}
                                 {searchData.results.online.length > 0 ? (
                                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
