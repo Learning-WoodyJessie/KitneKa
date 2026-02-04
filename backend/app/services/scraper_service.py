@@ -41,9 +41,11 @@ class RealScraperService:
             valid_count = 0
             
             for item in shopping_results:
-                url = item.get("link")
+                # Prioritize direct product link (often in 'product_link' or 'link')
+                # We check 'product_link' first as 'link' defaults to Google Shopping Viewer for aggregated items
+                url = item.get("product_link")
                 if not url:
-                    url = item.get("product_link")
+                    url = item.get("link")
                 
                 if not url:
                     continue
