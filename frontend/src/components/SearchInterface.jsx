@@ -255,12 +255,79 @@ const SearchInterface = ({ initialQuery }) => {
                             <Loader2 className="h-10 w-10 text-blue-600 animate-spin mb-4" />
                             <p className="text-gray-500 font-medium animate-pulse">Searching best prices for you...</p>
                         </div>
-                    ) : (
+                    ) : brandContext ? (
                         <ResultsGrouped
-                            data={searchData}
-                            brandContext={brandContext}
-                            onBrandChange={setBrandContext}
+                            context={brandContext}
+                            type="BRAND"
                         />
+                    ) : (
+                        /* General Search Results Grid */
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Search Results {query && `for "${query}"`}
+                                </h2>
+                                <span className="text-sm text-gray-500">
+                                    {searchData?.results?.online?.length || 0} items found
+                                </span>
+                            </div>
+
+                            {searchData?.results?.online?.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    {searchData.results.online.map((product) => (
+                                        <div
+                                            key={product.id || Math.random()}
+                                            onClick={() => {
+                                                const productId = product.id || `mock-${Date.now()}`;
+                                                // Ensure standard data structure
+                                                const productToSave = {
+                                                    ...product,
+                                                    id: productId,
+                                                    competitors: product.competitors || []
+                                                };
+                                                localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
+                                                window.open(`/#/product/${productId}`, '_blank');
+                                            }}
+                                            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group"
+                                        >
+                                            <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
+                                                <img
+                                                    src={product.image}
+                                                    alt={product.title}
+                                                    className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                                    loading="lazy"
+                                                />
+                                                {product.rating > 4 && (
+                                                    <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                                                        ★ {product.rating}
+                                                    </div>
+                                                )}
+                                                {product.source && (
+                                                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                        {product.source}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                                                {product.title}
+                                            </h3>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-lg font-bold text-gray-900">₹{product.price?.toLocaleString()}</span>
+                                                {product.original_price && product.original_price > product.price && (
+                                                    <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-900">No results found</h3>
+                                    <p className="text-gray-500">Try checking your spelling or using different keywords.</p>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             ) : (
