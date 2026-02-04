@@ -87,7 +87,7 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
         // Same logic as SearchInterface - simplified here, ideally shared utility
         const productId = product.id;
         localStorage.setItem(`product_shared_${productId}`, JSON.stringify(product));
-        window.open(`/product/${productId}`, '_blank');
+        window.open(`/#/product/${productId}`, '_blank');
     };
 
     const handleViewAll = (category) => {

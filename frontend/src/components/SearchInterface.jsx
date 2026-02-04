@@ -182,7 +182,7 @@ const SearchInterface = ({ initialQuery }) => {
         };
 
         localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productWithId));
-        window.open(`/product/${productId}`, '_blank');
+        window.open(`/#/product/${productId}`, '_blank');
     };
 
     return (
