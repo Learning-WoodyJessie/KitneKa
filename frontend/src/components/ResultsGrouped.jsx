@@ -63,7 +63,7 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
         try {
             const query = `${brand} ${category}`;
             const response = await axios.get(`${API_BASE}/discovery/search`, {
-                params: { q: query, location: 'Mumbai' } // Default location
+                params: { q: query }
             });
 
             const rawOnline = response.data?.results?.online || [];
