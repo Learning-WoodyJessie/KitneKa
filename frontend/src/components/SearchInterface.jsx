@@ -54,6 +54,7 @@ const SearchInterface = ({ initialQuery }) => {
         }
 
         if (categoryParam) {
+            setQuery(categoryParam);
             setBrandContext(null);
             setSearched(true);
             handleSearch(null, 'text', null, '', categoryParam);
@@ -92,6 +93,8 @@ const SearchInterface = ({ initialQuery }) => {
 
         if (mode === 'text' && !overrideQuery) {
             setActiveTab('online');
+            // Update URL to match search if not overridden (optional, but good for history)
+            navigate(`/search?q=${encodeURIComponent(q)}`, { replace: true });
         }
 
         try {
@@ -135,9 +138,8 @@ const SearchInterface = ({ initialQuery }) => {
     };
 
     const handleCategoryClick = (cat) => {
-        setQuery(cat);
-        handleSearch(null, 'text', null, '', cat);
         setShowCategories(false);
+        navigate(`/search?category=${encodeURIComponent(cat)}`);
     };
 
     const handleBrandClick = (brandName) => {
