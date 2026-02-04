@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, Share2, Star, ShoppingBag, Truck, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Share2, Star, ShoppingBag, Truck, CheckCircle, AlertCircle, ExternalLink, Heart, ThumbsUp, ThumbsDown } from 'lucide-react';
 import PriceHistoryChart from './PriceHistoryChart';
 
 const ProductPage = () => {
@@ -9,6 +9,9 @@ const ProductPage = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Offers Tab State
+    const [activeOfferTab, setActiveOfferTab] = useState('popular');
 
     const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -94,8 +97,24 @@ const ProductPage = () => {
         );
     }
 
+    // LIST OF POPULAR RETAILERS (Normalized)
+    const POPULAR_RETAILERS = [
+        'amazon', 'flipkart', 'myntra', 'ikea', 'h&m', 'zara', 'nike', 'adidas',
+        'uniqlo', 'tata cliq', 'nykaa', 'ajio', 'michael kors'
+    ];
+
+    // Determine if seller is popular
+    const isPopularStore = (sellerName) => {
+        const name = sellerName.toLowerCase();
+        // Check list
+        if (POPULAR_RETAILERS.some(r => name.includes(r))) return true;
+        // Check if it matches product brand (Official Site)
+        if (product.brand && name.includes(product.brand.toLowerCase())) return true;
+        return false;
+    };
+
     // Prepare Offer Data
-    const offers = (product.competitors || product.competitor_prices || []).map(comp => ({
+    const allOffers = (product.competitors || product.competitor_prices || []).map(comp => ({
         seller: comp.name || comp.source,
         price: comp.price || product.price,
         shipping: comp.shipping || 0,
@@ -105,8 +124,8 @@ const ProductPage = () => {
     }));
 
     // Add current product as an offer if not already in list
-    if (!offers.find(o => o.seller === product.source)) {
-        offers.unshift({
+    if (!allOffers.find(o => o.seller === product.source)) {
+        allOffers.unshift({
             seller: product.source || "Featured Store",
             price: product.price,
             shipping: 0,
@@ -118,8 +137,20 @@ const ProductPage = () => {
     }
 
     // Sort by Total Price
-    offers.sort((a, b) => (a.price + a.shipping) - (b.price + b.shipping));
-    const bestOffer = offers[0];
+    allOffers.sort((a, b) => (a.price + a.shipping) - (b.price + b.shipping));
+    const bestOffer = allOffers[0];
+
+    // Split Offers
+    const popularOffers = allOffers.filter(o => isPopularStore(o.seller));
+    const otherOffers = allOffers.filter(o => !isPopularStore(o.seller));
+
+    // Fallback: If no popular offers found, put top 3 best price offers in popular
+    if (popularOffers.length === 0 && otherOffers.length > 0) {
+        popularOffers.push(...otherOffers.slice(0, 3));
+        otherOffers.splice(0, 3);
+    }
+
+    const currentOffers = activeOfferTab === 'popular' ? popularOffers : otherOffers;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 font-sans">
@@ -156,9 +187,24 @@ const ProductPage = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* New Actions Row */}
+                        <div className="flex items-center justify-center gap-4">
+                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-red-200 hover:text-red-500 transition-colors shadow-sm">
+                                <Heart size={18} />
+                                <span className="text-sm font-medium">Wishlist</span>
+                            </button>
+                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-blue-200 hover:text-blue-500 transition-colors shadow-sm">
+                                <ThumbsUp size={18} />
+                                <span className="text-sm font-medium">Like</span>
+                            </button>
+                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:text-gray-600 transition-colors shadow-sm">
+                                <ThumbsDown size={18} />
+                            </button>
+                        </div>
                     </div>
 
-                    {/* RIGHT: DETAILS & CHART (Col span 7) */}
+                    {/* RIGHT: DETAILS (Col span 7) */}
                     <div className="lg:col-span-7 space-y-8">
                         {/* Title & Stats */}
                         <div>
@@ -188,7 +234,7 @@ const ProductPage = () => {
                             </div>
                         </div>
 
-                        {/* Price & CTA */}
+                        {/* Best Price Card */}
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
                             <div>
                                 <p className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Best Market Price</p>
@@ -220,65 +266,88 @@ const ProductPage = () => {
                                 )}
                             </button>
                         </div>
-
-                        {/* Chart Component */}
-                        <PriceHistoryChart currentPrice={bestOffer.price} />
-
                     </div>
                 </div>
 
-                {/* SECTION: OFFERS TABLE */}
+                {/* SECTION: OFFERS TABS */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-                        <h3 className="text-lg font-bold text-gray-900">Available from {offers.length} Sellers</h3>
+                    {/* Tabs Header */}
+                    <div className="flex border-b border-gray-100">
+                        <button
+                            onClick={() => setActiveOfferTab('popular')}
+                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'popular' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Top Retailers ({popularOffers.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveOfferTab('others')}
+                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'others' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Other Options ({otherOffers.length})
+                        </button>
                     </div>
+
+                    {/* Table Content */}
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                                    <th className="px-6 py-4">Seller</th>
-                                    <th className="px-6 py-4">Price</th>
-                                    <th className="px-6 py-4">Shipping</th>
-                                    <th className="px-6 py-4 hidden sm:table-cell">Delivery</th>
-                                    <th className="px-6 py-4"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {offers.map((offer, idx) => (
-                                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-gray-900">{offer.seller}</div>
-                                            {idx === 0 && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">BEST PRICE</span>}
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">
-                                            ₹{offer.price.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {offer.shipping === 0 ? <span className="text-green-600 font-bold text-xs uppercase">Free</span> : `+₹${offer.shipping}`}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
-                                            <div className="flex items-center gap-1.5">
-                                                <Truck size={14} /> {offer.eta}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={(e) => handleBuyNow(e, offer.url)}
-                                                className="inline-flex items-center gap-1 text-blue-600 font-bold text-sm hover:underline disabled:opacity-50"
-                                                disabled={resolvingUrl === offer.url}
-                                            >
-                                                {resolvingUrl === offer.url ? 'Loading...' : <>Buy Now <ExternalLink size={14} /></>}
-                                            </button>
-                                        </td>
+                        {currentOffers.length > 0 ? (
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                                        <th className="px-6 py-4">Seller</th>
+                                        <th className="px-6 py-4">Price</th>
+                                        <th className="px-6 py-4">Shipping</th>
+                                        <th className="px-6 py-4 hidden sm:table-cell">Delivery</th>
+                                        <th className="px-6 py-4"></th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {currentOffers.map((offer, idx) => (
+                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-gray-900">{offer.seller}</div>
+                                                {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">BEST DEAL</span>}
+                                                {isPopularStore(offer.seller) && <span className="ml-2 text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">VERIFIED</span>}
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-gray-900">
+                                                ₹{offer.price.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">
+                                                {offer.shipping === 0 ? <span className="text-green-600 font-bold text-xs uppercase">Free</span> : `+₹${offer.shipping}`}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Truck size={14} /> {offer.eta}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={(e) => handleBuyNow(e, offer.url)}
+                                                    className="inline-flex items-center gap-1 text-blue-600 font-bold text-sm hover:underline disabled:opacity-50"
+                                                    disabled={resolvingUrl === offer.url}
+                                                >
+                                                    {resolvingUrl === offer.url ? 'Loading...' : <>Buy Now <ExternalLink size={14} /></>}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="p-8 text-center text-gray-500">
+                                No offers found in this category.
+                            </div>
+                        )}
                     </div>
+                </div>
+
+                {/* PRICE HISTORY CHART (Moved Below Tabs) */}
+                <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Price History</h3>
+                    <PriceHistoryChart currentPrice={bestOffer.price} />
                 </div>
 
                 {/* SECTION: SIMILAR PRODUCTS */}
-                <div className="pt-8">
+                <div className="pt-8 border-t border-gray-100">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6 px-1">Similar Products</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {Array.from({ length: 5 }).map((_, i) => (
