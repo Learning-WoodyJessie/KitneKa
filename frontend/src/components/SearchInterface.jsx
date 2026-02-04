@@ -328,7 +328,8 @@ const SearchInterface = ({ initialQuery }) => {
                                                     competitors: product.competitors || []
                                                 };
                                                 localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
-                                                window.open(`/#/product/${productId}`, '_blank');
+                                                // Navigate in same tab
+                                                navigate(`/product/${productId}`);
                                             }}
                                             className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group"
                                         >

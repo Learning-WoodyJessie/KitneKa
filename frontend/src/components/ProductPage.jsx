@@ -228,10 +228,13 @@ const ProductPage = () => {
             {/* Nav */}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link to="/search" className="flex items-center text-gray-500 hover:text-black transition-colors gap-1">
+                    <button
+                        onClick={() => window.history.length > 1 ? window.history.back() : window.location.href = '/#/search'}
+                        className="flex items-center text-gray-500 hover:text-black transition-colors gap-1"
+                    >
                         <ChevronLeft size={20} />
                         <span className="text-sm font-medium">Back</span>
-                    </Link>
+                    </button>
                     <div className="flex items-center gap-4">
                         <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
                             <Share2 size={20} />
