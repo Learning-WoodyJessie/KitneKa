@@ -1,29 +1,42 @@
 import React from 'react';
+import { Shirt, Footprints, Sparkles, Gem, Watch, Activity, Baby, Glasses, User } from 'lucide-react';
 
 const CATEGORIES = [
-    "Women's Wear",
-    "Men's Wear",
-    "Kids Wear",
-    "Beauty",
-    "Footwear",
-    "Sportswear",
-    "Jewellery",
-    "Accessories"
+    { id: 'cat_1', name: "Women's Wear", icon: <User />, color: 'bg-pink-100 text-pink-600' },
+    { id: 'cat_2', name: "Men's Wear", icon: <Shirt />, color: 'bg-blue-100 text-blue-600' },
+    { id: 'cat_3', name: "Kids Wear", icon: <Baby />, color: 'bg-yellow-100 text-yellow-600' }, // Fallback logic if Baby not found: User
+    { id: 'cat_4', name: "Footwear", icon: <Footprints />, color: 'bg-orange-100 text-orange-600' },
+    { id: 'cat_5', name: "Beauty", icon: <Sparkles />, color: 'bg-purple-100 text-purple-600' },
+    { id: 'cat_6', name: "Jewellery", icon: <Gem />, color: 'bg-indigo-100 text-indigo-600' },
+    { id: 'cat_7', name: "Accessories", icon: <Watch />, color: 'bg-gray-100 text-gray-600' },
+    { id: 'cat_8', name: "Sportswear", icon: <Activity />, color: 'bg-green-100 text-green-600' },
 ];
 
-const CategoryLabels = ({ onCategoryClick }) => {
+const CategoryLabels = () => {
     return (
-        <div className="py-2 px-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Browse Categories</h2>
-            <div className="flex flex-wrap gap-3">
+        <div className="py-6 space-y-4">
+            <div className="flex items-center justify-between px-6">
+                <h2 className="text-xl font-bold text-gray-900">Browse Categories</h2>
+            </div>
+            <div className="flex overflow-x-auto pb-4 px-6 gap-4 no-scrollbar snap-x">
                 {CATEGORIES.map((cat) => (
-                    <button
-                        key={cat}
-                        onClick={() => onCategoryClick(cat)}
-                        className="px-5 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:text-black hover:border-gray-300 transition-all active:scale-95"
+                    <div
+                        key={cat.id}
+                        onClick={() => window.open(`/#/search?q=${encodeURIComponent(cat.name)}`, '_blank')}
+                        className="flex-shrink-0 cursor-pointer group snap-start"
                     >
-                        {cat}
-                    </button>
+                        <div className={`w-24 h-24 rounded-full border border-gray-200 flex items-center justify-center p-4 shadow-sm group-hover:shadow-md transition-all relative ${cat.color} group-hover:bg-white`}>
+                            {/* Icon Wrapper */}
+                            <div className="transform scale-150 group-hover:scale-125 transition-transform duration-300">
+                                {cat.icon || <User />}
+                            </div>
+                        </div>
+                        <div className="text-center mt-2">
+                            <p className="text-sm font-medium text-gray-900 truncate w-24 group-hover:text-blue-600">
+                                {cat.name}
+                            </p>
+                        </div>
+                    </div>
                 ))}
             </div>
         </div>
