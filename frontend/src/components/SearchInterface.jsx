@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
 import CategoryLabels from './CategoryLabels';
 import ResultsGrouped from './ResultsGrouped';
@@ -10,18 +10,19 @@ const SearchInterface = ({ initialQuery }) => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [query, setQuery] = useState(initialQuery || searchParams.get('q') || '');
-    const [location, setLocation] = useState('');
+    // Location removed as per request
     const [searchData, setSearchData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [error, setError] = useState(null);
-    const [visibleCount, setVisibleCount] = useState(5);
     const [activeTab, setActiveTab] = useState('online');
-    const [localSort, setLocalSort] = useState('distance');
-    const [selectedStores, setSelectedStores] = useState([]);
 
     // New State for Brand View
     const [brandContext, setBrandContext] = useState(null);
+
+    // Categories Menu State
+    const [showCategories, setShowCategories] = useState(false);
+    const categoryMenuRef = useRef(null);
 
     // Image/URL search states
     const [showImageModal, setShowImageModal] = useState(false);
@@ -29,6 +30,17 @@ const SearchInterface = ({ initialQuery }) => {
 
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
+
+    // Close categories menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target)) {
+                setShowCategories(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Trigger search if initialQuery or URL param exists
     useEffect(() => {
@@ -42,13 +54,8 @@ const SearchInterface = ({ initialQuery }) => {
         }
 
         if (categoryParam) {
-            // "Browsing Mode": Search for category, but keep search box empty
-            setBrandContext(null); // Clear brand context
-            setSearched(true); // Switch to results view
-            // We need to trigger the search fetch manually since we aren't setting 'query' state
-            // and thus not triggering any effect dependent on 'query'.
-            // However, handleSearch usually uses 'query' state. 
-            // We will modify handleSearch or call it with override.
+            setBrandContext(null);
+            setSearched(true);
             handleSearch(null, 'text', null, '', categoryParam);
             return;
         }
@@ -60,25 +67,11 @@ const SearchInterface = ({ initialQuery }) => {
         }
     }, [initialQuery, searchParams]);
 
-    // Major Indian cities for dropdown
-    const INDIAN_CITIES = [
-        "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai",
-        "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat"
+    // Categories list for the dropdown
+    const CATEGORIES = [
+        'Clothing', 'Footwear', 'Handbags', 'Watches', 'Jewellery', 'Beauty',
+        'Electronics', 'Home Decor', 'Kitchen', 'Sports', 'Toys', 'Books'
     ];
-
-    // Helper to get sorted local results
-    const getSortedLocalResults = () => {
-        if (!searchData?.results?.local) return [];
-        return [...searchData.results.local].sort((a, b) => {
-            if (localSort === 'distance') {
-                const distA = parseFloat(a.distance) || 0;
-                const distB = parseFloat(b.distance) || 0;
-                return distA - distB;
-            } else {
-                return a.price - b.price;
-            }
-        });
-    };
 
     const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null) => {
         if (e) e.preventDefault();
@@ -95,6 +88,7 @@ const SearchInterface = ({ initialQuery }) => {
         setSearched(true);
         setSearchData(null);
         setBrandContext(null); // Reset brand context on manual search
+        setShowCategories(false); // Close menu if open
 
         if (mode === 'text' && !overrideQuery) {
             setActiveTab('online');
@@ -102,267 +96,182 @@ const SearchInterface = ({ initialQuery }) => {
 
         try {
             let response;
-            const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
+            // Removed location parameter from API call
 
             if (mode === 'text') {
                 response = await axios.get(
-                    `${API_BASE}/discovery/search?q=${encodeURIComponent(q)}${locationParam}`
+                    `${API_BASE}/discovery/search?q=${encodeURIComponent(q)}`
                 );
             } else if (mode === 'image') {
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('location', location || 'Mumbai');
+                formData.append('location', 'Mumbai'); // Default if needed by backend, or remove if backend allows
 
                 response = await axios.post(
                     `${API_BASE}/discovery/search-by-image`,
                     formData,
-                    {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    }
+                    { headers: { 'Content-Type': 'multipart/form-data' } }
                 );
             } else if (mode === 'url') {
                 response = await axios.post(
                     `${API_BASE}/discovery/search-by-url`,
                     null,
-                    {
-                        params: {
-                            url: url,
-                            location: location || 'Mumbai'
-                        }
-                    }
+                    { params: { url: url, location: 'Mumbai' } }
                 );
             }
 
-            if (!response.data || (!response.data.results?.online?.length && !response.data.results?.local?.length && !response.data.results?.instagram?.length)) {
-                setError("No results found. Try a different query, image, or URL.");
+            if (!response.data || (!response.data.results?.online?.length && !response.data.results?.local?.length)) {
+                setError("No results found. Try a different query.");
                 setSearchData(null);
             } else {
                 setSearchData(response.data);
             }
         } catch (err) {
             console.error("Search failed:", err);
-            setError(`Search failed: ${err.message || "Unknown Error"}. Check console.`);
+            setError(`Search failed: ${err.message || "Unknown Error"}.`);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCategoryLabelClick = (catQuery) => {
-        setQuery(catQuery);
-        handleSearch(null, 'text', null, '', catQuery);
+    const handleCategoryClick = (cat) => {
+        setQuery(cat);
+        handleSearch(null, 'text', null, '', cat);
+        setShowCategories(false);
     };
 
     const handleBrandClick = (brandName) => {
         setBrandContext(brandName);
-        setSearched(true); // Switch to results view mode
-        setSearchData(null); // Clear previous search data
+        setSearched(true);
+        setSearchData(null);
         setError(null);
-    };
-
-    // Navigate to Product Page (New Tab)
-    const handleProductClick = (product) => {
-        // Generate real competitors from the current search results
-        const otherResults = searchData?.results?.online
-            ?.filter(p => p.id !== product.id)
-            .map(p => ({
-                name: p.source,
-                price: p.price,
-                url: p.url, // Ensure the real URL is passed
-                source: p.source
-            })) || [];
-
-        const competitors = otherResults.length > 0 ? otherResults : (product.competitors || []);
-        const productId = product.id || `mock-${Date.now()}`;
-
-        const productWithId = {
-            ...product,
-            id: productId,
-            url: product.url || product.link || `https://www.google.com/search?q=${encodeURIComponent(product.title || product.source)}`,
-            competitors: competitors
-        };
-
-        localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productWithId));
-        window.open(`/#/product/${productId}`, '_blank');
     };
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
-            {/* Hero / Search Section */}
-            <div className={`transition-all duration-700 ease-out py-8 border-b border-gray-100 bg-white sticky top-0 z-50 shadow-sm`}>
-                <div className="max-w-5xl mx-auto px-6">
-                    <form onSubmit={(e) => handleSearch(e, 'text')} className="group relative max-w-4xl mx-auto">
-                        <div className="flex flex-col md:flex-row shadow-sm rounded-xl overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
-                            <div className="relative md:w-48 bg-gray-50 border-r border-gray-200">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <MapPin className="h-4 w-4 text-gray-500" />
-                                </div>
-                                <select
-                                    className="block w-full pl-9 pr-8 py-3 bg-transparent text-sm font-medium text-gray-700 focus:outline-none cursor-pointer appearance-none h-full"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                >
-                                    <option value="">Select State</option>
-                                    {INDIAN_CITIES.map(city => (
-                                        <option key={city} value={city}>{city}</option>
-                                    ))}
-                                </select>
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <ChevronDown className="h-3 w-3 text-gray-400" />
-                                </div>
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 py-3">
+                    <div className="flex items-center gap-4 md:gap-8">
+                        {/* Logo */}
+                        <div
+                            className="flex items-center gap-2 cursor-pointer flex-shrink-0"
+                            onClick={() => {
+                                setQuery('');
+                                setSearched(false);
+                                setBrandContext(null);
+                                navigate('/search');
+                            }}
+                        >
+                            <div className="bg-blue-600 p-2 rounded-lg">
+                                <Search className="text-white w-5 h-5" />
                             </div>
+                            <span className="text-xl font-bold text-gray-900 tracking-tight hidden md:block">KitneKa</span>
+                        </div>
 
-                            {/* Search Input */}
-                            <div className="relative flex-grow bg-white">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Search className="h-5 w-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    className="block w-full pl-12 pr-4 py-3 bg-transparent text-base text-gray-900 placeholder-gray-400 focus:outline-none h-full"
-                                    placeholder="Search for products, brands, or categories..."
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Search Button */}
+                        {/* All Categories Menu */}
+                        <div className="relative" ref={categoryMenuRef}>
                             <button
-                                type="submit"
-                                className="bg-blue-600 text-white px-8 py-3 font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                                disabled={loading}
+                                onClick={() => setShowCategories(!showCategories)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${showCategories ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
                             >
-                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Search'}
+                                <Menu size={18} />
+                                <span className="hidden md:inline">All Categories</span>
+                                <ChevronDown size={16} className={`transition-transform duration-200 ${showCategories ? 'rotate-180' : ''}`} />
                             </button>
-                        </div >
-                    </form >
-                </div >
-            </div >
 
-            {/* LANDING SECTION: Featured Brands + Categories */}
-            {
-                !searched && (
-                    <div className="max-w-7xl mx-auto space-y-6 mt-8">
-                        <FeaturedBrands onBrandClick={handleBrandClick} />
-                        <CategoryLabels onCategoryClick={handleCategoryLabelClick} />
-                    </div>
-                )
-            }
-
-            {/* RESULTS SECTION */}
-            {
-                searched && (
-                    <div className="max-w-7xl mx-auto pt-8">
-                        {/* Error Message */}
-                        {error && (
-                            <div className="text-center py-12 px-6">
-                                <div className="inline-block bg-red-50 text-red-600 px-6 py-4 rounded-lg border border-red-100">
-                                    <p className="font-medium">{error}</p>
+                            {/* Dropdown */}
+                            {showCategories && (
+                                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {CATEGORIES.map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => handleCategoryClick(cat)}
+                                                className="text-left px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
+                            )}
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="flex-1 max-w-2xl relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                             </div>
-                        )}
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
+                                placeholder="Search for products, brands, or categories..."
+                                className="block w-full pl-10 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none transition-all placeholder-gray-400 font-medium"
+                            />
+                            {query && (
+                                <button
+                                    onClick={() => setQuery('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
 
-                        {/* CASE 1: Brand Grouped View */}
-                        {!error && brandContext && (
-                            <ResultsGrouped context={brandContext} type="BRAND" />
-                        )}
+                        {/* User Actions */}
+                        <div className="flex items-center gap-3 md:gap-6 flex-shrink-0">
+                            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors">
+                                <User size={20} />
+                                <span className="hidden lg:inline">Sign In</span>
+                            </button>
+                            <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors relative">
+                                <Heart size={20} />
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                                <span className="hidden lg:inline">Wishlist</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        {/* CASE 2: Standard Search Results */}
-                        {!error && !brandContext && searchData?.results?.online && (
-                            <div className="px-6 pb-24 space-y-12">
-                                {/* Category Browse Header */}
-                                {searchParams.get('category') && (
-                                    <div className="flex items-center gap-2 mb-[-2rem]">
-                                        <span className="text-gray-500">Browsing:</span>
-                                        <h2 className="text-2xl font-bold text-gray-900">{searchParams.get('category')}</h2>
-                                    </div>
-                                )}
+            {/* Error Message */}
+            {error && (
+                <div className="max-w-4xl mx-auto mt-6 px-4">
+                    <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl flex items-center gap-3">
+                        <X size={20} />
+                        {error}
+                    </div>
+                </div>
+            )}
 
-                                {/* ONLINE RESULTS GRID + SIDEBAR */}
-                                {searchData.results.online.length > 0 ? (
-                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                                        {/* SIDEBAR FILTERS (Existing) */}
-                                        <div className="hidden lg:block space-y-8">
-                                            <div>
-                                                <h3 className="font-bold text-sm tracking-wide text-black mb-4 uppercase">Stores</h3>
-                                                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                                                    {Array.from(new Set(searchData.results.online.map(p => p.source))).sort().map(store => (
-                                                        <label key={store} className="flex items-center gap-3 cursor-pointer group">
-                                                            <div className="relative flex items-center">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    className="peer h-4 w-4 border-2 border-gray-300 rounded-sm checked:bg-black checked:border-black transition-all appearance-none"
-                                                                    checked={selectedStores.includes(store)}
-                                                                    onChange={(e) => {
-                                                                        if (e.target.checked) {
-                                                                            setSelectedStores([...selectedStores, store]);
-                                                                        } else {
-                                                                            setSelectedStores(selectedStores.filter(s => s !== store));
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                <Check size={10} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
-                                                            </div>
-                                                            <span className={`text-sm transition-colors ${selectedStores.includes(store) ? 'text-black font-medium' : 'text-gray-500 group-hover:text-black'}`}>
-                                                                {store}
-                                                            </span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* RESULTS GRID */}
-                                        <div className="lg:col-span-3">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-10">
-                                                {searchData.results.online
-                                                    .filter(p => selectedStores.length === 0 || selectedStores.includes(p.source))
-                                                    .slice(0, visibleCount)
-                                                    .map((product, idx) => (
-                                                        <div key={product.id} className="group cursor-pointer" onClick={() => handleProductClick(product)}>
-                                                            <div className="relative aspect-[4/3] bg-gray-50 rounded-lg overflow-hidden mb-5 border border-gray-100">
-                                                                {idx === 0 && selectedStores.length === 0 && <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full z-10 tracking-wider">BEST PRICE</div>}
-                                                                <img src={product.image} alt={product.title} className="w-full h-full object-contain p-8 mix-blend-multiply transition-transform duration-500 group-hover:scale-105" />
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <div className="flex justify-between items-start">
-                                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{product.source}</span>
-                                                                    <span className="text-lg font-bold text-black">₹{product.price.toLocaleString()}</span>
-                                                                </div>
-                                                                <h3 className="text-base text-black font-medium leading-snug group-hover:underline decoration-1 underline-offset-4 line-clamp-2">
-                                                                    {product.title}
-                                                                </h3>
-
-                                                                {/* Comparison Link */}
-                                                                <button className="text-sm text-blue-600 hover:underline mt-1 font-medium">Compare Prices &rarr;</button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                            </div>
-
-                                            {visibleCount < searchData.results.online.length && (
-                                                <div className="text-center pt-12">
-                                                    <button
-                                                        onClick={() => setVisibleCount(prev => prev + 6)}
-                                                        className="text-sm font-medium text-gray-500 hover:text-black border-b border-gray-300 hover:border-black transition-all pb-1"
-                                                    >
-                                                        LOAD MORE RESULTS
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-20 text-slate-500">No online results found.</div>
-                                )}
-                            </div>
-                        )}
-                    </div >
-                )
-            }
-        </div >
+            {/* MAIN CONTENT Area */}
+            {searched ? (
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <Loader2 className="h-10 w-10 text-blue-600 animate-spin mb-4" />
+                            <p className="text-gray-500 font-medium animate-pulse">Searching best prices for you...</p>
+                        </div>
+                    ) : (
+                        <ResultsGrouped
+                            data={searchData}
+                            brandContext={brandContext}
+                            onBrandChange={setBrandContext}
+                        />
+                    )}
+                </div>
+            ) : (
+                /* LANDING STATE: Featured Brands + Categories Cards */
+                <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+                    <FeaturedBrands onBrandClick={handleBrandClick} />
+                    <CategoryLabels onCategoryClick={handleCategoryClick} />
+                </div>
+            )}
+        </div>
     );
 };
 
 export default SearchInterface;
-

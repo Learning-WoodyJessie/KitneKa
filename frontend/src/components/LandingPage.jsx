@@ -70,7 +70,19 @@ const LandingPage = () => {
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
                 </div>
 
-                <div className="container mx-auto px-6 relative z-10 pt-20">
+                <div className="container mx-auto px-6 relative z-10 pt-6 flex justify-end">
+                    <button className="text-white font-medium hover:text-blue-200 transition-colors">
+                        Sign In
+                    </button>
+                </div>
+
+                <div className="container mx-auto px-6 relative z-10 pt-6 flex justify-end">
+                    <button className="text-white font-medium hover:text-blue-200 transition-colors">
+                        Sign In
+                    </button>
+                </div>
+
+                <div className="container mx-auto px-6 relative z-10 pt-10">
                     <div className="max-w-4xl mx-auto text-center text-white">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
