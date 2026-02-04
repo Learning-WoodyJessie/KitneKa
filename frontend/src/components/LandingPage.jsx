@@ -70,13 +70,7 @@ const LandingPage = () => {
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
                 </div>
 
-                <div className="container mx-auto px-6 relative z-10 pt-6 flex justify-end">
-                    <button className="text-white font-medium hover:text-blue-200 transition-colors">
-                        Sign In
-                    </button>
-                </div>
-
-                <div className="container mx-auto px-6 relative z-10 pt-6 flex justify-end">
+                <div className="absolute top-0 right-0 p-8 z-20">
                     <button className="text-white font-medium hover:text-blue-200 transition-colors">
                         Sign In
                     </button>
