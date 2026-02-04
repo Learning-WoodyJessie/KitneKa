@@ -133,10 +133,8 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
                                 <p>{errors[category]}</p>
                             </div>
                         ) : isLoading ? (
-                            <div className="px-6 flex gap-4 overflow-hidden">
-                                {[1, 2, 3, 4].map(i => (
-                                    <div key={i} className="w-48 h-64 bg-gray-100 animate-pulse rounded-lg flex-shrink-0" />
-                                ))}
+                            <div className="px-6 py-12 flex items-center justify-center bg-gray-50 rounded-lg mx-6">
+                                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                             </div>
                         ) : (
                             <div className="flex overflow-x-auto gap-4 px-6 pb-4 snap-x no-scrollbar">
