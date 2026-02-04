@@ -23,7 +23,7 @@ services:
     region: singapore
     rootDir: frontend
     buildCommand: "npm install && npm run build"
-    startCommand: "npx serve -s dist -l $PORT"
+    startCommand: "node server.js"
     envVars:
       - key: VITE_API_URL
         value: https://kitneka-backend.onrender.com # Note: Render might append a random suffix to the name. Check dashboard.
