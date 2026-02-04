@@ -13,7 +13,14 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // Handle SPA routing: return index.html for any unknown route
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    const indexPath = path.join(__dirname, 'dist', 'index.html');
+    console.log(`Serving request: ${req.url} -> ${indexPath}`);
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error("Error sending index.html:", err);
+            res.status(500).send("Error loading application.");
+        }
+    });
 });
 
 app.listen(port, () => {
