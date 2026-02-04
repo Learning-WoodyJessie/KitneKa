@@ -112,6 +112,35 @@ class RealScraperService:
         except:
             return url
 
+    def _clean_tracking_params(self, url: str) -> str:
+        """
+        Removes tracking parameters (srsltid, gclid, etc.) that often trigger WAF/Bot detection.
+        """
+        if "?" not in url:
+            return url
+        
+        try:
+            # List of params to strip
+            bad_params = ['srsltid', 'gclid', 'fbclid', 'dclid', 'msclkid']
+            
+            # Simple regex remove for each param
+            cleaned_url = url
+            for param in bad_params:
+                # Remove param at start of query string (?param=val)
+                cleaned_url = re.sub(f'[?&]{param}=[^&]*', '', cleaned_url)
+            
+            # Fix up query string separators if we removed the first param but kept others
+            if '?' not in cleaned_url and '&' in cleaned_url:
+                cleaned_url = cleaned_url.replace('&', '?', 1)
+                
+            # Remove trailing ? or &
+            if cleaned_url.endswith('?') or cleaned_url.endswith('&'):
+                cleaned_url = cleaned_url[:-1]
+                
+            return cleaned_url
+        except:
+            return url
+
     async def search_playwright(self, query: str):
         # ... (Implementation kept as fallback)
         pass 
@@ -407,14 +436,14 @@ class RealScraperService:
                     href = link.get('href')
                     if href and href.startswith("http"):
                         logger.info(f"Resolved to: {href}")
-                        return href
+                        return self._clean_tracking_params(href)
             
             # Fallback: Look for the first external link that isn't Google
             for link in links:
                 href = link.get('href')
                 if href and href.startswith("http") and "google" not in href:
                     logger.info(f"Resolved to fallback: {href}")
-                    return href
+                    return self._clean_tracking_params(href)
                     
             return url
         except Exception as e:
