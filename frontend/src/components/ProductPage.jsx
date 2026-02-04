@@ -38,6 +38,36 @@ const ProductPage = () => {
         window.scrollTo(0, 0);
     }, [id]);
 
+    const [resolvingUrl, setResolvingUrl] = useState(null);
+
+    const handleBuyNow = async (e, url) => {
+        e.preventDefault();
+
+        // If it's already a direct link, just go
+        if (!url.includes('google.com') && !url.includes('google.co.in')) {
+            window.open(url, '_blank');
+            return;
+        }
+
+        // If it looks like a Google Shopping viewer link, resolve it
+        setResolvingUrl(url);
+        try {
+            const res = await axios.get(`${API_BASE}/discovery/resolve-link`, {
+                params: { url }
+            });
+            if (res.data.url) {
+                window.open(res.data.url, '_blank');
+            } else {
+                window.open(url, '_blank'); // Fallback
+            }
+        } catch (err) {
+            console.error("Link resolution failed", err);
+            window.open(url, '_blank'); // Fallback
+        } finally {
+            setResolvingUrl(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
@@ -91,81 +121,114 @@ const ProductPage = () => {
     offers.sort((a, b) => (a.price + a.shipping) - (b.price + b.shipping));
     const bestOffer = offers[0];
 
-    const [resolvingUrl, setResolvingUrl] = useState(null);
-
-    const handleBuyNow = async (e, url) => {
-        e.preventDefault();
-
-        // If it's already a direct link, just go
-        if (!url.includes('google.com') && !url.includes('google.co.in')) {
-            window.open(url, '_blank');
-            return;
-        }
-
-        // If it looks like a Google Shopping viewer link, resolve it
-        setResolvingUrl(url);
-        try {
-            const res = await axios.get(`${API_BASE}/discovery/resolve-link`, {
-                params: { url }
-            });
-            if (res.data.url) {
-                window.open(res.data.url, '_blank');
-            } else {
-                window.open(url, '_blank'); // Fallback
-            }
-        } catch (err) {
-            console.error("Link resolution failed", err);
-            window.open(url, '_blank'); // Fallback
-        } finally {
-            setResolvingUrl(null);
-        }
-    };
-
     return (
         <div className="min-h-screen bg-gray-50 pb-20 font-sans">
-            {/* ... (Header remains same) ... */}
-
-            {/* ... (Inside Details Section) ... */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div>
-                    <p className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Best Market Price</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-gray-900">₹{bestOffer.price.toLocaleString()}</span>
-                        {bestOffer.price < (product.original_price || bestOffer.price * 1.2) && (
-                            <span className="text-lg text-gray-400 line-through">₹{Math.round(bestOffer.price * 1.2).toLocaleString()}</span>
-                        )}
+            {/* Nav */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <Link to="/search" className="flex items-center text-gray-500 hover:text-black transition-colors gap-1">
+                        <ChevronLeft size={20} />
+                        <span className="text-sm font-medium">Back</span>
+                    </Link>
+                    <div className="flex items-center gap-4">
+                        <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                            <Share2 size={20} />
+                        </button>
                     </div>
-                    <p className="text-sm text-green-600 font-medium mt-1">
-                        Lowest at {bestOffer.seller}
-                    </p>
                 </div>
-                <button
-                    onClick={(e) => handleBuyNow(e, bestOffer.url)}
-                    disabled={resolvingUrl === bestOffer.url}
-                    className="w-full sm:w-auto px-8 py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-wait"
-                >
-                    {resolvingUrl === bestOffer.url ? (
-                        <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
-                            Redirecting...
-                        </>
-                    ) : (
-                        <>
-                            <ShoppingBag size={20} />
-                            Go to Store
-                        </>
-                    )}
-                </button>
             </div>
 
-            {/* Chart Component */}
-            <PriceHistoryChart currentPrice={bestOffer.price} />
+            <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+                {/* PRODCUT HEADER GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 
-        </div>
-                </div >
+                    {/* LEFT: IMAGE & GALLERY (Col span 5) */}
+                    <div className="lg:col-span-5 space-y-4">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 aspect-square flex items-center justify-center relative shadow-sm overflow-hidden group">
+                            <img
+                                src={product.image}
+                                alt={product.title}
+                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                            />
+                            {product.rating > 4.5 && (
+                                <div className="absolute top-4 left-4 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+                                    <Star size={12} fill="black" /> Top Rated
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-    {/* SECTION: OFFERS TABLE */ }
-    < div className = "bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" >
+                    {/* RIGHT: DETAILS & CHART (Col span 7) */}
+                    <div className="lg:col-span-7 space-y-8">
+                        {/* Title & Stats */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-blue-600 font-bold text-xs uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">
+                                    {product.brand || "Fashion"}
+                                </span>
+                                {product.category && (
+                                    <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">
+                                        • {product.category}
+                                    </span>
+                                )}
+                            </div>
+                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-4">
+                                {product.title}
+                            </h1>
+                            <div className="flex items-center gap-6 text-sm">
+                                <div className="flex items-center gap-1">
+                                    <Star className="text-yellow-400 fill-yellow-400" size={16} />
+                                    <span className="font-bold text-gray-900">{product.rating || '4.5'}</span>
+                                    <span className="text-gray-400 border-b border-dotted border-gray-400">(128 reviews)</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-green-600 font-medium">
+                                    <CheckCircle size={16} />
+                                    <span>In Stock</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Price & CTA */}
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+                            <div>
+                                <p className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Best Market Price</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-bold text-gray-900">₹{bestOffer.price.toLocaleString()}</span>
+                                    {bestOffer.price < (product.original_price || bestOffer.price * 1.2) && (
+                                        <span className="text-lg text-gray-400 line-through">₹{Math.round(bestOffer.price * 1.2).toLocaleString()}</span>
+                                    )}
+                                </div>
+                                <p className="text-sm text-green-600 font-medium mt-1">
+                                    Lowest at {bestOffer.seller}
+                                </p>
+                            </div>
+                            <button
+                                onClick={(e) => handleBuyNow(e, bestOffer.url)}
+                                disabled={resolvingUrl === bestOffer.url}
+                                className="w-full sm:w-auto px-8 py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-wait"
+                            >
+                                {resolvingUrl === bestOffer.url ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                                        Redirecting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShoppingBag size={20} />
+                                        Go to Store
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Chart Component */}
+                        <PriceHistoryChart currentPrice={bestOffer.price} />
+
+                    </div>
+                </div>
+
+                {/* SECTION: OFFERS TABLE */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
                         <h3 className="text-lg font-bold text-gray-900">Available from {offers.length} Sellers</h3>
                     </div>
@@ -212,10 +275,10 @@ const ProductPage = () => {
                             </tbody>
                         </table>
                     </div>
-                </div >
+                </div>
 
-    {/* SECTION: SIMILAR PRODUCTS */ }
-    < div className = "pt-8" >
+                {/* SECTION: SIMILAR PRODUCTS */}
+                <div className="pt-8">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6 px-1">Similar Products</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -239,10 +302,10 @@ const ProductPage = () => {
                             </div>
                         ))}
                     </div>
-                </div >
+                </div>
 
-            </main >
-        </div >
+            </main>
+        </div>
     );
 };
 
