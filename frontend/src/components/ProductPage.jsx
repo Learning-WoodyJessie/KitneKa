@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, Share2, Star, ShoppingBag, Truck, CheckCircle, AlertCircle, ExternalLink, Heart, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ChevronLeft, Share2, Star, ShoppingBag, Truck, CheckCircle, AlertCircle, ExternalLink, Heart, ThumbsUp, ThumbsDown, Sparkles, AlertTriangle, TrendingDown, Info } from 'lucide-react';
 import PriceHistoryChart from './PriceHistoryChart';
 
 const ProductPage = () => {
@@ -152,6 +152,77 @@ const ProductPage = () => {
 
     const currentOffers = activeOfferTab === 'popular' ? popularOffers : otherOffers;
 
+    // AI RECOMMENDATION LOGIC (Inspired by Buyhatke DealScan)
+    const getRecommendation = () => {
+        if (!allOffers.length) return null;
+
+        const prices = allOffers.map(o => o.price);
+        const minPrice = Math.min(...prices);
+        const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+
+        // Mock Rating if missing (since we need it for the score)
+        const rating = parseFloat(product.rating || '4.0');
+
+        // Price Difference %
+        const priceDiff = ((avgPrice - minPrice) / avgPrice) * 100;
+
+        // 1. High Risk / Low Rating
+        if (rating < 3.5) {
+            return {
+                verdict: 'CAUTION',
+                color: 'text-amber-600',
+                bg: 'bg-amber-50',
+                border: 'border-amber-200',
+                icon: <AlertTriangle className="text-amber-600 w-5 h-5" />,
+                title: "Check Reviews Carefully",
+                reason: "This product has a lower than average rating. We recommend checking user reviews before purchase.",
+                score: 4
+            };
+        }
+
+        // 2. Great Deal (Significant Price Drop/Gap)
+        if (priceDiff > 15) {
+            return {
+                verdict: 'GREAT BUY',
+                color: 'text-green-700',
+                bg: 'bg-green-50',
+                border: 'border-green-200',
+                icon: <Sparkles className="text-green-600 w-5 h-5" />,
+                title: "Excellent Price!",
+                reason: `This deal is ${Math.round(priceDiff)}% cheaper than the market average of ₹${Math.round(avgPrice).toLocaleString()}. It's a great time to buy.`,
+                score: 9
+            };
+        }
+
+        // 3. Good Deal (Moderate Gap)
+        if (priceDiff > 5) {
+            return {
+                verdict: 'GOOD DEAL',
+                color: 'text-emerald-600',
+                bg: 'bg-emerald-50',
+                border: 'border-emerald-200',
+                icon: <CheckCircle className="text-emerald-600 w-5 h-5" />,
+                title: "Fair Market Price",
+                reason: "This price is competitive and lower than the average market rate.",
+                score: 7
+            };
+        }
+
+        // 4. Neutral / Wait
+        return {
+            verdict: 'NEUTRAL',
+            color: 'text-blue-600',
+            bg: 'bg-blue-50',
+            border: 'border-blue-200',
+            icon: <Info className="text-blue-600 w-5 h-5" />,
+            title: "Standard Price",
+            reason: "The price is stable. You can buy now if you need it, or wait for a potential sale.",
+            score: 5
+        };
+    };
+
+    const recommendation = getRecommendation();
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20 font-sans">
             {/* Nav */}
@@ -188,7 +259,7 @@ const ProductPage = () => {
                             )}
                         </div>
 
-                        {/* New Actions Row */}
+                        {/* Actions Row */}
                         <div className="flex items-center justify-center gap-4">
                             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-red-200 hover:text-red-500 transition-colors shadow-sm">
                                 <Heart size={18} />
@@ -266,6 +337,36 @@ const ProductPage = () => {
                                 )}
                             </button>
                         </div>
+
+                        {/* AI Recommendation Card */}
+                        {recommendation && (
+                            <div className={`p-5 rounded-2xl border ${recommendation.border} ${recommendation.bg} flex gap-4 transition-all hover:shadow-md`}>
+                                <div className={`mt-0.5 bg-white p-2.5 rounded-full h-fit shadow-sm ${recommendation.color} bg-opacity-100`}>
+                                    {recommendation.icon}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-xs font-bold uppercase tracking-widest ${recommendation.color}`}>AI Recommendation</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-white shadow-sm border border-opacity-10 ${recommendation.color} ${recommendation.border}`}>
+                                                {recommendation.verdict}
+                                            </span>
+                                        </div>
+                                        {/* Mock Score Indicator */}
+                                        <div className="flex gap-0.5">
+                                            {Array.from({ length: 10 }).map((_, i) => (
+                                                <div key={i} className={`h-1.5 w-1.5 rounded-full ${i < recommendation.score ? recommendation.color.replace('text-', 'bg-') : 'bg-gray-200'}`} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <h4 className={`font-bold text-sm mb-1 ${recommendation.color}`}>{recommendation.title}</h4>
+                                    <p className="text-gray-700 font-medium text-sm leading-relaxed opacity-90">
+                                        {recommendation.reason}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
 
@@ -340,7 +441,7 @@ const ProductPage = () => {
                     </div>
                 </div>
 
-                {/* PRICE HISTORY CHART (Moved Below Tabs) */}
+                {/* PRICE HISTORY CHART */}
                 <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4">Price History</h3>
                     <PriceHistoryChart currentPrice={bestOffer.price} />
