@@ -307,7 +307,7 @@ const SearchInterface = ({ initialQuery }) => {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-gray-900">
-                                    Search Results {query && `for "${query}"`}
+                                    Search Results {searchData?.query ? `for "${searchData.query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${searchData.query.length > 40 ? '...' : ''}"` : query && `for "${query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${query.length > 40 ? '...' : ''}"`}
                                 </h2>
                                 <span className="text-sm text-gray-500">
                                     {searchData?.results?.online?.length || 0} items found
