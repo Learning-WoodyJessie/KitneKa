@@ -32,6 +32,13 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Trigger search if initialQuery or URL param exists
     useEffect(() => {
+        const brandParam = searchParams.get('brand');
+        if (brandParam) {
+            setBrandContext(brandParam);
+            setSearched(true);
+            return; // Skip standard query search if brand context is active
+        }
+
         const targetQuery = initialQuery || searchParams.get('q');
         if (targetQuery) {
             setQuery(targetQuery);

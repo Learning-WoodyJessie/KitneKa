@@ -24,7 +24,7 @@ const FeaturedBrands = ({ onBrandClick }) => {
                 {FEATURED_BRANDS.map((brand) => (
                     <div
                         key={brand.id}
-                        onClick={() => onBrandClick(brand.name)}
+                        onClick={() => window.open(`/?brand=${encodeURIComponent(brand.name)}`, '_blank')}
                         className="flex-shrink-0 cursor-pointer group snap-start"
                     >
                         <div className="w-24 h-24 rounded-full border border-gray-200 bg-white flex items-center justify-center p-4 shadow-sm group-hover:shadow-md group-hover:border-blue-500 transition-all overflow-hidden relative">
