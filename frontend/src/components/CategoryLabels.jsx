@@ -22,7 +22,7 @@ const CategoryLabels = () => {
                 {CATEGORIES.map((cat) => (
                     <div
                         key={cat.id}
-                        onClick={() => window.open(`/#/search?q=${encodeURIComponent(cat.name)}`, '_blank')}
+                        onClick={() => window.open(`/#/search?category=${encodeURIComponent(cat.name)}`, '_blank')}
                         className="flex-shrink-0 cursor-pointer group snap-start"
                     >
                         <div className={`w-24 h-24 rounded-full border border-gray-200 flex items-center justify-center p-4 shadow-sm group-hover:shadow-md transition-all relative ${cat.color} group-hover:bg-white`}>
