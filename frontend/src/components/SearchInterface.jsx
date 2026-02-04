@@ -23,6 +23,7 @@ const SearchInterface = ({ initialQuery }) => {
     // Categories Menu State
     const [showCategories, setShowCategories] = useState(false);
     const categoryMenuRef = useRef(null);
+    const drawerRef = useRef(null); // New ref for the side drawer
 
     // Image/URL search states
     const [showImageModal, setShowImageModal] = useState(false);
@@ -34,7 +35,13 @@ const SearchInterface = ({ initialQuery }) => {
     // Close categories menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target)) {
+            // Check if click is outside BOTH the trigger button and the drawer itself
+            if (
+                categoryMenuRef.current &&
+                !categoryMenuRef.current.contains(event.target) &&
+                drawerRef.current &&
+                !drawerRef.current.contains(event.target)
+            ) {
                 setShowCategories(false);
             }
         };
@@ -238,7 +245,10 @@ const SearchInterface = ({ initialQuery }) => {
             )}
 
             {/* Drawer Panel */}
-            <div className={`fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out ${showCategories ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div
+                ref={drawerRef}
+                className={`fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out ${showCategories ? 'translate-x-0' : '-translate-x-full'}`}
+            >
                 <div className="flex flex-col h-full">
                     {/* Drawer Header */}
                     <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
