@@ -5,7 +5,7 @@ import Footer from './Footer';
 const Layout = ({ children }) => {
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
-            <Navbar />
+            {/* Navbar removed as pages have their own headers */}
             <main className="flex-grow">
                 {children}
             </main>

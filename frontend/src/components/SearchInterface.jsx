@@ -163,8 +163,8 @@ const SearchInterface = ({ initialQuery }) => {
                                 navigate('/search');
                             }}
                         >
-                            <div className="bg-blue-600 p-2 rounded-lg">
-                                <Search className="text-white w-5 h-5" />
+                            <div className="bg-blue-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-lg">
+                                K
                             </div>
                             <span className="text-xl font-bold text-gray-900 tracking-tight hidden md:block">KitneKa</span>
                         </div>
