@@ -7,6 +7,7 @@ import re
 from typing import Dict, Any
 from urllib.parse import urlparse, unquote, parse_qs
 import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,83 @@ class URLScraperService:
             logger.warning(f"Could not resolve URL {url}: {e}")
             return url
 
+    def _extract_id_from_url(self, url: str) -> Dict[str, str]:
+        """
+        Extract stable Product IDs (ASIN, etc.) from URL.
+        """
+        try:
+            # Amazon ASIN (B0...) or 10-char alphanumeric
+            # Standard Amazon patterns: /dp/ASIN, /gp/product/ASIN, /ASIN
+            asin_match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|\?|$)', url)
+            if asin_match:
+                 return {"type": "asin", "value": asin_match.group(1)}
+            
+            # Loose ASIN check (B0 followed by 8 chars)
+            loose_asin = re.search(r'(B0[A-Z0-9]{8})', url)
+            if loose_asin:
+                return {"type": "asin", "value": loose_asin.group(1)}
+                
+            return None
+        except Exception:
+            return None
+
+    def _extract_metadata_from_html(self, url: str) -> Dict[str, Any]:
+        """
+        Lightweight HTML scrape (No JS) to get Canonical URL, OG Metadata, and JSON-LD.
+        """
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        try:
+            resp = requests.get(url, headers=headers, timeout=3)
+            if resp.status_code >= 400: return {}
+            
+            soup = BeautifulSoup(resp.content, 'html.parser')
+            meta = {}
+            
+            # 1. Canonical URL
+            canonical = soup.find("link", rel="canonical")
+            if canonical and canonical.get("href"):
+                meta['canonical_url'] = canonical['href']
+                
+            # 2. OG / Twitter Title
+            og_title = soup.find("meta", property="og:title")
+            if og_title and og_title.get("content"):
+                meta['title'] = og_title['content']
+            elif soup.title:
+                meta['title'] = soup.title.string
+                
+            # 3. JSON-LD (Search for @type: Product)
+            # Find all json-ld scripts
+            schemas = soup.find_all('script', type='application/ld+json')
+            for script in schemas:
+                try:
+                    data = json.loads(script.string)
+                    # Data can be list or dict
+                    if isinstance(data, list):
+                        items = data
+                    else:
+                        items = [data]
+                        
+                    for item in items:
+                        # Check graph or direct item
+                        if "@graph" in item:
+                            nodes = item["@graph"]
+                        else:
+                            nodes = [item]
+                            
+                        for node in nodes:
+                            if node.get("@type") == "Product":
+                                meta['json_ld'] = node
+                                if node.get("name"): meta['title'] = node["name"]
+                                if node.get("url"): meta['canonical_url'] = node["url"]
+                                break
+                    if 'json_ld' in meta: break
+                except: continue
+                
+            return meta
+        except Exception as e:
+            logger.warning(f"HTML Metadata fetch failed: {e}")
+            return {}
+
     def _extract_from_url_path(self, url: str) -> tuple:
         """
         Fallback: Extract product info from URL path when SerpAPI fails.
@@ -122,9 +200,13 @@ class URLScraperService:
                     asin = seg
                     continue # Skip ASIN in name to ensure broader competitor search
                 
-                # Clean normal text
+            # Clean normal text - Safer Case Preservation
                 cleaned = seg.replace('-', ' ').replace('_', ' ')
-                clean_segments.append(cleaned.title())
+                # Don't title()-case if it has digits (e.g. iPhone15, WH-1000XM5)
+                if not any(c.isdigit() for c in cleaned) and not cleaned[0].isupper():
+                    clean_segments.append(cleaned.title())
+                else:
+                    clean_segments.append(cleaned)
             
             product_name = ' '.join(clean_segments)
             
@@ -136,7 +218,7 @@ class URLScraperService:
             elif asin:
                  # If no name segments but we have ASIN, use ASIN for precise search
                  base_query = asin
-                 product_name = f"Amazon Product ({asin})"
+                 product_name = f"Product {asin}"
 
             # Truncate to max 5 words to prevent overly specific queries on SerpApi
             words = base_query.split()
@@ -145,7 +227,7 @@ class URLScraperService:
             else:
                 search_query = base_query
 
-            logger.info(f"Extracted: Name='{product_name}', Query='{search_query}'")
+            logger.info(f"Extracted Path: Name='{product_name}', Query='{search_query}'")
             return search_query, product_name
         except Exception as e:
             logger.error(f"Error in _extract_from_url_path: {e}")
@@ -192,39 +274,69 @@ class URLScraperService:
             logger.error(f"Playwright scraping failed: {e}")
             return ""
 
-    def extract_product_from_url(self, url: str) -> Dict[str, Any]:
+    def extract_product_from_url(self, url: str) -> dict:
         """
-        Uses SerpAPI to fetch product page and extract details.
-        Falls back to URL path parsing if SerpAPI fails.
+        Robust URL Extraction Pipeline:
+        1. Resolve Redirects
+        2. HTML Metadata (Canonical/OG/JSON-LD)
+        3. Stable ID Extraction
+        4. SerpAPI (if needed)
+        5. Path Parsing Fallback
+        6. AI Clean-up
         """
-        # 0. Resolve Short URLs (e.g. amzn.in)
-        clean_url = self._resolve_url(url) # Renamed to clean_url for clarity with new logic
+        # 1. Resolve Short URLs
+        clean_url = self._resolve_url(url)
         logger.info(f"Extracting product from URL: {clean_url}")
         
-        extracted_text = ""
-        serpapi_failed = False
+        extracted_info = {
+            "original_url": url,
+            "resolved_url": clean_url,
+            "canonical_url": None,
+            "product_id": self._extract_id_from_url(clean_url),
+            "url_type": "unknown",
+            "product_name": "",
+            "search_query": "",
+            "brand": "Unknown",
+            "confidence": "low"
+        }
         
-        # Initialize variables for fallback
-        url_product_name = ""
-        url_search_query = ""
-        product_name = ""
-        search_query = ""
-        brand = "Unknown" # Default brand
+        # 2. HTML Metadata (Lightweight)
+        html_meta = self._extract_metadata_from_html(clean_url)
+        if html_meta.get('canonical_url'):
+            extracted_info['canonical_url'] = html_meta['canonical_url']
+            
+        # Use HTML Title as baseline
+        if html_meta.get('title'):
+            extracted_info['product_name'] = html_meta['title'][:100] # Cap length
+            extracted_info['search_query'] = html_meta['title'][:50]
+            extracted_info['confidence'] = "medium"
+            extracted_info['url_type'] = "product_page" # Heuristic: has title
+            
+        # JSON-LD is gold standard
+        if html_meta.get('json_ld'):
+            ld = html_meta['json_ld']
+            if ld.get('name'):
+                extracted_info['product_name'] = ld['name']
+                extracted_info['search_query'] = ld['name']
+                extracted_info['confidence'] = "high"
+                extracted_info['url_type'] = "product_page"
+            if ld.get('brand'):
+                branch_val = ld['brand'] if isinstance(ld['brand'], str) else ld['brand'].get('name', 'Unknown')
+                extracted_info['brand'] = branch_val
 
-        # 1. Try SerpAPI if key is present
-        if self.serpapi_key:
+        # 3. SerpAPI (Fallback if Metadata weak)
+        # Skip if we already have High Confidence JSON-LD
+        if extracted_info['confidence'] != "high" and self.serpapi_key:
             try:
+                # Optimized query: simple URL lookup first
                 params = {
                     "engine": "google",
-                    "q": f"site:{urlparse(clean_url).netloc} {clean_url}",
+                    "q": clean_url, # Check if Google has indexed this exact URL
                     "api_key": self.serpapi_key,
-                    "num": 1
+                    "num": 2
                 }
                 search = GoogleSearch(params)
                 results = search.get_dict()
-                organic_results = results.get("organic_results", [])
-                
-                if organic_results:
                     first_result = organic_results[0]
                     title = first_result.get("title", "")
                     snippet = first_result.get("snippet", "")

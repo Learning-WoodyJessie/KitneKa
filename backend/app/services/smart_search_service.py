@@ -142,25 +142,22 @@ class SmartSearchService:
                 "recommendation_text": "Here are the top results we found."
             }
 
-    def _rank_results(self, results, query, target_url=None):
+    def _rank_results(self, results, query, target_url=None, canonical_url=None, product_id=None):
         """
         Rank results based on relevance.
-        Prioritizes URL matches (Normalized) > Model Numbers > Exact Phrases > Brand.
+        Prioritizes: Product ID > Canonical URL > Normalized URL > Model > Text
         """
-        if not results:
-            return []
+        if not results: return []
             
         query_terms = query.lower().split()
-        if not query_terms:
-            return results
+        if not query_terms: return results
             
-        # Pre-compute target match key
+        # Pre-compute match keys
         target_key = self._normalize_url(target_url) if target_url else None
+        canonical_key = self._normalize_url(canonical_url) if canonical_url else None
             
-        # Identify potential model numbers (e.g., MK9022, iPhone15, 3080Ti)
+        # Identify potential model numbers
         model_terms = [term for term in query_terms if any(c.isdigit() for c in term) and len(term) > 2]
-        
-        # Identify Phrases
         phrases = [" ".join(query_terms[i:i+2]) for i in range(len(query_terms)-1)] if len(query_terms) > 1 else []
 
         scored_results = []
@@ -169,22 +166,33 @@ class SmartSearchService:
             item_url = item.get("url", "")
             score = 0
             
-            # --- 1. URL MATCHING (High Confidence) ---
-            if target_key:
-                item_key = self._normalize_url(item_url)
-                
-                # Level 1: Exact Normalized Match
-                if item_key == target_key:
-                    score += 1000
-                    item['match_quality'] = 'exact_url'
-                # Level 2: Prefix Match (e.g. target is base product, item has extra params)
-                # Or Target contained in item (fuzzy backup)
-                elif item_key.startswith(target_key) or target_key in item_key:
-                    score += 800
-                    item['match_quality'] = 'fuzzy_url'
+            item_key = self._normalize_url(item_url)
+            matched = False
+            
+            # --- 1. PRODUCT ID MATCH (Highest Confidence) ---
+            if product_id and product_id.get("value"):
+                pid = product_id["value"]
+                # Check for ID in URL or Title
+                if pid in item_url or pid.lower() in title:
+                    score += 1500
+                    item['match_quality'] = 'id_match'
+                    matched = True
 
-            # --- 2. TEXT MATCHING ---
-            # 1. Exact Brand Match (First word usually)
+            # --- 2. CANONICAL / URL MATCHING ---
+            if not matched:
+                if canonical_key and item_key == canonical_key:
+                    score += 1200
+                    item['match_quality'] = 'canonical_match'
+                elif target_key:
+                    if item_key == target_key:
+                        score += 1000
+                        item['match_quality'] = 'exact_url'
+                    elif item_key.startswith(target_key) or target_key in item_key:
+                        score += 800
+                        item['match_quality'] = 'fuzzy_url'
+
+            # --- 3. TEXT MATCHING ---
+            # 1. Exact Brand Match
             if title.startswith(query_terms[0]):
                 score += 50
                 
@@ -202,18 +210,14 @@ class SmartSearchService:
                 if model in title:
                     score += 500
             
-            # Set generic match quality if not set by URL
+            # Set generic match quality
             if 'match_quality' not in item:
-                if score >= 200:
-                    item['match_quality'] = 'exact_text'
-                else:
-                    item['match_quality'] = 'related'
+                if score >= 200: item['match_quality'] = 'exact_text'
+                else: item['match_quality'] = 'related'
 
             scored_results.append((score, item))
             
-        # Sort by score descending
         scored_results.sort(key=lambda x: x[0], reverse=True)
-        
         return [item for _, item in scored_results]
 
     # Placeholder for the new _generate_ai_insight method
@@ -260,7 +264,10 @@ class SmartSearchService:
         final_results.extend(serp_results)
         
         # Rank Results
-        ranked_online = self._rank_results(final_results, query, target_url=target_url)
+        canonical_url = extracted_data.get("canonical_url") if extracted_data else None
+        product_id = extracted_data.get("product_id") if extracted_data else None
+        
+        ranked_online = self._rank_results(final_results, query, target_url=target_url, canonical_url=canonical_url, product_id=product_id)
 
         # 4. Passive History Recording (New)
         if db:
