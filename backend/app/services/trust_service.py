@@ -30,7 +30,12 @@ class TrustService:
             # 1. Store Tier (Popular Marketplace)
             # Check if host ends with any of the popular domains (handles m.myntra.com, www.amazon.in etc)
             is_found = False
+            
+            # Helper to check source match
+            source_name = (item.get("source") or "").lower()
+            
             for store in STORES:
+                # Check Domain
                 for domain in store["domains"]:
                     if host == domain or host.endswith("." + domain):
                         item["is_popular"] = True
@@ -38,6 +43,16 @@ class TrustService:
                         item["store_tier"] = store["tier"]
                         is_found = True
                         break
+                
+                # Check Source Name (Fallback for Google Redirects)
+                if not is_found and source_name:
+                    if store["display_name"].lower() in source_name or source_name in store["display_name"].lower():
+                         # e.g. source="Amazon.in" matches "Amazon"
+                         item["is_popular"] = True
+                         item["store_name"] = store["display_name"]
+                         item["store_tier"] = store["tier"]
+                         is_found = True
+                
                 if is_found: break
             
             # 2. Official Brand Check
