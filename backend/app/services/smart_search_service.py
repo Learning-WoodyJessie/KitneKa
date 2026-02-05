@@ -386,6 +386,7 @@ class SmartSearchService:
                  "price": extracted_data.get("price"),
                  "currency": extracted_data.get("currency", "INR"),
                  "link": target_url,
+                 "url": target_url, # CRITICAL: TrustService & Ranking rely on 'url' key
                  "source": self.url_service._get_domain(target_url), # simple helper or just domain
                  "thumbnail": extracted_data.get("image"),
                  "is_source_url": True 
