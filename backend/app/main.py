@@ -174,14 +174,9 @@ def search_products(q: str, location: Optional[str] = "Mumbai", anonymous_id: Op
     """
     search_term = q.strip()
     
-    # If query is a URL, extract product name first
-    if search_term.startswith(('http://', 'https://')):
-        try:
-            extraction = url_scraper.extract_product_from_url(search_term)
-            if extraction.get("search_query"):
-                search_term = extraction["search_query"]
-        except Exception as e:
-            print(f"URL extraction failed in search: {e}")
+    # Pass raw query to smart_searcher which handles URL extraction internally
+    # This ensures we keep the original URL context for ranking
+    search_term = q.strip()
 
     # Record search in graph (using clean term)
     if search_term:
