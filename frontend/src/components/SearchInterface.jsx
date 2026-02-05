@@ -169,14 +169,32 @@ const SearchInterface = ({ initialQuery }) => {
 
     const handleBrandClick = (brandName) => {
         setBrandContext(brandName);
+        setActiveTab('official'); // Default to Official Store tab
         setSearched(true);
         setSearchData(null);
         setError(null);
+        // Trigger search for the brand
+        setQuery(brandName);
+        handleSearch(null, 'text', null, '', brandName);
     };
 
     // Filter Logic
     const allItems = searchData?.results?.online || [];
     const filteredItems = allItems.filter(item => {
+        // BRAND VIEW FILTERING
+        if (brandContext) {
+            if (activeTab === 'official') {
+                return item.is_official;
+            }
+            if (activeTab === 'trusted') {
+                // Show items that are NOT official but are trusted/popular
+                // Or just show all non-official items
+                return !item.is_official;
+            }
+            return true;
+        }
+
+        // STANDARD FILTERING
         // 1. Clean Beauty Filter
         if (cleanBeautyOnly) {
             if (!item.is_clean_beauty) return false;
@@ -370,7 +388,6 @@ const SearchInterface = ({ initialQuery }) => {
                                 <RecommendationBanner
                                     recommendation={searchData.recommendation}
                                     insight={searchData.insight}
-                                    cleanBrands={searchData.clean_brands}
                                 />
                             )}
 
@@ -379,52 +396,124 @@ const SearchInterface = ({ initialQuery }) => {
                                     Search Results {searchData?.query ? `for "${searchData.query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${searchData.query.length > 40 ? '...' : ''}"` : query && `for "${query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${query.length > 40 ? '...' : ''}"`}
                                 </h2>
                                 <span className="text-sm text-gray-500">
-                                    {searchData?.results?.online?.length || 0} items found
+                                    {/* Counting Logic: If Brand Grid, count brands. Else items */}
+                                    {searchData?.clean_brands?.length > 0 && !brandContext ?
+                                        `${searchData.clean_brands.length} brands found` :
+                                        `${filteredItems.length} items found`
+                                    }
                                 </span>
                             </div>
 
-                            {/* Trust Filters: Popular / All / Clean Beauty - HIDDEN if showing Clean Brand Cards */}
-                            {(!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
+                            {/* Trust Filters: Popular / All / Clean Beauty - OR Brand View Tabs */}
+                            {brandContext ? (
+                                /* BRAND VIEW TABS */
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                                    {/* Tabs */}
                                     <div className="flex bg-gray-100 p-1 rounded-lg">
                                         <button
-                                            onClick={() => {
-                                                setFilterType('popular');
-                                                setSortBy('relevance');
-                                            }}
-                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            onClick={() => setActiveTab('official')}
+                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'official' ? 'bg-black text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
-                                            Popular & Trusted
+                                            Official Store
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setFilterType('all');
-                                                setSortBy('price_asc');
-                                            }}
-                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            onClick={() => setActiveTab('trusted')}
+                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'trusted' ? 'bg-black text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
-                                            All Results
+                                            Trusted Partners
                                         </button>
                                     </div>
 
-                                    {/* Sort By Control - High/Low removed as per request */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm text-gray-500">Sort by:</span>
-                                        <select
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
-                                        >
-                                            <option value="relevance">Popularity</option>
-                                            <option value="price_asc">Price: Low to High</option>
-                                        </select>
-                                    </div>
+                                    {/* Sort (Optional in Brand View, keeping simple) */}
                                 </div>
+                            ) : (
+                                /* STANDARD TABS */
+                                (!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                        {/* Tabs */}
+                                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                                            <button
+                                                onClick={() => {
+                                                    setFilterType('popular');
+                                                    setSortBy('relevance');
+                                                }}
+                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            >
+                                                Popular & Trusted
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setFilterType('all');
+                                                    setSortBy('price_asc');
+                                                }}
+                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            >
+                                                All Results
+                                            </button>
+                                        </div>
+
+                                        {/* Sort By Control - High/Low removed as per request */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500">Sort by:</span>
+                                            <select
+                                                value={sortBy}
+                                                onChange={(e) => setSortBy(e.target.value)}
+                                                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                                            >
+                                                <option value="relevance">Popularity</option>
+                                                <option value="price_asc">Price: Low to High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                )
                             )}
 
-                            {/* RESULTS GRID */}
-                            {sortedItems.length > 0 ? (
+                            {/* RESULTS GRID OR BRAND GRID */}
+                            {(searchData?.clean_brands?.length > 0 && !brandContext) ? (
+                                /* BRAND SELECTION GRID (Clean Beauty Category View) */
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    {searchData.clean_brands.map((brand, idx) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => {
+                                                // Extract simple name or use title
+                                                // Logic: "Visit Old School Rituals Official Store" -> "Old School Rituals"
+                                                let query = brand.title.replace('Visit ', '').replace(' Official Store', '');
+                                                handleBrandClick(query);
+                                            }}
+                                            className="bg-white rounded-xl border border-gray-200 p-4 hover:border-black hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
+                                        >
+                                            <div className="aspect-[3/2] bg-gray-50 rounded-lg p-2 flex items-center justify-center">
+                                                <img
+                                                    src={brand.thumbnail || brand.image}
+                                                    alt={brand.title}
+                                                    className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+                                                />
+                                            </div>
+
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex gap-2">
+                                                    {brand.is_official && (
+                                                        <span className="bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                                            Official
+                                                        </span>
+                                                    )}
+                                                    {brand.is_clean_beauty && (
+                                                        <span className="bg-stone-200 text-stone-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                                            Clean
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h3 className="font-bold text-black text-sm line-clamp-2">{brand.title}</h3>
+                                                <div className="text-xs text-gray-500">{brand.source}</div>
+
+                                                <button className="mt-2 w-full bg-gray-100 hover:bg-black hover:text-white text-black font-medium py-2 rounded-lg text-xs transition-colors">
+                                                    View Products
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : sortedItems.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                     {sortedItems.map((product) => (
                                         <div

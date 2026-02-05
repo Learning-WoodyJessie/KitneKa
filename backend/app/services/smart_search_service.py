@@ -298,13 +298,20 @@ class SmartSearchService:
         injected = []
         q_lower = query.lower()
         
+        # CATEGORY EXPANSION:
+        # If query is "clean beauty" or similar, return ALL clean brands
+        is_category_search = any(term in q_lower for term in ["clean beauty", "clean brands", "organic beauty"])
+        
         # Check against Registry
         for b_id, data in BRANDS.items():
-            # Check if query contains brand name (e.g. "old school rituals face wash") 
-            # OR is exactly the brand name
-            matches = any(alias in q_lower for alias in data["aliases"] + [data["display_name"].lower()])
+            # MATCH LOGIC:
+            # 1. Exact/Alias match (Existing)
+            matches_brand = any(alias in q_lower for alias in data["aliases"] + [data["display_name"].lower()])
             
-            if matches:
+            # 2. Category Match (New)
+            matches_category = is_category_search and data.get("is_clean_beauty", False)
+            
+            if matches_brand or matches_category:
                 # Create Official Site Card
                 for domain_data in data.get("official_domains", []):
                     # check deduplication

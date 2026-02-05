@@ -1,7 +1,7 @@
 import React from 'react';
 import { BadgeCheck, ShieldCheck, Sparkles, ExternalLink, Star, BrainCircuit, Leaf } from 'lucide-react';
 
-const RecommendationBanner = ({ recommendation, insight, cleanBrands }) => {
+const RecommendationBanner = ({ recommendation, insight, cleanBrands, onBrandClick }) => {
     // If no data at all, return null
     if (!recommendation && !insight && (!cleanBrands || cleanBrands.length === 0)) return null;
 
@@ -69,7 +69,20 @@ const RecommendationBanner = ({ recommendation, insight, cleanBrands }) => {
                                     </div>
 
                                     <button
-                                        onClick={() => window.open(brand.link, '_blank')}
+                                        onClick={() => {
+                                            if (onBrandClick) {
+                                                // Extract Brand Name from Title logic: "Visit Old School Rituals Official Store"
+                                                // We can try to just pass the 'title' cleanly or let the parent handle it.
+                                                // Let's pass the raw title and let parent parse, OR try to clean it here.
+                                                // Best approach: If brand object has a clean name field use it, else parse title.
+                                                // The backend constructs title as f"Visit {display_name} Official Store"
+                                                // We can reverse this or better, rely on the search.
+                                                let query = brand.title.replace('Visit ', '').replace(' Official Store', '');
+                                                onBrandClick(query);
+                                            } else {
+                                                window.open(brand.link, '_blank');
+                                            }
+                                        }}
                                         className="mt-auto w-full bg-black hover:bg-gray-800 text-white font-medium py-2.5 rounded-lg text-xs uppercase tracking-wide transition-colors flex items-center justify-center gap-2"
                                     >
                                         Visit Store <ArrowRightIcon size={12} />
