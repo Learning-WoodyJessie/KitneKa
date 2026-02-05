@@ -246,10 +246,79 @@ class SmartSearchService:
         scored_results.sort(key=lambda x: x[0], reverse=True)
         return [item for _, item in scored_results]
 
+    def _calculate_confidence(self, item, target_url=None, extracted_metadata=None):
+        """
+        Calculates a confidence score (0.0 - 1.0) for a candidate recommendation.
+        Rubric:
+        - Match Quality: +0.50 (Exact/ID), +0.30 (Fuzzy)
+        - Trust: +0.30 (Official), +0.15 (Popular)
+        - Price: +0.10 (Competitive)
+        - Rating: +0.05 (High Rating)
+        """
+        score = 0.0
+        reasons = []
+        
+        # 1. Match Quality (Reuse match logic logic or item metadata)
+        # Assuming item['match_quality'] is populated by _rank_results
+        qual = item.get('match_quality', 'related')
+        if qual in ('id_exact', 'url_canonical'):
+            score += 0.50
+            reasons.append("Exact Match")
+        elif qual in ('url_fuzzy', 'model_exact'):
+            score += 0.30
+            reasons.append("High Relevance")
+            
+        # 2. Trust Signals
+        if item.get("is_official"):
+            score += 0.30
+            reasons.append("Official Store")
+        elif item.get("is_popular"):
+            score += 0.15
+            reasons.append("Trusted Seller")
+            
+        # 3. Rating Bonus
+        if item.get("rating", 0) > 4.2:
+            score += 0.05
+            
+        # 4. Exclusion Penalty
+        if item.get("is_excluded"):
+            score -= 1.0
+            
+        return round(min(score, 1.0), 2), reasons
+
+    def _generate_recommendation(self, results, target_url=None, extracted_metadata=None):
+        """
+        Picks the single best offer based on "Official First, then Lowest Trusted Price".
+        Gated by Confidence Score >= 0.75.
+        """
+        if not results: return None
+        
+        # 1. Filter Candidates: Must be Popular or Official
+        candidates = [item for item in results if item.get('is_popular') or item.get('is_official')]
+        
+        if not candidates:
+            return None
+            
+        # 2. Strategy: Official First, then Lowest Price
+        # Sort key: tuple (not is_official, price) -> False < True (so Official comes first), then Price low->high
+        candidates.sort(key=lambda x: (not x.get('is_official', False), x.get('price', float('inf'))))
+        
+        best_pick = candidates[0]
+        
+        # 3. Calculate Confidence
+        confidence, reasons = self._calculate_confidence(best_pick, target_url, extracted_metadata)
+        
+        # 4. Gate: Threshold 0.75
+        if confidence >= 0.75:
+            best_pick["recommendation_reason"] = " • ".join(reasons)
+            best_pick["confidence_score"] = confidence
+            return best_pick
+            
+        return None
+
     # Placeholder for the new _generate_ai_insight method
     def _generate_ai_insight(self, ranked_online, query):
         # Delegate to the real synthesis method
-        # We pass empty lists for local/instagram for now as the new signature supports them but current flow might not prioritize them for insight
         return self._synthesize_results(query, ranked_online, [], [])
 
     def smart_search(self, query: str, location: str = "Mumbai", db=None):
@@ -327,5 +396,11 @@ class SmartSearchService:
                 "instagram": instagram_results,
                 "local": local_results
             },
+            "results": {
+                "online": ranked_online,
+                "instagram": instagram_results,
+                "local": local_results
+            },
+            "recommendation": self._generate_recommendation(ranked_online, target_url, extracted_data),
             "insight": self._generate_ai_insight(ranked_online, query)
         }

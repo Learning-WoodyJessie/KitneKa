@@ -4,6 +4,7 @@ import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, 
 import FeaturedBrands from './FeaturedBrands';
 import CategoryLabels from './CategoryLabels';
 import ResultsGrouped from './ResultsGrouped';
+import RecommendationBanner from './RecommendationBanner';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -188,7 +189,6 @@ const SearchInterface = ({ initialQuery }) => {
     });
 
     // Sorting Logic
-    // Sorting Logic
     let sortedItems = [...filteredItems];
     if (sortBy === 'price_asc') {
         sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -358,6 +358,13 @@ const SearchInterface = ({ initialQuery }) => {
                     ) : (
                         /* General Search Results Grid */
                         <div className="space-y-6">
+
+                            {/* RECOMMENDATION BANNER (New) */}
+                            {/* Only show if we have a recommendation and user hasn't explicitly sorted/filtered away from defaults */}
+                            {searchData?.recommendation && filterType === 'popular' && sortBy === 'relevance' && (
+                                <RecommendationBanner recommendation={searchData.recommendation} />
+                            )}
+
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-gray-900">
                                     Search Results {searchData?.query ? `for "${searchData.query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${searchData.query.length > 40 ? '...' : ''}"` : query && `for "${query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${query.length > 40 ? '...' : ''}"`}
