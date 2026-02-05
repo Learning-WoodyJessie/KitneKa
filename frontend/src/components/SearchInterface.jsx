@@ -364,9 +364,13 @@ const SearchInterface = ({ initialQuery }) => {
                         <div className="space-y-6">
 
                             {/* RECOMMENDATION BANNER (New) */}
-                            {/* Only show if we have a recommendation and user hasn't explicitly sorted/filtered away from defaults */}
-                            {searchData?.recommendation && filterType === 'popular' && sortBy === 'relevance' && (
-                                <RecommendationBanner recommendation={searchData.recommendation} />
+                            {/* RECOMMENDATION & INSIGHT BANNER */}
+                            {/* Show if we have EITHER a specific pick OR an AI insight */}
+                            {(searchData?.recommendation || searchData?.insight) && filterType === 'popular' && sortBy === 'relevance' && (
+                                <RecommendationBanner
+                                    recommendation={searchData.recommendation}
+                                    insight={searchData.insight}
+                                />
                             )}
 
                             <div className="flex items-center justify-between">
