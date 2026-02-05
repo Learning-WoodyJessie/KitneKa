@@ -423,9 +423,17 @@ const SearchInterface = ({ initialQuery }) => {
                                         <div
                                             key={product.id || Math.random()}
                                             onClick={() => {
-                                                // INJECTED CARD LOGIC: Open Official Link Directly
+                                                // INJECTED CARD LOGIC: Trigger Site Search
                                                 if (product.is_injected_card) {
-                                                    window.open(product.url, '_blank');
+                                                    try {
+                                                        const domain = new URL(product.url).hostname.replace(/^www\./, '');
+                                                        const siteQuery = `site:${domain}`;
+                                                        setQuery(siteQuery);
+                                                        handleSearch(null, 'text', null, '', siteQuery);
+                                                    } catch (e) {
+                                                        console.error("Invalid URL in injected card", product.url);
+                                                        window.open(product.url, '_blank');
+                                                    }
                                                     return;
                                                 }
 
