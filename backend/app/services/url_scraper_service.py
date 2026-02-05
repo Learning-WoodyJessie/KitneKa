@@ -5,7 +5,7 @@ import logging
 import os
 import re
 from typing import Dict, Any
-from urllib.parse import urlparse, unquote, parse_qs
+from urllib.parse import urlparse, unquote, parse_qs, urlsplit, urlencode, parse_qsl
 import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
@@ -96,6 +96,43 @@ class URLScraperService:
             return None
         except Exception:
             return None
+
+    def _normalize_url_for_match(self, url: str) -> tuple[str, str, str]:
+        """
+        Returns (host, path, filtered_query_string) suitable for matching.
+        Host is lowercased and stripped of leading www.
+        Path is unquoted and normalized for slashes/trailing slash.
+        Query is filtered of universal tracking params only.
+        """
+        if not url:
+            return ("", "", "")
+        try:
+            u = urlsplit(url.strip())
+            host = (u.hostname or "").lower()
+            if host.startswith("www."):
+                host = host[4:]
+
+            path = unquote(u.path or "/")
+            path = re.sub(r"/{2,}", "/", path)  # collapse //
+            if path != "/" and path.endswith("/"):
+                path = path[:-1]
+
+            # filter only universal tracking params
+            TRACKING_KEYS = {"gclid", "fbclid", "msclkid", "igshid", "dclid", "gbraid", "wbraid", "ref", "source", "srsltid", "pf_rd_r", "pf_rd_p"}
+            TRACKING_PREFIXES = ("utm_",)
+            
+            q = []
+            for k, v in parse_qsl(u.query, keep_blank_values=True):
+                kl = k.lower()
+                if kl in TRACKING_KEYS or any(kl.startswith(p) for p in TRACKING_PREFIXES):
+                    continue
+                q.append((kl, v))
+            q.sort()
+            filtered_qs = urlencode(q, doseq=True)
+
+            return (host, path, filtered_qs)
+        except Exception:
+            return ("", "", "")
 
     def _extract_metadata_from_html(self, url: str) -> Dict[str, Any]:
         """
@@ -189,7 +226,7 @@ class URLScraperService:
             
             # Segments to ignore (Amazon/generic artifacts)
             ignored_prefixes = ('ref=', 'sr=', 'qid=', 'pf_rd', 'dib', 'dib_tag')
-            ignored_exact = ('dp', 'gp', 'product', 'd')
+            ignored_exact = ('dp', 'gp', 'product', 'd', 'buy', 'mailers', 'p', 'skin-care', 'watches', 'clothing')
             
             for seg in raw_segments:
                 if seg.lower() in ignored_exact or seg.lower().startswith(ignored_prefixes):
@@ -337,96 +374,64 @@ class URLScraperService:
                 }
                 search = GoogleSearch(params)
                 results = search.get_dict()
+                organic_results = results.get("organic_results", [])
+                
+                if organic_results:
                     first_result = organic_results[0]
                     title = first_result.get("title", "")
                     snippet = first_result.get("snippet", "")
                     if title or snippet:
-                        extracted_text = f"Title: {title}\nDescription: {snippet}\nURL: {clean_url}"
-                        logger.info("Successfully extracted info from SerpAPI")
-                        # Use SerpAPI results as initial product_name and search_query
-                        product_name = title if title else snippet.split('.')[0]
-                        search_query = product_name.split(' ')[0:5] # Take first 5 words
-                        search_query = ' '.join(search_query)
-                    else:
-                        serpapi_failed = True
-                else:
-                    serpapi_failed = True
+                        # Update extracted_info
+                        extracted_info['product_name'] = title if title else snippet.split('.')[0]
+                        extracted_info['search_query'] = extracted_info['product_name']
+                        extracted_info['confidence'] = "high"
+            except Exception as e:
+                logger.warning(f"SerpAPI fallback failed: {e}")
+                pass # Fail silently, use existing data
             except Exception as e:
                 logger.warning(f"SerpAPI fetch failed: {e}")
                 serpapi_failed = True
-        else:
-            serpapi_failed = True
-        
-        # 2. Fallback: URL Path Extraction if SerpAPI failed or yielded no useful text
-        if serpapi_failed or not extracted_text:
-            logger.info("Using fallback: extracting from URL path")
-            url_search_query, url_product_name = self._extract_from_url_path(clean_url)
-            domain = urlparse(clean_url).netloc.replace('www.', '').split('.')[0].title()
-            extracted_text = f"Product Name: {url_product_name}\nDomain: {domain}\nURL: {clean_url}"
-            product_name = url_product_name
-            search_query = url_search_query
+        # 5. Fallback Path Parsing (if still empty)
+        if not extracted_info['product_name']:
+             # Last resort: Try to read the URL path
+             p_query, p_name = self._extract_from_url_path(clean_url)
+             extracted_info['product_name'] = p_name
+             extracted_info['search_query'] = p_query
+             extracted_info['confidence'] = "medium" if p_name else "low"
 
-        # --- DOM SCRAPING ENHANCEMENT ---
-        # If extraction is weak (e.g. just generic "Amazon Product (ASIN)"), try to get real title from DOM
-        # This check should happen after initial extraction attempts but before AI,
-        # so AI gets the best possible input.
-        if "Amazon Product (" in product_name or search_query.startswith("B0"):
-            dom_title = self._scrape_dom_title(clean_url)
-            if dom_title:
-                product_name = dom_title
-                # Smart truncate for search query
-                words = dom_title.split()
-                search_query = ' '.join(words[:5])
-                logger.info(f"Enhanced with DOM Title: {product_name}")
-                # Update extracted_text for AI if DOM scraping was successful
-                extracted_text = f"Product Name: {product_name}\nURL: {clean_url}"
-
-
-        # 3. AI Analysis (if available)
-        if self.client and extracted_text:
+        # 6. AI Clean-up (If client available and we have a name)
+        # This step refines "dirty" titles like "BRUTON Shoes for Men Running..." to "BRUTON Shoes"
+        if self.client and extracted_info['product_name']:
             try:
-                logger.info("Using AI to extract details")
+                # Construct text for AI
+                text_context = f"Product Title: {extracted_info['product_name']}\nURL: {clean_url}"
+                if extracted_info['brand'] != "Unknown": 
+                    text_context += f"\nBrand: {extracted_info['brand']}"
+                
+                logger.info(f"Refining with AI: {text_context}")
+                
                 ai_response = self.client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {
-                            "role": "system",
-                            "content": "Extract: 'product_name', 'brand', 'model', 'search_query' (optimized for India). Return JSON."
-                        },
-                        {
-                            "role": "user",
-                            "content": f"Extract from:\n{extracted_text}"
-                        }
+                        {"role": "system", "content": "You are a product data cleaner. Extract/Clean: 'product_name' (concise, no filler), 'brand', 'search_query' (optimized for shopping). Return JSON."},
+                        {"role": "user", "content": text_context}
                     ],
                     response_format={"type": "json_object"},
-                    max_tokens=300
+                    max_tokens=200
                 )
                 result = json.loads(ai_response.choices[0].message.content)
-                result['original_url'] = clean_url
-                return result
+                
+                if result.get('product_name'):
+                    extracted_info['product_name'] = result['product_name']
+                    extracted_info['search_query'] = result.get('search_query', result['product_name'])
+                if result.get('brand'):
+                    extracted_info['brand'] = result['brand']
+                
+                # Mark as AI refined
+                extracted_info['confidence'] = "high"
+                    
             except Exception as e:
-                logger.error(f"AI extraction failed: {e}")
-                # If AI fails, we fall through to the final fallback using previously gathered info
-                # The instruction snippet for this part was a bit confusing,
-                # so I'm integrating it into the existing flow.
-                # If AI fails, we retain the best product_name/search_query we got so far.
-                if not product_name or product_name == "Unknown":
-                    # Just retry path extraction or simple defaults if product_name is still weak
-                    url_search_query, url_product_name = self._extract_from_url_path(clean_url)
-                    search_query = url_search_query if url_search_query else search_query
-                    product_name = url_product_name if url_product_name else product_name
-        
-        # 4. Final Fallback (No AI or AI failed)
-        # Use the best available product_name and search_query
-        final_query = search_query if search_query else "Product from URL"
-        final_name = product_name if product_name else final_query
-        
-        return {
-            "search_query": final_query,
-            "product_name": final_name,
-            "brand": brand,
-            "confidence": "high" if "Amazon Product" not in final_name else "medium",
-            "original_url": url,       # The raw input
-            "resolved_url": clean_url, # The final destination
-            "url_type": "product_page" # Basic default, can be refined later
-        }
+                logger.warning(f"AI cleanup failed: {e}")
+                # Fallback to what we have
+ 
+        return extracted_info

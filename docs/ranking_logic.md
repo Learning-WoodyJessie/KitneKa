@@ -66,6 +66,27 @@ The **URL Match (+1000)** effectively "short-circuits" the ranking, guaranteeing
 
 ---
 
+## Raw Input: The SerpAPI Object 📥
+
+Before ranking, we receive a list of "Raw" items from our Scraper Service. This is what the **Scraper** sends to the **Ranker**.
+(Engine: `google_shopping`)
+
+```json
+{
+  "id": "serp_8291",
+  "source": "Google Shopping",
+  "title": "BRUTON Sport Shoes for Men | Running Sneaker (Blue)",
+  "price": 499.0,
+  "url": "https://www.google.com/url?q=https://www.amazon.in/dp/B0F2THXY4T...",
+  "image": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcR...",
+  "rating": 4.2,
+  "reviews": 1200,
+  "delivery": "Free Delivery"
+}
+```
+
+---
+
 ## Data Schema: The Result Object 📄
 
 Here is an example of a single **"Online Result Item"** as it flows through the Ranking Engine.

@@ -101,38 +101,121 @@ It scores the candidates to ensure the *exact* item you pasted is #1.
 ### Step 2: The Detective (Extraction)
 *   **Redirects**: None (it's a full link).
 *   **ID Check**:
-    *   Scanner sees `/dp/B0F2THXY4T`.
     *   **Extracted Product ID**: `{"type": "asin", "value": "B0F2THXY4T"}` 🎯
-*   **Metadata Extraction**:
-    *   Fetches HTML.
-    *   Finds Title: *"BRUTON Sport Shoes for Men..."*
-    *   **Clean Name**: "BRUTON Sport Shoes"
-*   **Normalization**:
-    *   Strips `source=...`, `ref_=...`, `smid=...`.
-    *   **Clean Key**: `amazon.in/bruton-sport-shoes-running-white/dp/b0f2thxy4t`
+*   **Source**:
+    *   Scraper tries to fetch HTML (blocked by Amazon 🚫).
+    *   **Fallback to Path Parsing**: Reads URL text `/BRUTON-Sport-Shoes-Running-White...`
+    *   **Extracted Text**: "BRUTON Sport Shoes Running White"
 
-### Step 3: The Manager (Search)
-*   Executes Google Shopping search for: `BRUTON Sport Shoes`.
-*   Gets 20 Results.
-    *   Result A: "Bruton Running Shoe" (Link: `flipkart.com/...`)
-    *   Result B: "Bruton Sport Shoe" (Link: `amazon.in/BRUTON...dp/B0F2THXY4T...`)
-    *   Result C: "Nike Shoe"
+### Step 3: The Polisher (AI Refinement) 🤖
+*   **Input**: "BRUTON Sport Shoes Running White"
+*   **Action**: AI removes "Running White" (SEO filler).
+*   **Clean Output**: "BRUTON Sport Shoes"
 
-### Step 4: The Judge (Ranking)
+### Step 4: The Manager (Search)
+*   **Action**: Searches Google Shopping for `BRUTON Sport Shoes`.
+*   **Discovery**: Because we search for the *Name* (not the link), we find the same shoe across the web.
+*   **Results Found**:
+    *   Result A (Flipkart): "Bruton Running Shoe Blue"
+    *   Result B (Amazon): "BRUTON Sport Shoe... B0F2..."
+    *   Result C (Myntra): "Bruton Gym Wear..."
+
+### Step 5: The Judge (Ranking)
 The Ranker loops through the results:
 
 1.  **Checking Result A (Flipkart)**:
-    *   ID Match? No.
-    *   Canonical Match? No.
-    *   Text Match? Yes (Brand "Bruton"). **Score: 200**.
+    *   ID Match? **No** (Flipkart URLs don't have Amazon ASINs).
+    *   Text Match? **Yes**.
+        *   Brand "Bruton" matches (+50).
+        *   Phrase "Sport Shoes" matches (+200).
+    *   **Total Score: 250 (Strong Alternative)** 🥈
+    *   *Result*: This appears just below the pinned item.
 
 2.  **Checking Result B (Amazon)**:
     *   **ID Match? YES!** Link contains `B0F2THXY4T`.
     *   **Action**: Apply **+1500 Points**.
     *   **Total Score: 1750 (Winner)** 🏆
-
-3.  **Checking Result C (Nike)**:
-    *   Low score.
+    *   *Result*: Pinned to #1.
 
 ### Final Outcome
-The frontend displays **Result B** (the exact shoe you pasted) at the very top of the list. ✅
+*   **#1**: The Exact Amazon Item (Verified via ID).
+*   **#2, #3**: The same shoe on Flipkart/Myntra (Verified via Text Match).
+*   **#10+**: Unrelated shoes.
+
+
+---
+
+## Trace 2: Myntra Watch Example ⌚
+
+**Input URL**:
+`https://www.myntra.com/watches/michael+kors/michael-kors-women-embellished-harlowe-analogue-watch-mk4710/22142168/buy`
+
+This example demonstrates **Fuzzy Path Matching** (finding the link even if `/buy` is missing) and **Model Matching** (finding the watch on other sites).
+
+### Step 1: Extraction & Normalization
+*   **Normalization**:
+    *   Host: `myntra.com` (stripped `www`)
+    *   Path: `/watches/michael+kors/michael-kors...mk4710/22142168/buy`
+    *   Query: (Empty)
+*   **Extraction**:
+    *   **ID**: `None` (Our extractor currently targets Amazon ASINs).
+    *   **Path Text**: "Michael Kors Women Embellished Harlowe Analogue Watch Mk4710"
+    *   **Refined Query**: "Michael Kors Women Embellished Watch MK4710"
+
+### Step 2: The Manager (Search)
+*   Searches Google Shopping for: "Michael Kors Women Embellished Watch MK4710"
+
+### Step 3: The Judge (Ranking)
+The Ranker finds results and matches them:
+
+1.  **Result A (Myntra Result)**:
+    *   **URL**: `https://www.myntra.com/watches/michael+kors/michael-kors-women...mk4710/22142168` (Note: No `/buy` suffix).
+    *   **ID Match**: No.
+    *   **Canonical Match**: No (URLs differ by `/buy`).
+    *   **Fuzzy Path Match? YES!**
+        *   The input path ends with `/22142168/buy`.
+        *   The result path ends with `/22142168`.
+        *   Logic: `/buy` is a safe suffix difference.
+        *   **Score**: **+800 Points** (High Boost). 🥉
+    *   *Result*: Ranked near top (Pinned if confidence high).
+
+2.  **Result B (Amazon/Ajio)**:
+    *   **URL**: `https://www.amazon.in/.../MK4710`
+    *   **ID Match**: No.
+    *   **URL Match**: No.
+    *   **Text Match**:
+        *   Brand "Michael Kors" (+50).
+        *   **Model "MK4710"** found in title (+500).
+        *   Phrase Match (+200).
+    *   **Score**: **~750 Points** (Strong Text Match).
+    *   *Result*: shown as a top comparison option.
+
+### Final Outcome
+*   **#1**: The Myntra Link (captured via Fuzzy Path logic).
+*   **#2**: Amazon/Ajio links (captured via Model Identification).
+
+
+---
+
+## Trace 3: Myntra Generic Path Fix (M.A.C Cream) 💄
+
+**Input URL**:
+`https://www.myntra.com/mailers/skin-care/m.a.c/m.a.c-mini-strobe-cream-15-ml---pinklite/12218208/buy`
+
+This example shows how we handle generic path segments (`mailers`, `skin-care`) that used to pollute the search query.
+
+### Step 1: Extraction (Path Parsing)
+*   **Raw Path**: `/mailers/skin-care/m.a.c/m.a.c-mini-strobe-cream...`
+*   **Old Logic**: Extracted "Mailers Skin Care M.A.C".
+*   **New Logic**:
+    *   Ignores: `mailers`, `skin-care`, `buy`.
+    *   Extracts: **"M.A.C m.a.c mini strobe cream 15 ml pinklite"**
+    *   **Refined Query**: **"M.A.C m.a.c mini strobe cream"** (First 5 words).
+
+### Step 2: The Manager (Search)
+*   Searches Google Shopping for: "M.A.C m.a.c mini strobe cream".
+*   *Result*: Accurate product results found.
+
+### Step 3: The Judge (Ranking)
+*   **Myntra Result**: Found via **Fuzzy Path Match** (`/12218208` matches `/12218208/buy`). **(Score +800)**
+*   **Nykaa/Amazon Results**: Found via **Text Match**.

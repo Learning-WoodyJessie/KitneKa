@@ -39,36 +39,31 @@ class SmartSearchService:
                 logger.error(f"Lazy load failed: {e}")
         return None
 
-    def _normalize_url(self, url: str) -> str:
+    def _urls_match(self, a: str, b: str) -> str | None:
         """
-        Normalize URL for stable comparison:
-        - Lowercase host
-        - Remove default ports
-        - Remove tracking params (utm_*, ref, etc.)
-        - Remove fragments
+        Returns match type: 'exact', 'path_prefix', or None.
+        Uses URLScraperService's robust normalizer.
         """
-        if not url: return ""
-        try:
-            from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
-            
-            parsed = urlparse(url)
-            # 1. Lowercase scheme and netloc
-            netloc = parsed.netloc.lower()
-            if netloc.startswith("www."):
-                netloc = netloc[4:]
-            
-            # 2. Filter query params
-            query_params = parse_qsl(parsed.query)
-            # tracking params to drop
-            blocklist = {'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'gclid', 'fbclid'}
-            cleaned_params = sorted([(k, v) for k, v in query_params if k.lower() not in blocklist])
-            
-            new_query = urlencode(cleaned_params)
-            
-            # Reconstruct (drop fragment)
-            return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, new_query, ''))
-        except Exception:
-            return url.lower() # Fallback
+        if not a or not b: return None
+        
+        ah, ap, aq = self.url_service._normalize_url_for_match(a)
+        bh, bp, bq = self.url_service._normalize_url_for_match(b)
+        
+        if not ah or not bh or ah != bh:
+            return None
+
+        # strongest: host+path exact
+        if ap == bp and ap:
+            return "exact"
+
+        # safer fuzzy: path prefix match with boundary
+        if ap and bp:
+            if ap.startswith(bp) and (ap == bp or ap[len(bp):].startswith("/")):
+                return "path_prefix"
+            if bp.startswith(ap) and (bp == ap or bp[len(ap):].startswith("/")):
+                return "path_prefix"
+
+        return None
 
 
     def _analyze_query(self, query: str):
@@ -142,81 +137,97 @@ class SmartSearchService:
                 "recommendation_text": "Here are the top results we found."
             }
 
-    def _rank_results(self, results, query, target_url=None, canonical_url=None, product_id=None):
+    def _rank_results(self, results, query, target_url=None, canonical_url=None, product_id=None, debug=True):
         """
-        Rank results based on relevance.
-        Prioritizes: Product ID > Canonical URL > Normalized URL > Model > Text
+        Rank results based on relevance (Tiered Logic).
+        Prioritizes: Product ID > Canonical URL > Fuzzy URL > Model > Text
         """
         if not results: return []
-            
+        
         query_terms = query.lower().split()
         if not query_terms: return results
-            
-        # Pre-compute match keys
-        target_key = self._normalize_url(target_url) if target_url else None
-        canonical_key = self._normalize_url(canonical_url) if canonical_url else None
-            
-        # Identify potential model numbers
-        model_terms = [term for term in query_terms if any(c.isdigit() for c in term) and len(term) > 2]
+        
+        model_terms = [t for t in query_terms if any(c.isdigit() for c in t) and len(t) > 2]
         phrases = [" ".join(query_terms[i:i+2]) for i in range(len(query_terms)-1)] if len(query_terms) > 1 else []
-
+        
+        # Prepare Identity signals
+        pid_val = product_id.get("value") if product_id else None
+        
         scored_results = []
         for item in results:
             title = item.get("title", "").lower()
             item_url = item.get("url", "")
             score = 0
-            
-            item_key = self._normalize_url(item_url)
-            matched = False
-            
+            score_components = {}
+            match_reasons = []
+            pinned = False
+
+            def add(points, reason):
+                nonlocal score
+                score += points
+                score_components[reason] = points
+                if reason not in match_reasons:
+                    match_reasons.append(reason)
+
             # --- 1. PRODUCT ID MATCH (Highest Confidence) ---
-            if product_id and product_id.get("value"):
-                pid = product_id["value"]
-                # Check for ID in URL or Title
-                if pid in item_url or pid.lower() in title:
-                    score += 1500
-                    item['match_quality'] = 'id_match'
-                    matched = True
-
-            # --- 2. CANONICAL / URL MATCHING ---
-            if not matched:
-                if canonical_key and item_key == canonical_key:
-                    score += 1200
-                    item['match_quality'] = 'canonical_match'
-                elif target_key:
-                    if item_key == target_key:
-                        score += 1000
-                        item['match_quality'] = 'exact_url'
-                    elif item_key.startswith(target_key) or target_key in item_key:
-                        score += 800
-                        item['match_quality'] = 'fuzzy_url'
-
-            # --- 3. TEXT MATCHING ---
-            # 1. Exact Brand Match
-            if title.startswith(query_terms[0]):
-                score += 50
-                
-            # 2. Term Overlap
-            matches = sum(1 for term in query_terms if term in title)
-            score += matches * 10
+            if pid_val and pid_val in item_url:
+                add(1500, "product_id_match")
+                pinned = True
             
-            # 3. Phrase Match Boost
+            # --- 2. URL MATCHING (Canonical / Resolved) ---
+            if not pinned and target_url and item_url:
+                # Compare against Canonical first if available
+                match_target = canonical_url if canonical_url else target_url
+                match_type = self._urls_match(match_target, item_url)
+                
+                if match_type == "exact":
+                    add(1200, "canonical_url_match")
+                    pinned = True
+                elif match_type == "path_prefix":
+                    add(800, "fuzzy_url_match")
+            
+            # --- 3. TEXT MATCHING ---
+            # Brand Prefix
+            if title.startswith(query_terms[0]):
+                add(50, "brand_prefix")
+            
+            # Phrase Match
             for phrase in phrases:
                 if phrase in title:
-                    score += 200
+                    add(200, "phrase_match")
             
-            # 4. Model Number Boost
+            # Model Match
             for model in model_terms:
                 if model in title:
-                    score += 500
+                    add(500, "model_match")
             
-            # Set generic match quality
-            if 'match_quality' not in item:
-                if score >= 200: item['match_quality'] = 'exact_text'
-                else: item['match_quality'] = 'related'
+            # Term Overlap
+            matches = sum(1 for term in query_terms if term in title)
+            if matches:
+                add(matches * 10, "term_overlap")
 
-            # Save score for debugging/frontend sorting
+            # Determine Match Quality
+            if "product_id_match" in match_reasons:
+                match_quality = "id_exact"
+            elif "canonical_url_match" in match_reasons:
+                match_quality = "url_canonical"
+            elif "fuzzy_url_match" in match_reasons:
+                match_quality = "url_fuzzy" 
+            elif "model_match" in match_reasons:
+                match_quality = "model_exact"
+            elif "phrase_match" in match_reasons:
+                match_quality = "phrase_exact"
+            else:
+                match_quality = "related"
+            
             item['match_score'] = score
+            item['match_quality'] = match_quality
+            item['pinned'] = pinned
+            
+            if debug:
+                item['match_reasons'] = match_reasons
+                item['score_components'] = score_components
+                
             scored_results.append((score, item))
             
         scored_results.sort(key=lambda x: x[0], reverse=True)
@@ -245,9 +256,17 @@ class SmartSearchService:
         target_url = None
         
         if url_pattern.match(query):
+            raw_query = query
             extracted_data = self.url_service.extract_product_from_url(query)
-            # Fix: Capture original/resolved URLs before overwriting query
-            target_url = extracted_data.get("resolved_url") or extracted_data.get("original_url") or query
+            
+            # capture best available URL for matching
+            target_url = (
+                extracted_data.get("resolved_url") 
+                or extracted_data.get("canonical_url") 
+                or extracted_data.get("original_url") 
+                or raw_query
+            )
+            # use extracted query for search
             query = extracted_data.get("search_query", query)
         
         logger.info(f"Fetching Data for: {query}, Target URL: {target_url}")

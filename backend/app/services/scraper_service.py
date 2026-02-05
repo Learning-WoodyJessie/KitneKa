@@ -28,6 +28,8 @@ class RealScraperService:
                 "q": query,
                 "gl": "in",
                 "hl": "en",
+                "location": "Mumbai, Maharashtra, India",
+                "google_domain": "google.co.in",
                 "api_key": self.serpapi_key,
                 "num": 100,
                 "direct_link": True
@@ -47,30 +49,34 @@ class RealScraperService:
                 if not url:
                     url = item.get("link")
                 
+                # Raw Google URL (for reference)
+                google_url = item.get("link")
+                
                 if not url:
                     continue
 
                 # URL Cleaning & Filtering
+                merchant_url = url
                 if "google.com" in url or "google.co.in" in url:
                     # 1. Try to extract real URL from redirect (e.g. url?q=)
-                    url = self._clean_google_url(url)
+                    merchant_url = self._clean_google_url(url)
                     
                     # 2. Filtering Logic
-                    # Allow 'aclk' (Ad Click) redirects
-                    if "/aclk" in url:
+                    # Allow 'aclk' (Ad Click) redirects if cleaner fails to find destination
+                    # But if we did clean it, merchant_url will be the specific site.
+                    if merchant_url == url and "/aclk" in url:
                         pass 
-                    # ALLOW 'ibp=oshop' (Shopping Viewer) because direct links are failing
                     elif "ibp=oshop" in url:
                         pass
-                    # Still discard generic search pages if they aren't product viewer
                     elif "/search" in url and "ibp=oshop" not in url:
                         continue
-                    # Any other google links that weren't cleaned? Maybe keep them if they aren't search pages.
-                    # But to be safe, if it's still a raw google link and not aclk, we might want to skip it 
-                    # to strictly avoid search pages.
-                    elif "google.com" in url or "google.co.in" in url:
-                         # If it's just a google domain but not aclk, it's likely a search page or profile
-                         continue
+                    elif "google.com" in merchant_url or "google.co.in" in merchant_url:
+                        #Likely a search page
+                        if "url?q=" not in merchant_url:
+                             continue
+                
+                # Use the clean merchant URL as the primary 'url'
+                url = merchant_url
 
                 valid_count += 1
                 cleaned_results.append({
@@ -79,6 +85,10 @@ class RealScraperService:
                     "title": item.get("title"),
                     "price": float(item.get("price", "0").replace("₹", "").replace(",", "").strip()) if item.get("price") else 0,
                     "url": url,
+                    "google_url": google_url,
+                    "merchant_url": merchant_url,
+                    "product_id": {"value": item.get("product_id"), "type": "google_shopping_id"} if item.get("product_id") else None,
+                    "immersive_token": item.get("immersive_product_page_token"),
                     "image": item.get("thumbnail"),
                     "rating": item.get("rating", 0),
                     "reviews": item.get("reviews", 0),
