@@ -39,6 +39,37 @@ class SmartSearchService:
                 logger.error(f"Lazy load failed: {e}")
         return None
 
+    def _normalize_url(self, url: str) -> str:
+        """
+        Normalize URL for stable comparison:
+        - Lowercase host
+        - Remove default ports
+        - Remove tracking params (utm_*, ref, etc.)
+        - Remove fragments
+        """
+        if not url: return ""
+        try:
+            from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+            
+            parsed = urlparse(url)
+            # 1. Lowercase scheme and netloc
+            netloc = parsed.netloc.lower()
+            if netloc.startswith("www."):
+                netloc = netloc[4:]
+            
+            # 2. Filter query params
+            query_params = parse_qsl(parsed.query)
+            # tracking params to drop
+            blocklist = {'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'gclid', 'fbclid'}
+            cleaned_params = sorted([(k, v) for k, v in query_params if k.lower() not in blocklist])
+            
+            new_query = urlencode(cleaned_params)
+            
+            # Reconstruct (drop fragment)
+            return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, new_query, ''))
+        except Exception:
+            return url.lower() # Fallback
+
 
     def _analyze_query(self, query: str):
         """
@@ -111,10 +142,10 @@ class SmartSearchService:
                 "recommendation_text": "Here are the top results we found."
             }
 
-    def _rank_results(self, results, query, original_url=None):
+    def _rank_results(self, results, query, target_url=None):
         """
-        Rank results based on relevance to the query.
-        Returns a list of (score, item) tuples.
+        Rank results based on relevance.
+        Prioritizes URL matches (Normalized) > Model Numbers > Exact Phrases > Brand.
         """
         if not results:
             return []
@@ -123,11 +154,13 @@ class SmartSearchService:
         if not query_terms:
             return results
             
+        # Pre-compute target match key
+        target_key = self._normalize_url(target_url) if target_url else None
+            
         # Identify potential model numbers (e.g., MK9022, iPhone15, 3080Ti)
         model_terms = [term for term in query_terms if any(c.isdigit() for c in term) and len(term) > 2]
         
-        # Identify Phrases (2-word combinations) for specific name boosting
-        # e.g., "mini izzy" needs to be boosted more than just "mini" + "izzy" separately
+        # Identify Phrases
         phrases = [" ".join(query_terms[i:i+2]) for i in range(len(query_terms)-1)] if len(query_terms) > 1 else []
 
         scored_results = []
@@ -136,13 +169,21 @@ class SmartSearchService:
             item_url = item.get("url", "")
             score = 0
             
-            # 0. Original URL Match (The Absolute Best Match)
-            # If the user searched via URL, this IS the product.
-            if original_url:
-                 # Check for equality or mutual inclusion (to handle redirect mismatches/query params)
-                 if original_url == item_url or (original_url in item_url) or (item_url in original_url and len(item_url) > 20):
-                     score += 1000
+            # --- 1. URL MATCHING (High Confidence) ---
+            if target_key:
+                item_key = self._normalize_url(item_url)
+                
+                # Level 1: Exact Normalized Match
+                if item_key == target_key:
+                    score += 1000
+                    item['match_quality'] = 'exact_url'
+                # Level 2: Prefix Match (e.g. target is base product, item has extra params)
+                # Or Target contained in item (fuzzy backup)
+                elif item_key.startswith(target_key) or target_key in item_key:
+                    score += 800
+                    item['match_quality'] = 'fuzzy_url'
 
+            # --- 2. TEXT MATCHING ---
             # 1. Exact Brand Match (First word usually)
             if title.startswith(query_terms[0]):
                 score += 50
@@ -151,29 +192,28 @@ class SmartSearchService:
             matches = sum(1 for term in query_terms if term in title)
             score += matches * 10
             
-            # 3. Phrase Match Boost (High priority for specific product names)
+            # 3. Phrase Match Boost
             for phrase in phrases:
                 if phrase in title:
                     score += 200
             
-            # 4. Model Number Boost (Critical for specific URL searches)
+            # 4. Model Number Boost
             for model in model_terms:
                 if model in title:
-                    score += 500 # Massive boost for exact model match
+                    score += 500
             
-            # Determine match quality based on score
-            # Score >= 200 implies a Phrase Match (200) or Model Match (500)
-            if score >= 200:
-                item['match_quality'] = 'exact'
-            else:
-                item['match_quality'] = 'related'
+            # Set generic match quality if not set by URL
+            if 'match_quality' not in item:
+                if score >= 200:
+                    item['match_quality'] = 'exact_text'
+                else:
+                    item['match_quality'] = 'related'
 
             scored_results.append((score, item))
             
         # Sort by score descending
         scored_results.sort(key=lambda x: x[0], reverse=True)
         
-        # Return all results, sorted by score.
         return [item for _, item in scored_results]
 
     # Placeholder for the new _generate_ai_insight method
@@ -196,12 +236,15 @@ class SmartSearchService:
         # 1. Check if query is URL
         url_pattern = re.compile(r'https?://\S+')
         extracted_data = None
-        original_url = None
+        target_url = None
         
         if url_pattern.match(query):
             extracted_data = self.url_service.extract_product_from_url(query)
+            # Fix: Capture original/resolved URLs before overwriting query
+            target_url = extracted_data.get("resolved_url") or extracted_data.get("original_url") or query
             query = extracted_data.get("search_query", query)
-            original_url = extracted_data.get("original_url", query) # Use resolved URL
+        
+        logger.info(f"Fetching Data for: {query}, Target URL: {target_url}")
         
         logger.info(f"Fetching Data for: {query}")
         
@@ -217,7 +260,7 @@ class SmartSearchService:
         final_results.extend(serp_results)
         
         # Rank Results
-        ranked_online = self._rank_results(final_results, query, original_url=original_url)
+        ranked_online = self._rank_results(final_results, query, target_url=target_url)
 
         # 4. Passive History Recording (New)
         if db:

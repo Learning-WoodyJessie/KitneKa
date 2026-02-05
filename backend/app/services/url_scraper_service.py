@@ -312,7 +312,9 @@ class URLScraperService:
         return {
             "search_query": final_query,
             "product_name": final_name,
-            "brand": brand, # Keep default "Unknown" or if AI set it
-            "confidence": "high" if "Amazon Product" not in final_name else "medium", # Adjust confidence based on name quality
-            "original_url": clean_url
+            "brand": brand,
+            "confidence": "high" if "Amazon Product" not in final_name else "medium",
+            "original_url": url,       # The raw input
+            "resolved_url": clean_url, # The final destination
+            "url_type": "product_page" # Basic default, can be refined later
         }
