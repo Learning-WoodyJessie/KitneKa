@@ -49,41 +49,90 @@ sequenceDiagram
     FE->>User: Render Product Grid
 ```
 
-## Component Breakdown
+## Simple English Breakdown 🧠
 
-### 1. Frontend (`SearchInterface.jsx`)
-*   **Input Handling**: Captures the user's input. Even if it's a URL, it's sent to the `/discovery/search` endpoint.
-*   **Visual Feedback**:
-    *   Shows a loading spinner.
-    *   Once results return, it looks at the `searchData.query` field from the backend.
-    *   **Smart Header**: Instead of showing `Results for "https://..."`, it displays `Results for "Extracted Product Name"` to verify to the user that we understood the link.
-*   **Rendering**: Displays the results in a grid. If the original URL product was found, it will likely be the first item due to ranking logic.
+Here is the step-by-step story of what happens when you search for a URL.
 
-### 2. Backend Entry (`main.py`)
-*   **Gateway**: Receives the request.
-*   **Refactor Note**: We recently removed logic here that was "prematurely" extracting the name. Now, it passes the *raw URL* directly to the inner services so they have the full context.
+### 1. The Messenger (Frontend)
+**"I take your message."**
+*   **Action**: You paste `https://amzn.to/3xyz` into the search bar.
+*   **Logic**: The frontend sees it's a URL but **does not** touch it. It sends the exact text to the backend.
+*   **Display**: It waits. When the backend replies "This is a Sony Headphone," the frontend updates the header to say *"Results for Sony Headphone"* (instead of showing the ugly link).
 
-### 3. Smart Search Service (`smart_search_service.py`)
-The "Brain" of the operation.
-*   **Detection**: Uses Regex to see if the query is a URL.
-*   **Orchestration**:
-    1.  Calls `URLScraperService` to turn the URL into a searchable "Product Name".
-    2.  Uses that "Product Name" to search the web (Google Shopping).
-    3.  **Critical Step - Ranking**: It compares the fresh search results against the `original_url`.
-    *   *Match Found?* -> **Exact Match Boost** (Score += 1000). This guarantees the product you linked appears at the top.
-    *   *No URL Match?* -> Ranks by text relevance (Brand match, Model match).
+### 2. The Detective (URL Scraper Service)
+**"I find out who this is."**
+This component has a new "Smart Pipeline" to identify the product efficiently:
+1.  **Un-masking**: It follows redirects to turn short links (`amzn.to`) into real links (`amazon.in/dp/B0...`).
+2.  **The Quick Peek (Metadata)**: Before doing anything heavy, it quickly grabs the page's hidden "ID Card" (HTML Metadata & JSON-LD).
+    *   *Found a Canonical URL?* Great, save it.
+    *   *Found a Product Name?* Done.
+3.  **ID Check**: It looks at the URL for a fingerprint, like an Amazon ASIN (`B085...`). If found, this is the strongest proof of identity.
+4.  **The Deep Search**: Only if the above fail, it asks Google (SerpAPI) or scans the URL text itself.
 
-### 4. URL Scraper Service (`url_scraper_service.py`)
-The "Investigator". Its job is to find out *what* the link is.
-*   **Resolver**: Handles shortened links (e.g., `amzn.to`, `bit.ly`) by following redirects to the final retailer page.
-*   **Strategy 1 (SerpAPI)**: Asks Google "What is on this specific page?". This is fast and accurate for metadata.
-*   **Strategy 2 (Path Parsing)**: Reads the URL text itself (e.g., `amazon.in/Apple-iPhone-15...`) to guess the name.
-*   **Strategy 3 (DOM Scraping)**: If other methods fail, it spawns a headless browser (Playwright) to visit the page and read the `<H1>` title tag.
-*   **AI Refinement**: Sends the gathered messy text to OpenAI to get a clean, search-optimized string (e.g., converting "Apple-iPhone-15-Blue-128GB-Generic-Case" -> "Apple iPhone 15 Blue 128GB").
+### 3. The Manager (Smart Search Service)
+**"I organize it all."**
+*   **Action**: It takes the *Product Name* found by the Detective and searches Google Shopping.
+*   **Goal**: Get a list of 10-20 "Candidate Products".
+*   **Normalization**: It cleans the URLs (removes `?ref=...`, cleans `www.`) so they can be compared fairly.
 
-### 5. Data Flow Summary
-1.  **Raw URL** (`https://...`) -> **Backend**
-2.  **Backend** -> **Name Extraction** ("Michael Kors Bag")
-3.  **Name** -> **Google Shopping Search**
-4.  **Results** + **Original URL** -> **Ranking Engine**
-5.  **Sorted Results** (Exact match first) -> **Frontend**
+### 4. The Judge (Ranking Logic)
+**"I decide the winner."**
+It scores the candidates to ensure the *exact* item you pasted is #1.
+*   **Rule #1: The ID Match (+1500 Points)** 🥇
+    *   If the Detective found ID `B0XYZ` and a search result has `B0XYZ`, it wins immediately.
+*   **Rule #2: The Official Link Match (+1200 Points)** 🥈
+    *   If the "Official Canonical URL" matches the result's URL, it wins.
+*   **Rule #3: The Fuzzy Match (+800 Points)** 🥉
+    *   If the URLs look mostly the same (ignoring tracking codes), it gets a big boost.
+*   **Rule #4: Text Match**
+    *   Otherwise, we rank by Brand and Name similarity.
+
+---
+
+## Real World Trace: Amazon Shoe Example 👟
+
+**Input URL**:
+`https://www.amazon.in/BRUTON-Sport-Shoes-Running-White/dp/B0F2THXY4T?source=ps-sl-shoppingads-lpcontext&ref_=fplfs&smid=A22K40KEJWHSL8&th=1&psc=1`
+
+### Step 1: Frontend
+*   User pastes link.
+*   Frontend displays *Loading...* and sends URL to Backend.
+
+### Step 2: The Detective (Extraction)
+*   **Redirects**: None (it's a full link).
+*   **ID Check**:
+    *   Scanner sees `/dp/B0F2THXY4T`.
+    *   **Extracted Product ID**: `{"type": "asin", "value": "B0F2THXY4T"}` 🎯
+*   **Metadata Extraction**:
+    *   Fetches HTML.
+    *   Finds Title: *"BRUTON Sport Shoes for Men..."*
+    *   **Clean Name**: "BRUTON Sport Shoes"
+*   **Normalization**:
+    *   Strips `source=...`, `ref_=...`, `smid=...`.
+    *   **Clean Key**: `amazon.in/bruton-sport-shoes-running-white/dp/b0f2thxy4t`
+
+### Step 3: The Manager (Search)
+*   Executes Google Shopping search for: `BRUTON Sport Shoes`.
+*   Gets 20 Results.
+    *   Result A: "Bruton Running Shoe" (Link: `flipkart.com/...`)
+    *   Result B: "Bruton Sport Shoe" (Link: `amazon.in/BRUTON...dp/B0F2THXY4T...`)
+    *   Result C: "Nike Shoe"
+
+### Step 4: The Judge (Ranking)
+The Ranker loops through the results:
+
+1.  **Checking Result A (Flipkart)**:
+    *   ID Match? No.
+    *   Canonical Match? No.
+    *   Text Match? Yes (Brand "Bruton"). **Score: 200**.
+
+2.  **Checking Result B (Amazon)**:
+    *   **ID Match? YES!** Link contains `B0F2THXY4T`.
+    *   **Action**: Apply **+1500 Points**.
+    *   **Total Score: 1750 (Winner)** 🏆
+
+3.  **Checking Result C (Nike)**:
+    *   Low score.
+
+### Final Outcome
+The frontend displays **Result B** (the exact shoe you pasted) at the very top of the list. ✅

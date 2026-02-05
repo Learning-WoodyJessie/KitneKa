@@ -1,53 +1,46 @@
 # Logic: Mapping URL -> Product Name
 
-The system uses a "Waterfall" approach to extract a clean product name (e.g., "Michael Kors Jet Set Tote") from a raw URL. If one method fails, it falls back to the next.
+The system uses a sophisticated **6-Step Waterfall** approach to extract a clean product identity from a raw URL.
 
-## The 4-Step Waterfall
+## The 6-Step Waterfall 🌊
 
 ### Step 1: Link Resolution (The Un-Shortener)
-First, we check if the link is a shortened URL (like `amzn.to/xyz` or `bit.ly/abc`).
-*   **Action**: We try a `HEAD` request to follow the redirect chain.
-*   **Result**: We get the "Real" final URL (e.g., `https://www.amazon.in/Michael-Kors-Tote...`).
+First, we resolve shortened links (`amzn.to`, `bit.ly`) to their final destination.
+*   **Method**: `HEAD` request to follow redirects.
+*   **Goal**: Get the real URL where data lives.
 
-### Step 2: SerpAPI Strategy (The "Google It" Method)
-We ask Google directly: *"What is the title of this page?"*
-*   **Query**: `site:amazon.in https://www.amazon.in/Michael-Kors...`
-*   **Why**: Google has already crawled the page. Its cache is faster than visiting the site ourselves.
-*   **Extraction**: We take the `title` and `snippet` from the first organic result.
-*   **Success Rate**: ~90% for popular e-commerce sites.
+### Step 2: HTML Metadata (The "Quick Peek") 🚀
+**New**: Before doing anything heavy, we check if the page has structured data.
+*   **Method**: Lightweight HTML fetch (timeout: 3s).
+*   **Goal**: Extract:
+    *   **Canonical URL** (`<link rel="canonical" ...>`)
+    *   **JSON-LD** (`@type: Product`) - The Gold Standard.
+    *   **OG Title** (`<meta property="og:title" ...>`)
 
-### Step 3: DOM Scraping (The "Headless Browser" Method)
-**Trigger**: If Step 2 fails OR returns a generic title like "Amazon Product", we use a headless browser (Playwright).
-*   **Action**: We launch a hidden Chromium browser and visit the page.
-*   **Targeting**: We look for specific HTML ID/Class tags used by major retailers:
-    *   `#productTitle` (Amazon)
-    *   `h1#title` (General)
-    *   `.B_NuCI` (Flipkart)
-*   **Why**: This gets the *exact* text displayed on the page, avoiding "SEO Metadata" which can be messy.
+### Step 3: Stable ID Extraction (The Fingerprint) 🧬
+We scan the URL for known Product IDs.
+*   **Regex**: `/(?:dp|gp/product)/([A-Z0-9]{10})` (Amazon ASIN).
+*   **Why**: IDs are more accurate than names. If we find `B0F2THXY4T`, we know *exactly* what this is.
 
-### Step 4: URL Path Parsing (The Regex Fallback)
-If all external calls fail, we analyze the URL string itself.
-*   **Example URL**: `.../Michael-Kors-Jet-Set-Tote/dp/B012345`
-*   **Regex Logic**:
-    1.  Split URL by `/`
-    2.  Ignore known garbage segments (`dp`, `product`, `ref=...`)
-    3.  Find segments that look like names (`Michael-Kors...`)
-    4.  Identify Brand identifiers in query params (Amazon uses `p_89`).
-    5.  Clean hyphens: `Michael-Kors` -> `Michael Kors`
+### Step 4: SerpAPI Strategy (The Google Fallback)
+If metadata failed, we ask Google.
+*   **Query**: `https://www.amazon.in/...`
+*   **Method**: Google Search API.
+*   **Goal**: Get the Title/Snippet that Google indexed.
+
+### Step 5: Path Parsing (The Regex Fallback)
+If external tools fail, we parse the URL text itself.
+*   **Method**: Split URL (`/my-shoe-name/dp/...`) and clean hyphens.
+*   **Goal**: Get a rough "best guess" name.
+
+### Step 6: AI Refinement (The Polisher) ✨
+Finally, we send the messy extracted text to **OpenAI (GPT-3.5)**.
+*   **Input**: *"BRUTON Sport Shoes for Men Running White Size 10..."*
+*   **Prompt**: *"Extract: 'product_name' (concise), 'brand'. Remove SEO filler."*
+*   **Output**: "BRUTON Sport Shoes"
+*   **Why**: Ensures we search for the *product*, not the *keywords*.
 
 ---
-
-## The AI Refinement Layer (The Polisher)
-Once we have a raw string from one of the steps above (which might be messy like *"Michael Kors Tote Bag - Blue 2024 Model [Best Value]..."*), we pass it to **OpenAI (GPT-3.5)**.
-
-*   **Prompt**: *"Extract: 'product_name', 'brand', 'model', 'search_query' (optimized for India). Return JSON."*
-*   **Input**: The messy title we found.
-*   **Output**: A clean, structured JSON object.
-    *   `product_name`: "Michael Kors Jet Set Tote"
-    *   `search_query`: "Michael Kors Jet Set Tote Blue" (Optimized for shopping search)
-
-## Final Output
-This clean `search_query` is what gets sent to the search engine, ensuring we search for the *item*, not the *link*.
 
 ## Canonicalization Strategy
 The user asked: *"Are we doing canonicalization?"*
@@ -55,19 +48,15 @@ The user asked: *"Are we doing canonicalization?"*
 **Answer: Yes, but in two specific layers.**
 
 ### 1. Technical Canonicalization (Redirect Resolution)
-We **always** resolve the URL to its final destination before processing.
-*   **Input**: `https://amzn.to/3xyz` (Short Link)
-*   **Process**: Follow HTTP 301/302 Redirects.
-*   **Canonical Output**: `https://www.amazon.in/Sony-Headphones...`
-*   **Why**: We cannot scrape or identify a product from a shortened wrapper.
+We **always** resolve the URL to its final destination and verify against `<link rel="canonical">`.
 
 ### 2. Parameter Handling (Fuzzy Canonicalization)
-We **do not** aggressively strip all query parameters (like `?ref=`, `?source=`) from the URL string we store. Instead, we use **Fuzzy Matching** in our ranking logic.
+We **do not** aggressively strip all query parameters. Instead, we use **Normalization & Match Levels**.
 
-*   **Problem**: `amazon.in/p/123?ref=mobile` != `amazon.in/p/123`
-*   **Our Solution**: We use an inclusion check:
-    ```python
-    if original_url in item_url or item_url in original_url:
-        score += 1000
-    ```
-*   **Benefit**: This is safer than writing complex Regex to strip parameters for every single retailer domain (Amazon, Flipkart, Myntra, etc.), which breaks often. Use the "Core" URL text for the match, ignore the noise.
+*   **Normalization**: We strip tracking params (`utm_`, `ref`, `source`) and lowercase the URL.
+*   **Match Levels**:
+    1.  **ID Match** (+1500 pts): Does the ASIN match?
+    2.  **Canonical Match** (+1200 pts): Do the official URLs match?
+    3.  **Fuzzy/Prefix Match** (+800 pts): Is the URL fundamentally the same?
+
+This gives us the accuracy of strict canonicalization without the maintenance burden of per-site rules.
