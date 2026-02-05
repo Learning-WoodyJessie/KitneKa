@@ -378,6 +378,20 @@ class SmartSearchService:
         
         # 3. Synthesis
         final_results = []
+        
+        # INJECT SOURCE ITEM: If we started with a URL, ensure it's in the results!
+        if extracted_data and extracted_data.get("title"):
+             source_item = {
+                 "title": extracted_data.get("title"),
+                 "price": extracted_data.get("price"),
+                 "currency": extracted_data.get("currency", "INR"),
+                 "link": target_url,
+                 "source": self.url_service._get_domain(target_url), # simple helper or just domain
+                 "thumbnail": extracted_data.get("image"),
+                 "is_source_url": True 
+             }
+             final_results.append(source_item)
+
         final_results.extend(serp_results)
         
         # Rank Results
