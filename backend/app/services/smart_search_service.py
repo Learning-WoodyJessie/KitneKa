@@ -157,17 +157,6 @@ class SmartSearchService:
         
         scored_results = []
         for item in results:
-            # Trust Tagging & Exclusion
-            item = self.trust_service.enrich_result(item)
-            if item.get("is_excluded"):
-                # Skip testers/samples
-                continue
-                
-            # BOOST TRUSTED SOURCES
-            if item.get("is_popular") or item.get("is_official") or item.get("is_clean_beauty"):
-                # Significant boost to bubble these up
-                 add(500, "trusted_source_boost")
-
             title = item.get("title", "").lower()
             item_url = item.get("url", "")
             score = 0
@@ -181,6 +170,17 @@ class SmartSearchService:
                 score_components[reason] = points
                 if reason not in match_reasons:
                     match_reasons.append(reason)
+            
+            # Trust Tagging & Exclusion
+            item = self.trust_service.enrich_result(item)
+            if item.get("is_excluded"):
+                # Skip testers/samples
+                continue
+                
+            # BOOST TRUSTED SOURCES
+            if item.get("is_popular") or item.get("is_official") or item.get("is_clean_beauty"):
+                # Significant boost to bubble these up
+                 add(500, "trusted_source_boost")
 
             # --- 1. PRODUCT ID MATCH (Highest Confidence) ---
             if pid_val and pid_val in item_url:
