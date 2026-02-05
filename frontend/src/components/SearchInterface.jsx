@@ -423,6 +423,12 @@ const SearchInterface = ({ initialQuery }) => {
                                         <div
                                             key={product.id || Math.random()}
                                             onClick={() => {
+                                                // INJECTED CARD LOGIC: Open Official Link Directly
+                                                if (product.is_injected_card) {
+                                                    window.open(product.url, '_blank');
+                                                    return;
+                                                }
+
                                                 const productId = product.id || `mock-${Date.now()}`;
                                                 // Ensure standard data structure
                                                 const productToSave = {
@@ -434,7 +440,7 @@ const SearchInterface = ({ initialQuery }) => {
                                                 // Navigate in same tab
                                                 navigate(`/product/${productId}`);
                                             }}
-                                            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group relative"
+                                            className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
                                         >
                                             {/* Trust Badges on Card */}
                                             {/* Trust Badges on Card */}
