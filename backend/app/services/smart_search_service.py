@@ -6,6 +6,7 @@ import re
 from app.services.scraper_service import RealScraperService
 from app.services.url_scraper_service import URLScraperService
 from app.services.trust_service import TrustService
+from app.services.registry import BRANDS, STORES
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +287,52 @@ class SmartSearchService:
             
         return round(min(score, 1.0), 2), reasons
 
+    
+    def _inject_registry_cards(self, query, current_results):
+        """
+        Injects official Store Cards if the query matches a known Brand in the Registry.
+        This acts as a fallback or enhancement if search results are poor.
+        """
+        if not query: return []
+        
+        injected = []
+        q_lower = query.lower()
+        
+        # Check against Registry
+        for b_id, data in BRANDS.items():
+            # Check if query contains brand name (e.g. "old school rituals face wash") 
+            # OR is exactly the brand name
+            matches = any(alias in q_lower for alias in data["aliases"] + [data["display_name"].lower()])
+            
+            if matches:
+                # Create Official Site Card
+                for domain_data in data.get("official_domains", []):
+                    # check deduplication
+                    host = domain_data["host"]
+                    if any(host in (r.get("link") or "") for r in current_results):
+                        continue
+                        
+                    full_url = f"https://{host}{domain_data.get('path_prefix', '/')}"
+                    
+                    card = {
+                        "title": f"Visit {data['display_name']} Official Store",
+                        "price": 0, # Placeholder
+                        "currency": "INR",
+                        "source": f"{data['display_name']} Official",
+                        "link": full_url,
+                        "url": full_url,
+                        "thumbnail": "https://cdn-icons-png.flaticon.com/512/3596/3596091.png", # Generic Store Icon or Brand Logo if available
+                        "is_official": True,
+                        "is_popular": True,
+                        "is_clean_beauty": data.get("is_clean_beauty", False),
+                        "is_injected_card": True, # For UI styling
+                        "rating": 5.0,
+                        "reviews": 1000 # Trust Booster
+                    }
+                    injected.append(card)
+        
+        return injected
+
     def _generate_recommendation(self, results, target_url=None, extracted_metadata=None):
         """
         Picks the single best offer based on "Lowest Trusted Price".
@@ -398,16 +445,29 @@ class SmartSearchService:
         # Rank Results
         canonical_url = extracted_data.get("canonical_url") if extracted_data else None
         product_id = extracted_data.get("product_id") if extracted_data else None
+        # 2. Rank Results
+        ranked_results = self._rank_results(
+            final_results, 
+            query_terms=query.lower().split(), 
+            target_url=target_url,
+            canonical_url=canonical_url,
+            product_id=product_id
+        )
         
-        ranked_online = self._rank_results(final_results, query, target_url=target_url, canonical_url=canonical_url, product_id=product_id)
-
+        # 3. Registry Injection (NEW)
+        # Inject official cards if query matches a Brand
+        injected_cards = self._inject_registry_cards(query, ranked_results)
+        if injected_cards:
+            # Prepend to results
+            ranked_results = injected_cards + ranked_results
+        
         # 4. Passive History Recording (New)
         if db:
             from app.services.db_utils import save_product_snapshot
             try:
                 # We save the top 5 most relevant results to avoid spamming DB with low quality matches
                 # Only save results that are 'exact' matches or top ranked
-                for item in ranked_online[:5]:
+                for item in ranked_results[:5]:
                     save_product_snapshot(db, item)
             except Exception as e:
                 logger.error(f"Passive History Save Failed: {e}")
