@@ -176,17 +176,19 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Filter Logic
     const allItems = searchData?.results?.online || [];
-    const filteredItems = allItems.filter(item => {
-        // 1. Clean Beauty Filter
-        if (cleanBeautyOnly && !item.is_clean_beauty) return false;
+    // 1. Clean Beauty Filter
+    if (cleanBeautyOnly) {
+        if (!item.is_clean_beauty) return false;
+        // STRICT REQUIREMENT: Must be Official Site OR Trusted Store
+        if (!item.is_official && !item.is_popular) return false;
+    }
 
-        // 2. Tab Filter
-        if (filterType === 'popular') {
-            // Show if Popular OR Official OR Clean Beauty (usually trusted)
-            return item.is_popular || item.is_official || item.is_clean_beauty;
-        }
-        return true; // 'all' shows everything
-    });
+    // 2. Tab Filter
+    if (filterType === 'popular') {
+        // Show if Popular OR Official (Clean Beauty alone is no longer enough to be "Popular" if the store is untrusted)
+        return item.is_popular || item.is_official;
+    }
+    return true; // 'all' shows everything
 
     // Sorting Logic
     let sortedItems = [...filteredItems];

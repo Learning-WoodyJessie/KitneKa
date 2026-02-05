@@ -97,9 +97,10 @@ class TrustService:
                             item["is_popular"] = True # Official Official Sites are always Popular
                             break
             
-            # 3. Clean Beauty is also Popular
-            if item.get("is_clean_beauty"):
-                 item["is_popular"] = True
+            # 3. Clean Beauty is also Popular - REMOVED
+            # User request: Clean Beauty should only be "Popular" if it's from a Trusted Store or Official Site.
+            # if item.get("is_clean_beauty"):
+            #      item["is_popular"] = True
 
             # 3. Exclusion / Low Quality Logic (Testers)
             # User flagged Netmeds Tester: https://www.netmeds.com/product/tstr-tester-...
