@@ -82,20 +82,33 @@ class TrustService:
                 if brand_data.get("is_clean_beauty"):
                     item["is_clean_beauty"] = True
                 
-                # Check Official Domain
+                # Check Official Domain OR Source Name
+                is_official_found = False
+                
+                # 1. Domain Check
                 for official in brand_data.get("official_domains", []):
                     if official["host"] in host:
                         # Optional: Check path prefix if defined
                         prefix = official.get("path_prefix")
                         if prefix:
                             if urlparse(url).path.startswith(prefix):
-                                item["is_official"] = True
+                                is_official_found = True
                         else:
-                            item["is_official"] = True
+                            is_official_found = True
                         
-                        if item.get("is_official"):
-                            item["is_popular"] = True # Official Official Sites are always Popular
-                            break
+                        if is_official_found: break
+                
+                # 2. Source Name Check (Fallback)
+                if not is_official_found and source_name:
+                    # Clean source name (remove .com, .in etc to match brand name)
+                    clean_source = source_name.replace(".com", "").replace(".in", "").strip().lower()
+                    if brand_data["display_name"].lower() in clean_source or clean_source in brand_data["display_name"].lower():
+                        is_official_found = True
+
+                if is_official_found:
+                    item["is_official"] = True
+                    item["is_popular"] = True # Official Sites are always Popular/Trusted
+
             
             # 3. Clean Beauty is also Popular - REMOVED
             # User request: Clean Beauty should only be "Popular" if it's from a Trusted Store or Official Site.
