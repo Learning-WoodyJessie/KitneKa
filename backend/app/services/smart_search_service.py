@@ -262,7 +262,7 @@ class SmartSearchService:
         # Assuming item['match_quality'] is populated by _rank_results
         qual = item.get('match_quality', 'related')
         if qual in ('id_exact', 'url_canonical'):
-            score += 0.50
+            score += 0.60
             reasons.append("Exact Match")
         elif qual in ('url_fuzzy', 'model_exact'):
             score += 0.30
@@ -288,27 +288,37 @@ class SmartSearchService:
 
     def _generate_recommendation(self, results, target_url=None, extracted_metadata=None):
         """
-        Picks the single best offer based on "Official First, then Lowest Trusted Price".
-        Gated by Confidence Score >= 0.75.
+        Picks the single best offer based on "Lowest Trusted Price".
+        Candidates must be:
+        1. Trusted (Popular or Official)
+        2. High Quality Match (Exact/Canonical/Fuzzy/Model) - ensures we compare same product
+        3. Lowest Price wins.
         """
         if not results: return None
         
-        # 1. Filter Candidates: Must be Popular or Official
-        candidates = [item for item in results if item.get('is_popular') or item.get('is_official')]
+        # 1. Broad Filter: Must be Popular or Official
+        trusted_items = [item for item in results if item.get('is_popular') or item.get('is_official')]
         
-        if not candidates:
+        # 2. Strict Filter: Must be arguably the "Same Product" (High Match Quality)
+        # We don't want to recommend a cheap accessory that happens to be from a trusted seller.
+        valid_candidates = [
+            item for item in trusted_items 
+            if item.get('match_quality') in ('id_exact', 'url_canonical', 'url_fuzzy', 'model_exact')
+        ]
+        
+        if not valid_candidates:
             return None
             
-        # 2. Strategy: Official First, then Lowest Price
-        # Sort key: tuple (not is_official, price) -> False < True (so Official comes first), then Price low->high
-        candidates.sort(key=lambda x: (not x.get('is_official', False), x.get('price', float('inf'))))
+        # 3. Strategy: Lowest Price Wins
+        # Official stores are treated equally to detailed marketplaces.
+        valid_candidates.sort(key=lambda x: x.get('price', float('inf')))
         
-        best_pick = candidates[0]
+        best_pick = valid_candidates[0]
         
-        # 3. Calculate Confidence
+        # 4. Calculate Confidence (Final Gate)
         confidence, reasons = self._calculate_confidence(best_pick, target_url, extracted_metadata)
         
-        # 4. Gate: Threshold 0.75
+        # 5. Gate: Threshold 0.75
         if confidence >= 0.75:
             best_pick["recommendation_reason"] = " • ".join(reasons)
             best_pick["confidence_score"] = confidence
