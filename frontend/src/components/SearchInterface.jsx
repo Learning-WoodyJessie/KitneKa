@@ -370,6 +370,7 @@ const SearchInterface = ({ initialQuery }) => {
                                 <RecommendationBanner
                                     recommendation={searchData.recommendation}
                                     insight={searchData.insight}
+                                    cleanBrands={searchData.clean_brands}
                                 />
                             )}
 
@@ -382,43 +383,45 @@ const SearchInterface = ({ initialQuery }) => {
                                 </span>
                             </div>
 
-                            {/* Trust Filters: Popular / All / Clean Beauty */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                                {/* Tabs */}
-                                <div className="flex bg-gray-100 p-1 rounded-lg">
-                                    <button
-                                        onClick={() => {
-                                            setFilterType('popular');
-                                            setSortBy('relevance');
-                                        }}
-                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                    >
-                                        Popular & Trusted
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setFilterType('all');
-                                            setSortBy('price_asc');
-                                        }}
-                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                    >
-                                        All Results
-                                    </button>
-                                </div>
+                            {/* Trust Filters: Popular / All / Clean Beauty - HIDDEN if showing Clean Brand Cards */}
+                            {(!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                    {/* Tabs */}
+                                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                                        <button
+                                            onClick={() => {
+                                                setFilterType('popular');
+                                                setSortBy('relevance');
+                                            }}
+                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            Popular & Trusted
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setFilterType('all');
+                                                setSortBy('price_asc');
+                                            }}
+                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            All Results
+                                        </button>
+                                    </div>
 
-                                {/* Sort By Control - High/Low removed as per request */}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-500">Sort by:</span>
-                                    <select
-                                        value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
-                                    >
-                                        <option value="relevance">Popularity</option>
-                                        <option value="price_asc">Price: Low to High</option>
-                                    </select>
+                                    {/* Sort By Control - High/Low removed as per request */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-gray-500">Sort by:</span>
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value)}
+                                            className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                                        >
+                                            <option value="relevance">Popularity</option>
+                                            <option value="price_asc">Price: Low to High</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* RESULTS GRID */}
                             {sortedItems.length > 0 ? (

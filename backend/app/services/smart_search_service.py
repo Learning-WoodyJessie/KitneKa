@@ -456,10 +456,8 @@ class SmartSearchService:
         
         # 3. Registry Injection (NEW)
         # Inject official cards if query matches a Brand
-        injected_cards = self._inject_registry_cards(query, ranked_results)
-        if injected_cards:
-            # Prepend to results
-            ranked_results = injected_cards + ranked_results
+        # MODIFIED: Return these as a separate 'clean_brands' list for specific UI handling
+        clean_brands = self._inject_registry_cards(query, ranked_results)
         
         # 4. Passive History Recording (New)
         if db:
@@ -481,6 +479,7 @@ class SmartSearchService:
                 "instagram": instagram_results,
                 "local": local_results
             },
+            "clean_brands": clean_brands, # New Explicit Key
             "recommendation": self._generate_recommendation(ranked_results, target_url, extracted_data),
             "insight": self._generate_ai_insight(ranked_results, query)
         }
