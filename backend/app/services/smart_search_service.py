@@ -477,15 +477,10 @@ class SmartSearchService:
             "match_type": "url" if extracted_data else "text",
             "extracted_metadata": extracted_data,
             "results": {
-                "online": ranked_online,
+                "online": ranked_results,
                 "instagram": instagram_results,
                 "local": local_results
             },
-            "results": {
-                "online": ranked_online,
-                "instagram": instagram_results,
-                "local": local_results
-            },
-            "recommendation": self._generate_recommendation(ranked_online, target_url, extracted_data),
-            "insight": self._generate_ai_insight(ranked_online, query)
+            "recommendation": self._generate_recommendation(ranked_results, target_url, extracted_data),
+            "insight": self._generate_ai_insight(ranked_results, query)
         }
