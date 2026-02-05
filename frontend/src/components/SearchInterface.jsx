@@ -428,20 +428,11 @@ const SearchInterface = ({ initialQuery }) => {
                                             className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group relative"
                                         >
                                             {/* Trust Badges on Card */}
+                                            {/* Trust Badges on Card */}
                                             <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                                {product.rating > 4 && (
-                                                    <div className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm w-fit">
-                                                        ★ {product.rating}
-                                                    </div>
-                                                )}
                                                 {product.is_official && (
                                                     <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
                                                         <BadgeCheck size={10} /> Official
-                                                    </div>
-                                                )}
-                                                {product.is_popular && !product.is_official && (
-                                                    <div className="bg-gray-100 text-gray-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                        <ShieldCheck size={10} /> Trusted
                                                     </div>
                                                 )}
                                                 {product.is_clean_beauty && (
@@ -450,6 +441,18 @@ const SearchInterface = ({ initialQuery }) => {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Wishlist Button */}
+                                            <button
+                                                className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Placeholder for wishlist logic
+                                                    console.log("Add to wishlist:", product.title);
+                                                }}
+                                            >
+                                                <Heart size={16} />
+                                            </button>
 
                                             <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
                                                 <img
