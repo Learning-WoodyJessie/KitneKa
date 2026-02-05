@@ -69,6 +69,14 @@ const SearchInterface = ({ initialQuery }) => {
             setQuery(categoryParam);
             setBrandContext(null);
             setSearched(true);
+
+            // Auto-enable Clean Beauty filter if selected
+            if (categoryParam === 'Clean Beauty') {
+                setCleanBeautyOnly(true);
+            } else {
+                setCleanBeautyOnly(false);
+            }
+
             handleSearch(null, 'text', null, '', categoryParam);
             return;
         }
