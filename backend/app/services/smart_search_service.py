@@ -215,6 +215,8 @@ class SmartSearchService:
                 if score >= 200: item['match_quality'] = 'exact_text'
                 else: item['match_quality'] = 'related'
 
+            # Save score for debugging/frontend sorting
+            item['match_score'] = score
             scored_results.append((score, item))
             
         scored_results.sort(key=lambda x: x[0], reverse=True)

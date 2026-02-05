@@ -63,3 +63,32 @@ Basic keyword matching.
 
 ## Conclusion
 The **URL Match (+1000)** effectively "short-circuits" the ranking, guaranteeing that if we found the link you gave us, it wins. If not, the **Model Number (+500)** acts as the secondary anchor for high precision.
+
+---
+
+## Data Schema: The Result Object 📄
+
+Here is an example of a single **"Online Result Item"** as it flows through the Ranking Engine.
+
+```json
+{
+  "title": "BRUTON Sport Shoes for Men | Running Sneaker (Blue)",
+  "url": "https://www.amazon.in/dp/B0F2THXY4T?th=1",
+  "price": "₹499.00",
+  "source": "Amazon.in",
+  "thumbnail": "https://m.media-amazon.com/images/I/71xyz.jpg",
+  
+  // --- Fields Added by The Judge (Ranker) ---
+  "match_quality": "id_match",  // Reasons: id_match, exact_url, fuzzy_url, exact_text, related
+  "match_score": 1750           // The finalized score used for sorting
+}
+```
+
+### Key Fields Breakdown
+*   **`title` & `url`**: The raw data from Google Shopping.
+*   **`source`**: The retailer name (e.g., Flipkart, Amazon).
+*   **`match_quality`**: The final verdict from the ranker. This tells the Frontend how to display the item (e.g., show a "Top Match" badge).
+*   **`match_score`**: The numeric score.
+    *   `> 1000`: Verified Match (ID or Exact URL).
+    *   `> 500`: Strong Match (Model Number).
+    *   `< 300`: Weak/Text Match.
