@@ -5,6 +5,7 @@ import os
 import re
 from app.services.scraper_service import RealScraperService
 from app.services.url_scraper_service import URLScraperService
+from app.services.trust_service import TrustService
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class SmartSearchService:
             
         self.scraper = RealScraperService()
         self.url_service = URLScraperService()
+        self.trust_service = TrustService()
 
     def _get_client(self):
         """Lazy load client"""
@@ -155,6 +157,12 @@ class SmartSearchService:
         
         scored_results = []
         for item in results:
+            # Trust Tagging & Exclusion
+            item = self.trust_service.enrich_result(item)
+            if item.get("is_excluded"):
+                # Skip testers/samples
+                continue
+
             title = item.get("title", "").lower()
             item_url = item.get("url", "")
             score = 0

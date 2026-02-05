@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
 import CategoryLabels from './CategoryLabels';
 import ResultsGrouped from './ResultsGrouped';
@@ -28,6 +29,10 @@ const SearchInterface = ({ initialQuery }) => {
     // Image/URL search states
     const [showImageModal, setShowImageModal] = useState(false);
     const [imageFile, setImageFile] = useState(null);
+
+    // Trust & Categories State
+    const [filterType, setFilterType] = useState('popular'); // 'popular' | 'all'
+    const [cleanBeautyOnly, setCleanBeautyOnly] = useState(false);
 
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -100,6 +105,9 @@ const SearchInterface = ({ initialQuery }) => {
 
         if (mode === 'text' && !overrideQuery) {
             setActiveTab('online');
+            // Reset filters on new search
+            setFilterType('popular');
+            setCleanBeautyOnly(false);
             // Update URL to match search if not overridden (optional, but good for history)
             navigate(`/search?q=${encodeURIComponent(q)}`, { replace: true });
         }
@@ -155,6 +163,20 @@ const SearchInterface = ({ initialQuery }) => {
         setSearchData(null);
         setError(null);
     };
+
+    // Filter Logic
+    const allItems = searchData?.results?.online || [];
+    const filteredItems = allItems.filter(item => {
+        // 1. Clean Beauty Filter
+        if (cleanBeautyOnly && !item.is_clean_beauty) return false;
+
+        // 2. Tab Filter
+        if (filterType === 'popular') {
+            // Show if Popular OR Official OR Clean Beauty (usually trusted)
+            return item.is_popular || item.is_official || item.is_clean_beauty;
+        }
+        return true; // 'all' shows everything
+    });
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
@@ -326,9 +348,38 @@ const SearchInterface = ({ initialQuery }) => {
                                 </span>
                             </div>
 
-                            {searchData?.results?.online?.length > 0 ? (
+                            {/* Trust Filters: Popular / All / Clean Beauty */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b border-gray-100 pb-4">
+                                {/* Tabs */}
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    <button
+                                        onClick={() => setFilterType('popular')}
+                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                        Popular & Trusted
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterType('all')}
+                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                        All Results
+                                    </button>
+                                </div>
+
+                                {/* Clean Beauty Toggle */}
+                                <button
+                                    onClick={() => setCleanBeautyOnly(!cleanBeautyOnly)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${cleanBeautyOnly ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                >
+                                    <Leaf size={14} className={cleanBeautyOnly ? "fill-current" : ""} />
+                                    Clean Beauty
+                                </button>
+                            </div>
+
+                            {/* RESULTS GRID */}
+                            {filteredItems.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {searchData.results.online.map((product) => (
+                                    {filteredItems.map((product) => (
                                         <div
                                             key={product.id || Math.random()}
                                             onClick={() => {
@@ -343,8 +394,33 @@ const SearchInterface = ({ initialQuery }) => {
                                                 // Navigate in same tab
                                                 navigate(`/product/${productId}`);
                                             }}
-                                            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group"
+                                            className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-lg transition-all cursor-pointer group relative"
                                         >
+                                            {/* Trust Badges on Card */}
+                                            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                                {product.rating > 4 && (
+                                                    <div className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm w-fit">
+                                                        ★ {product.rating}
+                                                    </div>
+                                                )}
+                                                {product.is_official && (
+                                                    <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                        <BadgeCheck size={10} /> Official
+                                                    </div>
+                                                )}
+                                                {product.is_popular && !product.is_official && (
+                                                    // Popular but not official brand store (optional badge)
+                                                    <div className="bg-gray-100 text-gray-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                        <ShieldCheck size={10} /> Trusted
+                                                    </div>
+                                                )}
+                                                {product.is_clean_beauty && (
+                                                    <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                        <Leaf size={10} /> Clean
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
                                                 <img
                                                     src={product.image}
@@ -352,11 +428,6 @@ const SearchInterface = ({ initialQuery }) => {
                                                     className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                                                     loading="lazy"
                                                 />
-                                                {product.rating > 4 && (
-                                                    <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                                        ★ {product.rating}
-                                                    </div>
-                                                )}
                                                 {product.source && (
                                                     <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                                                         {product.source}
@@ -378,8 +449,8 @@ const SearchInterface = ({ initialQuery }) => {
                             ) : (
                                 <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                     <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900">No results found</h3>
-                                    <p className="text-gray-500">Try checking your spelling or using different keywords.</p>
+                                    <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
+                                    <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
                                 </div>
                             )}
                         </div>
