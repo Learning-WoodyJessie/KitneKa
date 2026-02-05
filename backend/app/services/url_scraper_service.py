@@ -226,7 +226,7 @@ class URLScraperService:
             
             # Segments to ignore (Amazon/generic artifacts)
             ignored_prefixes = ('ref=', 'sr=', 'qid=', 'pf_rd', 'dib', 'dib_tag')
-            ignored_exact = ('dp', 'gp', 'product', 'd', 'buy', 'mailers', 'p', 'skin-care', 'watches', 'clothing')
+            ignored_exact = ('dp', 'gp', 'product', 'd', 'buy', 'mailers', 'p', 'skin-care', 'watches', 'clothing', 'highlighter')
             
             for seg in raw_segments:
                 if seg.lower() in ignored_exact or seg.lower().startswith(ignored_prefixes):
