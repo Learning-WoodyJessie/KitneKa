@@ -9,7 +9,7 @@ os.environ["OPENAI_API_KEY"] = "sk-fake"
 os.environ["SERPAPI_API_KEY"] = "fake"
 
 def test_myntra():
-    url = "https://www.myntra.com/highlighter/m.a.c/mac-strobe-cream---pinklite-50-ml/9589241/buy"
+    url = "https://www.myntra.com/mailers/skin-care/m.a.c/m.a.c-mini-strobe-cream-15-ml---pinklite/12218208/buy?utm_source=social_share_pdp&utm_medium=deeplink&utm_campaign=social_share_pdp_deeplink"
     service = URLScraperService()
     
     # We want to test _extract_from_url_path specifically to see the fallback logic

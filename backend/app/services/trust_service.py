@@ -77,7 +77,12 @@ class TrustService:
                             item["is_official"] = True
                         
                         if item.get("is_official"):
+                            item["is_popular"] = True # Official Official Sites are always Popular
                             break
+            
+            # 3. Clean Beauty is also Popular
+            if item.get("is_clean_beauty"):
+                 item["is_popular"] = True
 
             # 3. Exclusion / Low Quality Logic (Testers)
             # User flagged Netmeds Tester: https://www.netmeds.com/product/tstr-tester-...

@@ -162,6 +162,11 @@ class SmartSearchService:
             if item.get("is_excluded"):
                 # Skip testers/samples
                 continue
+                
+            # BOOST TRUSTED SOURCES
+            if item.get("is_popular") or item.get("is_official") or item.get("is_clean_beauty"):
+                # Significant boost to bubble these up
+                 add(500, "trusted_source_boost")
 
             title = item.get("title", "").lower()
             item_url = item.get("url", "")

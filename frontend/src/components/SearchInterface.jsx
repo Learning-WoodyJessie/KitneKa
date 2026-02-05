@@ -32,7 +32,8 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Trust & Categories State
     const [filterType, setFilterType] = useState('popular'); // 'popular' | 'all'
-    const [cleanBeautyOnly, setCleanBeautyOnly] = useState(false);
+    const [cleanBeautyOnly, setCleanBeautyOnly] = useState(false); // Controlled by "Clean Beauty" Category Tile
+    const [sortBy, setSortBy] = useState('relevance'); // 'relevance' | 'price_asc' | 'price_desc'
 
     // API Base URL for production
     const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -184,6 +185,17 @@ const SearchInterface = ({ initialQuery }) => {
             return item.is_popular || item.is_official || item.is_clean_beauty;
         }
         return true; // 'all' shows everything
+    });
+
+    // Sorting Logic
+    const sortedItems = [...filteredItems].sort((a, b) => {
+        if (sortBy === 'price_asc') {
+            return (a.price || 0) - (b.price || 0);
+        } else if (sortBy === 'price_desc') {
+            return (b.price || 0) - (a.price || 0);
+        }
+        // Default: Relevance (Server returned order, usually descending match score)
+        return 0;
     });
 
     return (
@@ -357,7 +369,7 @@ const SearchInterface = ({ initialQuery }) => {
                             </div>
 
                             {/* Trust Filters: Popular / All / Clean Beauty */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b border-gray-100 pb-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                                 {/* Tabs */}
                                 <div className="flex bg-gray-100 p-1 rounded-lg">
                                     <button
@@ -374,20 +386,25 @@ const SearchInterface = ({ initialQuery }) => {
                                     </button>
                                 </div>
 
-                                {/* Clean Beauty Toggle */}
-                                <button
-                                    onClick={() => setCleanBeautyOnly(!cleanBeautyOnly)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${cleanBeautyOnly ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                                >
-                                    <Leaf size={14} className={cleanBeautyOnly ? "fill-current" : ""} />
-                                    Clean Beauty
-                                </button>
+                                {/* Sort By */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">Sort by:</span>
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                                    >
+                                        <option value="relevance">Popularity</option>
+                                        <option value="price_asc">Price: Low to High</option>
+                                        <option value="price_desc">Price: High to Low</option>
+                                    </select>
+                                </div>
                             </div>
 
                             {/* RESULTS GRID */}
-                            {filteredItems.length > 0 ? (
+                            {sortedItems.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {filteredItems.map((product) => (
+                                    {sortedItems.map((product) => (
                                         <div
                                             key={product.id || Math.random()}
                                             onClick={() => {
@@ -417,7 +434,6 @@ const SearchInterface = ({ initialQuery }) => {
                                                     </div>
                                                 )}
                                                 {product.is_popular && !product.is_official && (
-                                                    // Popular but not official brand store (optional badge)
                                                     <div className="bg-gray-100 text-gray-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
                                                         <ShieldCheck size={10} /> Trusted
                                                     </div>

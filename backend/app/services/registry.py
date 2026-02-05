@@ -137,9 +137,45 @@ BRANDS = {
         "display_name": "Old School Rituals",
         "aliases": ["old school rituals"],
         "categories": ["beauty", "wellness"],
-        "is_clean_beauty": True, # User curated
+        "is_clean_beauty": True, 
         "official_domains": [
             {"host": "oldschoolrituals.in", "path_prefix": "/"}
+        ]
+    },
+    "faces_canada": {
+        "display_name": "Faces Canada",
+        "aliases": ["faces canada", "facescanada"],
+        "categories": ["beauty", "makeup"],
+        "is_clean_beauty": False,
+        "official_domains": [
+            {"host": "facescanada.com", "path_prefix": "/"}
+        ]
+    },
+    "forest_essentials": {
+        "display_name": "Forest Essentials",
+        "aliases": ["forest essentials"],
+        "categories": ["beauty", "ayurveda"],
+        "is_clean_beauty": True,
+        "official_domains": [
+            {"host": "forestessentialsindia.com", "path_prefix": "/"}
+        ]
+    },
+    "plum": {
+        "display_name": "Plum",
+        "aliases": ["plum", "plum goodness"],
+        "categories": ["beauty", "skincare"],
+        "is_clean_beauty": True,
+        "official_domains": [
+            {"host": "plumgoodness.com", "path_prefix": "/"}
+        ]
+    },
+    "kama_ayurveda": {
+        "display_name": "Kama Ayurveda",
+        "aliases": ["kama ayurveda"],
+        "categories": ["beauty", "ayurveda"],
+        "is_clean_beauty": True,
+        "official_domains": [
+            {"host": "kamaayurveda.in", "path_prefix": "/"}
         ]
     }
 }
