@@ -448,7 +448,7 @@ class SmartSearchService:
         # 2. Rank Results
         ranked_results = self._rank_results(
             final_results, 
-            query_terms=query.lower().split(), 
+            query=query, 
             target_url=target_url,
             canonical_url=canonical_url,
             product_id=product_id
