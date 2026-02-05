@@ -188,15 +188,14 @@ const SearchInterface = ({ initialQuery }) => {
     });
 
     // Sorting Logic
-    const sortedItems = [...filteredItems].sort((a, b) => {
-        if (sortBy === 'price_asc') {
-            return (a.price || 0) - (b.price || 0);
-        } else if (sortBy === 'price_desc') {
-            return (b.price || 0) - (a.price || 0);
-        }
-        // Default: Relevance (Server returned order, usually descending match score)
-        return 0;
-    });
+    // Sorting Logic
+    let sortedItems = [...filteredItems];
+    if (sortBy === 'price_asc') {
+        sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price_desc') {
+        sortedItems.sort((a, b) => (b.price || 0) - (a.price || 0));
+    }
+    // For 'relevance', we do NOT sort, preserving the server's sophisticated ranking (which acts like Popularity)
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">

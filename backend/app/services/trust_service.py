@@ -28,15 +28,17 @@ class TrustService:
                 host = host[4:]
             
             # 1. Store Tier (Popular Marketplace)
-            if host in POPULAR_STORE_DOMAINS:
-                item["is_popular"] = True
-                
-                # Check specifics
-                for store in STORES:
-                    if host in store["domains"]:
+            # Check if host ends with any of the popular domains (handles m.myntra.com, www.amazon.in etc)
+            is_found = False
+            for store in STORES:
+                for domain in store["domains"]:
+                    if host == domain or host.endswith("." + domain):
+                        item["is_popular"] = True
                         item["store_name"] = store["display_name"]
                         item["store_tier"] = store["tier"]
+                        is_found = True
                         break
+                if is_found: break
             
             # 2. Official Brand Check
             # We need to know WHICH brand this item belongs to.

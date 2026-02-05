@@ -263,23 +263,27 @@ class SmartSearchService:
         """
         logger.info(f"Smart Search Analysis for: {query}")
         
-        # 1. Check if query is URL
+        # 1. Check if query contains a URL (anywhere in text)
         url_pattern = re.compile(r'https?://\S+')
         extracted_data = None
         target_url = None
         
-        if url_pattern.match(query):
-            raw_query = query
-            extracted_data = self.url_service.extract_product_from_url(query)
+        url_match = url_pattern.search(query)
+        if url_match:
+            # Extract just the URL part
+            raw_url = url_match.group(0)
+            logger.info(f"Detected URL in query: {raw_url}")
+            
+            extracted_data = self.url_service.extract_product_from_url(raw_url)
             
             # capture best available URL for matching
             target_url = (
                 extracted_data.get("resolved_url") 
                 or extracted_data.get("canonical_url") 
                 or extracted_data.get("original_url") 
-                or raw_query
+                or raw_url
             )
-            # use extracted query for search
+            # extraction might give us a clean product name to search
             query = extracted_data.get("search_query", query)
         
         logger.info(f"Fetching Data for: {query}, Target URL: {target_url}")
