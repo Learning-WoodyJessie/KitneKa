@@ -379,13 +379,19 @@ const SearchInterface = ({ initialQuery }) => {
                                 {/* Tabs */}
                                 <div className="flex bg-gray-100 p-1 rounded-lg">
                                     <button
-                                        onClick={() => setFilterType('popular')}
+                                        onClick={() => {
+                                            setFilterType('popular');
+                                            setSortBy('relevance');
+                                        }}
                                         className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                                     >
                                         Popular & Trusted
                                     </button>
                                     <button
-                                        onClick={() => setFilterType('all')}
+                                        onClick={() => {
+                                            setFilterType('all');
+                                            setSortBy('price_asc');
+                                        }}
                                         className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                                     >
                                         All Results
@@ -402,7 +408,6 @@ const SearchInterface = ({ initialQuery }) => {
                                     >
                                         <option value="relevance">Popularity</option>
                                         <option value="price_asc">Price: Low to High</option>
-                                        <option value="price_desc">Price: High to Low</option>
                                     </select>
                                 </div>
                             </div>
