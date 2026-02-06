@@ -16,20 +16,20 @@ const Footer = () => {
                     <div>
                         <h4 className="font-semibold text-gray-900 mb-4">Shop</h4>
                         <ul className="space-y-2 text-sm text-gray-500">
-                            <li><a href="#" className="hover:text-blue-600">Mobiles</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Laptops</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Electronics</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Fashion</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Mobiles</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Laptops</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Electronics</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Fashion</a></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
                         <ul className="space-y-2 text-sm text-gray-500">
-                            <li><a href="#" className="hover:text-blue-600">About Us</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Contact</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Privacy Policy</a></li>
-                            <li><a href="#" className="hover:text-blue-600">Terms of Service</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">About Us</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Contact</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Privacy Policy</a></li>
+                            <li><a href="#" className="hover:text-black transition-colors">Terms of Service</a></li>
                         </ul>
                     </div>
 
@@ -40,9 +40,9 @@ const Footer = () => {
                             <input
                                 type="email"
                                 placeholder="Enter your email"
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                             />
-                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                            <button className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
                                 Subscribe
                             </button>
                         </div>

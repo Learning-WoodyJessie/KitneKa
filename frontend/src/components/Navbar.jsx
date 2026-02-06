@@ -47,10 +47,10 @@ const Navbar = () => {
 
                     {/* --- LOGO (Centers on Mobile, Left on Desktop) --- */}
                     <Link to="/" className="flex-shrink-0 flex items-center gap-2 group">
-                        <div className="hidden md:flex w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:shadow-blue-200 transition-all">
+                        <div className="hidden md:flex w-10 h-10 bg-black rounded-xl items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:scale-105 transition-all">
                             K
                         </div>
-                        <span className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
+                        <span className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight group-hover:text-black transition-colors">
                             KitneKa
                         </span>
                     </Link>
@@ -69,14 +69,14 @@ const Navbar = () => {
                             <form onSubmit={handleSearch} className="relative group">
                                 <input
                                     type="text"
-                                    className="w-full pl-5 pr-14 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-full focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm group-hover:shadow-md"
+                                    className="w-full pl-5 pr-14 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-full focus:outline-none focus:bg-white focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm group-hover:shadow-md"
                                     placeholder="Search for products, brands, or categories..."
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                 />
                                 <button
                                     type="submit"
-                                    className="absolute right-1 top-1 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
+                                    className="absolute right-1 top-1 p-1.5 bg-black text-white rounded-full hover:bg-gray-800 transition-colors shadow-sm"
                                 >
                                     <Search size={18} />
                                 </button>
@@ -86,11 +86,11 @@ const Navbar = () => {
 
                     {/* --- DESKTOP: ACTIONS --- */}
                     <div className="hidden md:flex items-center gap-6">
-                        <Link to="/login" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium text-sm">
+                        <Link to="/login" className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium text-sm">
                             <User size={20} />
                             <span className="hidden lg:inline">Sign In</span>
                         </Link>
-                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors font-medium relative text-sm">
+                        <button className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium relative text-sm">
                             <ShoppingBag size={20} />
                             <span className="hidden lg:inline">Wishlist</span>
                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white">0</span>
@@ -103,7 +103,7 @@ const Navbar = () => {
             <div className="hidden md:block border-t border-gray-100 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <nav className="flex items-center gap-8 h-12 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-900 mr-4 cursor-pointer hover:text-blue-600">
+                        <div className="flex items-center gap-2 text-sm font-bold text-gray-900 mr-4 cursor-pointer hover:text-black">
                             <Menu size={16} />
                             <span>All Categories</span>
                         </div>
@@ -111,7 +111,7 @@ const Navbar = () => {
                             <Link
                                 key={cat.name}
                                 to={cat.path}
-                                className="text-sm font-medium text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 h-full flex items-center transition-colors px-1 whitespace-nowrap"
+                                className="text-sm font-medium text-gray-600 hover:text-black hover:border-b-2 hover:border-black h-full flex items-center transition-colors px-1 whitespace-nowrap"
                             >
                                 {cat.name}
                             </Link>

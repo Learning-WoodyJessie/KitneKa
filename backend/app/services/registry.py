@@ -130,6 +130,8 @@ BRANDS = {
         "categories": ["beauty", "wellness"],
         "is_clean_beauty": True, # User curated
         "image": "https://ui-avatars.com/api/?name=Mamaearth&background=a0d468&color=fff&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Mamaearth Face Wash", "Mamaearth Onion Hair Oil", "Mamaearth Vitamin C"],
         "official_domains": [
             {"host": "mamaearth.in", "path_prefix": "/"}
         ]
@@ -140,6 +142,16 @@ BRANDS = {
         "categories": ["beauty", "wellness"],
         "is_clean_beauty": True, 
         "image": "https://ui-avatars.com/api/?name=Old+School&background=cba135&color=fff&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": [
+            "Old School Rituals", 
+            "Old School Rituals Skincare", 
+            "Old School Rituals Hair", 
+            "Old School Rituals Body", 
+            "Old School Rituals Face Wash",
+            "Old School Rituals Oil",
+            "Old School Rituals Shampoo"
+        ],
         "official_domains": [
             {"host": "oldschoolrituals.in", "path_prefix": "/"}
         ]
@@ -159,16 +171,20 @@ BRANDS = {
         "categories": ["beauty", "ayurveda"],
         "is_clean_beauty": True,
         "image": "https://ui-avatars.com/api/?name=Forest+E&background=0f4d19&color=ffd700&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Forest Essentials Soundarya", "Forest Essentials Hair Cleanser"],
         "official_domains": [
             {"host": "forestessentialsindia.com", "path_prefix": "/"}
         ]
     },
     "plum": {
-        "display_name": "Plum",
-        "aliases": ["plum", "plum goodness"],
+        "display_name": "Plum Goodness",
+        "aliases": ["plum goodness", "plum"],
         "categories": ["beauty", "skincare"],
         "is_clean_beauty": True,
         "image": "https://ui-avatars.com/api/?name=Plum&background=5d3a9b&color=fff&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Plum Green Tea", "Plum Vitamin C Serum", "Plum Body Lovin"],
         "official_domains": [
             {"host": "plumgoodness.com", "path_prefix": "/"}
         ]
@@ -179,8 +195,34 @@ BRANDS = {
         "categories": ["beauty", "ayurveda"],
         "is_clean_beauty": True,
         "image": "https://ui-avatars.com/api/?name=Kama&background=3e2723&color=d4af37&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1608248597279-f99d160bfbc8?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Kumkumadi Thailam", "Kama Ayurveda Rose Water"],
         "official_domains": [
             {"host": "kamaayurveda.in", "path_prefix": "/"}
+        ]
+    },
+    "sugar_cosmetics": {
+        "display_name": "Sugar Cosmetics",
+        "aliases": ["sugar cosmetics", "sugar"],
+        "categories": ["beauty", "makeup"],
+        "is_clean_beauty": True,
+        "image": "https://ui-avatars.com/api/?name=Sugar&background=000&color=fff&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=2000&auto=format&fit=crop", 
+        "popular_searches": ["Sugar Cosmetics Lipstick", "Sugar Foundation", "Sugar Kajal"],
+        "official_domains": [
+            {"host": "sugarcosmetics.com", "path_prefix": "/"}
+        ]
+    },
+    "the_tribe_concepts": {
+        "display_name": "The Tribe Concepts",
+        "aliases": ["the tribe concepts", "tribe concepts"],
+        "categories": ["beauty", "ayurveda"],
+        "is_clean_beauty": True,
+        "image": "https://ui-avatars.com/api/?name=Tribe&background=8d6e63&color=fff&size=512&font-size=0.33",
+        "banner_image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Tribe Concepts Face Brightening", "Tribe Concepts Hair Oil"],
+        "official_domains": [
+            {"host": "thetribeconcepts.com", "path_prefix": "/"}
         ]
     }
 }

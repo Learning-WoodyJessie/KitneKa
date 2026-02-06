@@ -283,7 +283,7 @@ const ProductPage = () => {
                         {/* Title & Stats */}
                         <div>
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="text-blue-600 font-bold text-xs uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">
+                                <span className="text-black font-bold text-xs uppercase tracking-widest border border-gray-200 px-3 py-1">
                                     {product.brand || "Fashion"}
                                 </span>
                                 {product.category && (
@@ -379,13 +379,13 @@ const ProductPage = () => {
                     <div className="flex border-b border-gray-100">
                         <button
                             onClick={() => setActiveOfferTab('popular')}
-                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'popular' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'popular' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Top Retailers ({popularOffers.length})
                         </button>
                         <button
                             onClick={() => setActiveOfferTab('others')}
-                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'others' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'others' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Other Options ({otherOffers.length})
                         </button>
@@ -409,8 +409,8 @@ const ProductPage = () => {
                                         <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-900">{offer.seller}</div>
-                                                {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">BEST DEAL</span>}
-                                                {isPopularStore(offer.seller) && <span className="ml-2 text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">VERIFIED</span>}
+                                                {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 ml-2 uppercase tracking-wide">BEST DEAL</span>}
+                                                {isPopularStore(offer.seller) && <span className="ml-2 text-[10px] font-bold border border-gray-200 text-gray-500 px-2 py-0.5 uppercase tracking-wide">VERIFIED</span>}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 ₹{offer.price.toLocaleString()}
@@ -426,7 +426,7 @@ const ProductPage = () => {
                                             <td className="px-6 py-4 text-right">
                                                 <button
                                                     onClick={(e) => handleBuyNow(e, offer.url)}
-                                                    className="inline-flex items-center gap-1 text-blue-600 font-bold text-sm hover:underline disabled:opacity-50"
+                                                    className="inline-flex items-center gap-1 text-black font-bold text-sm hover:underline disabled:opacity-50"
                                                     disabled={resolvingUrl === offer.url}
                                                 >
                                                     {resolvingUrl === offer.url ? 'Loading...' : <>Buy Now <ExternalLink size={14} /></>}

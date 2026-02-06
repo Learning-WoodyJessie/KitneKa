@@ -331,6 +331,8 @@ class SmartSearchService:
                         # Use specific image if available, else generic
                         "thumbnail": data.get("image", "https://cdn-icons-png.flaticon.com/512/3596/3596091.png"),
                         "image": data.get("image", "https://cdn-icons-png.flaticon.com/512/3596/3596091.png"), 
+                        "banner_image": data.get("banner_image"),
+                        "popular_searches": data.get("popular_searches", []),
                         "is_official": True,
                         "is_popular": True,
                         "is_clean_beauty": data.get("is_clean_beauty", False),
@@ -429,6 +431,17 @@ class SmartSearchService:
         # Use search_products which handles the fallback to organic search if shopping fails
         scraper_response = self.scraper.search_products(query)
         serp_results = scraper_response.get("online", [])
+        
+        # 2a. Direct Integration for Registry Brands (Live Data)
+        if "old school rituals" in query.lower():
+             logger.info("Triggering Direct Shopify Fetch for Old School Rituals")
+             direct_items = self.scraper.fetch_direct_shopify("https://www.oldschoolrituals.in")
+             if direct_items:
+                 logger.info(f"Replacing SERP results with {len(direct_items)} Direct Items.")
+                 serp_results = direct_items
+
+
+
         local_results = self.scraper.search_local_stores(query, location)
         instagram_results = self.scraper.search_instagram(query, location)
         
@@ -451,6 +464,20 @@ class SmartSearchService:
 
         final_results.extend(serp_results)
         
+        # 2b. Strict Filtering for Ambiguous Brands (User Feedback)
+        # remove "fruit", "eating", "kg" for Plum
+        if "plum" in query.lower():
+             logger.info("Applying strict filtering for 'Plum' to remove fruits/groceries.")
+             filtered_results = []
+             negative_terms = ["fruit", "dry fruit", "eating", "fresh plum", "1kg", "500g", "250g", "cake", "candy"]
+             for item in final_results:
+                 title_lower = item.get("title", "").lower()
+                 if not any(term in title_lower for term in negative_terms):
+                     filtered_results.append(item)
+                 else:
+                     logger.info(f"Filtered out irrelevant item: {item.get('title')}")
+             final_results = filtered_results
+
         # Rank Results
         canonical_url = extracted_data.get("canonical_url") if extracted_data else None
         product_id = extracted_data.get("product_id") if extracted_data else None
@@ -479,7 +506,7 @@ class SmartSearchService:
             except Exception as e:
                 logger.error(f"Passive History Save Failed: {e}")
         
-        return {
+        response_payload = {
             "query": query,
             "match_type": "url" if extracted_data else "text",
             "extracted_metadata": extracted_data,
@@ -492,3 +519,10 @@ class SmartSearchService:
             "recommendation": self._generate_recommendation(ranked_results, target_url, extracted_data),
             "insight": self._generate_ai_insight(ranked_results, query)
         }
+        
+        # DEBUG LOGGING
+        logger.info(f"Smart Search Response for '{query}': {len(ranked_results)} online results, {len(clean_brands)} clean brands.")
+        if clean_brands:
+             logger.info(f"Clean Brands Data: {json.dumps(clean_brands, default=str)}")
+             
+        return response_payload

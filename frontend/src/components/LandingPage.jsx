@@ -34,19 +34,19 @@ const LandingPage = () => {
 
     const benefits = [
         {
-            icon: <TrendingUp className="w-8 h-8 text-blue-600" />,
+            icon: <TrendingUp className="w-8 h-8 text-black" />,
             title: "Real-Time Price Tracking",
             description: "Track price history across major retailers to buy at the perfect moment."
         },
         {
-            icon: <Zap className="w-8 h-8 text-amber-500" />,
+            icon: <Zap className="w-8 h-8 text-black" />,
             title: "Instant Comparison",
             description: "Compare prices from Amazon, Flipkart, Instagram, and local shops in one click."
         }
     ];
 
     return (
-        <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+        <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-gray-200 selection:text-black">
 
             {/* HERO SECTION */}
             <section className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
@@ -61,7 +61,7 @@ const LandingPage = () => {
                 </div>
 
                 <div className="absolute top-0 right-0 p-8 z-20">
-                    <button className="text-white font-medium hover:text-blue-200 transition-colors">
+                    <button className="text-white font-medium hover:text-white/80 transition-colors">
                         Sign In
                     </button>
                 </div>
@@ -75,10 +75,10 @@ const LandingPage = () => {
                             className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 mb-8 shadow-sm"
                         >
                             <span className="flex h-2 w-2 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                             </span>
-                            <span className="text-xs font-semibold tracking-wide uppercase text-blue-50">The Future of Shopping is Here</span>
+                            <span className="text-xs font-semibold tracking-wide uppercase text-white">The Future of Shopping is Here</span>
                         </motion.div>
 
                         <motion.h1
@@ -88,7 +88,7 @@ const LandingPage = () => {
                             className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.1]"
                         >
                             Right Price. <br className="hidden md:block" />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Right Store.</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white">Right Store.</span>
                         </motion.h1>
 
                         <motion.p
@@ -122,7 +122,7 @@ const LandingPage = () => {
             <section className="py-24 bg-slate-50">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
-                        <div className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold tracking-widest uppercase mb-4">Why KitneKa?</div>
+                        <div className="inline-block px-3 py-1 bg-black text-white rounded-full text-xs font-bold tracking-widest uppercase mb-4">Why KitneKa?</div>
                         <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Smart Shopping, Simplified.</h2>
                         <p className="text-slate-600 max-w-2xl mx-auto">We bring the entire market to your fingertips, helping you make the best buying decisions in seconds.</p>
                     </div>
@@ -135,9 +135,9 @@ const LandingPage = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                                className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group"
+                                className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-black/5 transition-all group"
                             >
-                                <div className="bg-slate-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-50 transition-colors">
+                                <div className="bg-slate-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-black/5 transition-colors">
                                     {benefit.icon}
                                 </div>
                                 <h3 className="text-xl font-bold text-slate-900 mb-3">{benefit.title}</h3>
@@ -152,8 +152,8 @@ const LandingPage = () => {
             <section className="py-24 bg-white">
                 <div className="container mx-auto px-6">
                     <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-16 text-center text-white relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-br from-amber-500/10 to-pink-500/10 rounded-full blur-3xl"></div>
+                        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-gray-500/10 to-white/5 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-br from-gray-500/10 to-white/5 rounded-full blur-3xl"></div>
 
                         <div className="relative z-10 max-w-2xl mx-auto">
                             <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight">Ready to stop overpaying?</h2>
@@ -201,11 +201,11 @@ const LandingPage = () => {
                         <div>
                             <h4 className="font-bold text-slate-900 mb-4 uppercase text-xs tracking-wider">Connect</h4>
                             <div className="flex gap-4">
-                                <a href="#" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-400 hover:text-blue-600">
+                                <a href="#" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-black hover:border-black transition-all text-slate-400 hover:text-white">
                                     <span className="sr-only">Twitter</span>
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
                                 </a>
-                                <a href="#" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-400 hover:text-blue-600">
+                                <a href="#" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-black hover:border-black transition-all text-slate-400 hover:text-white">
                                     <span className="sr-only">Instagram</span>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
                                 </a>

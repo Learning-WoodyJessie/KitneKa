@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
+import BrandGrid from './BrandGrid';
 import CategoryLabels from './CategoryLabels';
-import ResultsGrouped from './ResultsGrouped';
 import RecommendationBanner from './RecommendationBanner';
+import Loader from './Loader';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -21,6 +22,7 @@ const SearchInterface = ({ initialQuery }) => {
 
     // New State for Brand View
     const [brandContext, setBrandContext] = useState(null);
+    const [activeBrandData, setActiveBrandData] = useState(null);
 
     // Categories Menu State
     const [showCategories, setShowCategories] = useState(false);
@@ -64,6 +66,8 @@ const SearchInterface = ({ initialQuery }) => {
         if (brandParam) {
             setBrandContext(brandParam);
             setSearched(true);
+            setQuery(brandParam); // Ensure query state matches
+            handleSearch(null, 'text', null, '', brandParam);
             return;
         }
 
@@ -85,7 +89,14 @@ const SearchInterface = ({ initialQuery }) => {
 
         const targetQuery = initialQuery || searchParams.get('q');
         if (targetQuery) {
-            setQuery(targetQuery);
+            // User Feedback: Only show text in search bar if it looks like a URL
+            // Otherwise, keep it clean for brand/category searches
+            const isUrl = /^(http|www\.)/i.test(targetQuery);
+            if (isUrl) {
+                setQuery(targetQuery);
+            } else {
+                setQuery(''); // Clean aesthetics
+            }
             handleSearch(null, 'text', null, '', targetQuery);
         }
     }, [initialQuery, searchParams]);
@@ -155,6 +166,22 @@ const SearchInterface = ({ initialQuery }) => {
                 setSearchData(null);
             } else {
                 setSearchData(response.data);
+
+                // RESTORE BRAND DATA ON DIRECT NAV (Hero Banner Fix)
+                if (response.data.clean_brands && response.data.clean_brands.length > 0) {
+                    const searchedBrand = overrideQuery || q;
+                    if (searchedBrand) {
+                        const match = response.data.clean_brands.find(b =>
+                            b.title.toLowerCase().includes(searchedBrand.toLowerCase()) ||
+                            b.source.toLowerCase().includes(searchedBrand.toLowerCase())
+                        );
+                        if (match) {
+                            setActiveBrandData(match);
+                            // If we found a match, ensure context is locked
+                            if (!brandContext) setBrandContext(match.title.replace('Visit ', '').replace(' Official Store', ''));
+                        }
+                    }
+                }
             }
         } catch (err) {
             console.error("Search failed:", err);
@@ -169,12 +196,18 @@ const SearchInterface = ({ initialQuery }) => {
         navigate(`/search?category=${encodeURIComponent(cat)}`);
     };
 
-    const handleBrandClick = (brandName, brandUrl) => {
+    const handleBrandClick = (brand) => {
+        // Support both direct object or (name, url) for legacy calls
+        const brandName = brand.title ? brand.title.replace('Visit ', '').replace(' Official Store', '') : brand;
+        const brandUrl = brand.link || brand.url;
+
         setBrandContext(brandName);
-        setActiveTab('official'); // Default to Official Store tab
+        setActiveBrandData(brand.title ? brand : null); // Store full metadata if available
+        setActiveTab('all'); // MERGED VIEW: Default to showing everything
         setSearched(true);
         setSearchData(null);
         setError(null);
+        setQuery(''); // CLEAR SEARCH BOX: As per user request, don't show search text
 
         if (brandUrl) {
             // User Request: Use same logic as "Search be URL"
@@ -190,14 +223,8 @@ const SearchInterface = ({ initialQuery }) => {
     const filteredItems = allItems.filter(item => {
         // BRAND VIEW FILTERING
         if (brandContext) {
-            if (activeTab === 'official') {
-                return item.is_official;
-            }
-            if (activeTab === 'trusted') {
-                // Show items that are NOT official but are trusted/popular
-                // Or just show all non-official items
-                return !item.is_official;
-            }
+            // MERGED VIEW: Show ALL items (Official + Trusted)
+            // We trust the backend/search to be relevant to the brandContext
             return true;
         }
 
@@ -219,7 +246,11 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Sorting Logic
     let sortedItems = [...filteredItems];
-    if (sortBy === 'price_asc') {
+
+    // BRAND VIEW DEFAULT SORT: Price Low to High (as requested)
+    if (brandContext) {
+        sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price_asc') {
         sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
     } else if (sortBy === 'price_desc') {
         sortedItems.sort((a, b) => (b.price || 0) - (a.price || 0));
@@ -228,6 +259,9 @@ const SearchInterface = ({ initialQuery }) => {
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
+            {/* GLOBAL LOADER */}
+            {loading && <Loader message={brandContext ? `Finding best prices for ${brandContext}...` : "Searching across verified stores..."} />}
+
             {/* Header */}
             <div className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 py-3">
@@ -321,9 +355,9 @@ const SearchInterface = ({ initialQuery }) => {
             >
                 <div className="flex flex-col h-full">
                     {/* Drawer Header */}
-                    <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
+                    <div className="p-5 bg-black text-white flex items-center justify-between">
                         <div className="flex items-center gap-2 font-bold text-lg">
-                            <div className="bg-white/20 p-1.5 rounded">K</div>
+                            <div className="bg-white/20 p-1.5 rounded-lg">K</div>
                             KitneKa
                         </div>
                         <button
@@ -343,10 +377,10 @@ const SearchInterface = ({ initialQuery }) => {
                             <button
                                 key={cat}
                                 onClick={() => handleCategoryClick(cat)}
-                                className="w-full text-left px-5 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition-colors flex items-center justify-between group"
+                                className="w-full text-left px-5 py-3 text-gray-700 hover:bg-gray-50 hover:text-black font-medium transition-colors flex items-center justify-between group"
                             >
                                 {cat}
-                                <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-400" />
+                                <ChevronRight size={16} className="text-gray-300 group-hover:text-black" />
                             </button>
                         ))}
                     </div>
@@ -376,14 +410,9 @@ const SearchInterface = ({ initialQuery }) => {
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="h-10 w-10 text-blue-600 animate-spin mb-4" />
+                            <Loader2 className="h-10 w-10 text-black animate-spin mb-4" />
                             <p className="text-gray-500 font-medium animate-pulse">Searching best prices for you...</p>
                         </div>
-                    ) : brandContext ? (
-                        <ResultsGrouped
-                            context={brandContext}
-                            type="BRAND"
-                        />
                     ) : (
                         /* General Search Results Grid */
                         <div className="space-y-6">
@@ -391,12 +420,13 @@ const SearchInterface = ({ initialQuery }) => {
                             {/* RECOMMENDATION BANNER (New) */}
                             {/* RECOMMENDATION & INSIGHT BANNER */}
                             {/* Show if we have EITHER a specific pick OR an AI insight */}
-                            {(searchData?.recommendation || searchData?.insight) && filterType === 'popular' && sortBy === 'relevance' && (
+                            {/* RECOMMENDATION BANNER (Temporarily disabled for debugging) */}
+                            {/* {(searchData?.recommendation || searchData?.insight) && filterType === 'popular' && sortBy === 'relevance' && (
                                 <RecommendationBanner
                                     recommendation={searchData.recommendation}
                                     insight={searchData.insight}
                                 />
-                            )}
+                            )} */}
 
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-gray-900">
@@ -413,25 +443,44 @@ const SearchInterface = ({ initialQuery }) => {
 
                             {/* Trust Filters: Popular / All / Clean Beauty - OR Brand View Tabs */}
                             {brandContext ? (
-                                /* BRAND VIEW TABS */
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                                    <div className="flex bg-gray-100 p-1 rounded-lg">
-                                        <button
-                                            onClick={() => setActiveTab('official')}
-                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'official' ? 'bg-black text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                        >
-                                            Official Store
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('trusted')}
-                                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'trusted' ? 'bg-black text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                        >
-                                            Trusted Partners
-                                        </button>
+                                /* BRAND RESULTS: compact header (small card style) + Official / Trusted tabs */
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    {/* Compact brand: small logo + name + optional official link */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full border border-gray-200 overflow-hidden bg-gray-50 flex-shrink-0">
+                                            <img
+                                                src={activeBrandData?.image || ''}
+                                                alt=""
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="font-semibold text-gray-900 truncate">{brandContext}</span>
+                                            {(activeBrandData?.link || activeBrandData?.url) && (
+                                                <a
+                                                    href={activeBrandData.link || activeBrandData.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 shrink-0"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    Official site <ExternalLink size={12} />
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
-
-                                    {/* Sort (Optional in Brand View, keeping simple) */}
+                                    {/* "Search within Brand" Input */}
+                                    <div className="relative group">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                        <input
+                                            type="text"
+                                            placeholder={`Search ${brandContext}...`}
+                                            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black w-64 transition-all"
+                                        />
+                                    </div>
                                 </div>
+
                             ) : (
                                 /* STANDARD TABS */
                                 (!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
@@ -477,134 +526,98 @@ const SearchInterface = ({ initialQuery }) => {
                             {/* RESULTS GRID OR BRAND GRID */}
                             {(searchData?.clean_brands?.length > 0 && !brandContext) ? (
                                 /* BRAND SELECTION GRID (Clean Beauty Category View) */
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {searchData.clean_brands.map((brand, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => {
-                                                // Extract simple name or use title
-                                                // Logic: "Visit Old School Rituals Official Store" -> "Old School Rituals"
-                                                let query = brand.title.replace('Visit ', '').replace(' Official Store', '');
-                                                // Pass Brand Name AND Brand URL (brand.link or brand.url from registry)
-                                                handleBrandClick(query, brand.link || brand.url);
-                                            }}
-                                            className="bg-white rounded-xl border border-gray-200 p-4 hover:border-black hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
-                                        >
-                                            <div className="aspect-[3/2] bg-gray-50 rounded-lg p-2 flex items-center justify-center">
-                                                <img
-                                                    src={brand.thumbnail || brand.image}
-                                                    alt={brand.title}
-                                                    className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
-                                                />
-                                            </div>
-
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex gap-2">
-                                                    {brand.is_official && (
-                                                        <span className="bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                                            Official
-                                                        </span>
-                                                    )}
-                                                    {brand.is_clean_beauty && (
-                                                        <span className="bg-stone-200 text-stone-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                                            Clean
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h3 className="font-bold text-black text-sm line-clamp-2">{brand.title}</h3>
-                                                <div className="text-xs text-gray-500">{brand.source}</div>
-
-                                                <button className="mt-2 w-full bg-gray-100 hover:bg-black hover:text-white text-black font-medium py-2 rounded-lg text-xs transition-colors">
-                                                    View Products
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <BrandGrid
+                                    brands={searchData.clean_brands}
+                                    onBrandClick={handleBrandClick}
+                                />
                             ) : sortedItems.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {sortedItems.map((product) => (
-                                        <div
-                                            key={product.id || Math.random()}
-                                            onClick={() => {
-                                                // INJECTED CARD LOGIC: Trigger Site Search
-                                                if (product.is_injected_card) {
-                                                    try {
-                                                        const domain = new URL(product.url).hostname.replace(/^www\./, '');
-                                                        const siteQuery = `site:${domain}`;
-                                                        setQuery(siteQuery);
-                                                        handleSearch(null, 'text', null, '', siteQuery);
-                                                    } catch (e) {
-                                                        console.error("Invalid URL in injected card", product.url);
-                                                        window.open(product.url, '_blank');
+                                    {sortedItems.map((product) => {
+                                        if (!product) return null;
+                                        return (
+                                            <div
+                                                key={product.id || Math.random()}
+                                                onClick={() => {
+                                                    // INJECTED CARD LOGIC: Trigger Site Search
+                                                    if (product.is_injected_card) {
+                                                        try {
+                                                            const domain = new URL(product.url).hostname.replace(/^www\./, '');
+                                                            const siteQuery = `site:${domain}`;
+                                                            setQuery(siteQuery);
+                                                            handleSearch(null, 'text', null, '', siteQuery);
+                                                        } catch (e) {
+                                                            console.error("Invalid URL in injected card", product.url);
+                                                            window.open(product.url, '_blank');
+                                                        }
+                                                        return;
                                                     }
-                                                    return;
-                                                }
 
-                                                const productId = product.id || `mock-${Date.now()}`;
-                                                // Ensure standard data structure
-                                                const productToSave = {
-                                                    ...product,
-                                                    id: productId,
-                                                    competitors: product.competitors || []
-                                                };
-                                                localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
-                                                // Navigate in same tab
-                                                navigate(`/product/${productId}`);
-                                            }}
-                                            className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
-                                        >
-                                            {/* Trust Badges on Card */}
-                                            {/* Trust Badges on Card */}
-                                            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                                {product.is_official && (
-                                                    <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                        <BadgeCheck size={10} /> Official
-                                                    </div>
-                                                )}
-                                                {product.is_clean_beauty && (
-                                                    <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                        <Leaf size={10} /> Clean
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Wishlist Button */}
-                                            <button
-                                                className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    // Placeholder for wishlist logic
-                                                    console.log("Add to wishlist:", product.title);
+                                                    const productId = product.id || `mock-${Date.now()}`;
+                                                    // Ensure standard data structure
+                                                    const productToSave = {
+                                                        ...product,
+                                                        id: productId,
+                                                        competitors: product.competitors || []
+                                                    };
+                                                    localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
+                                                    // Navigate in same tab
+                                                    navigate(`/product/${productId}`);
                                                 }}
+                                                className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
                                             >
-                                                <Heart size={16} />
-                                            </button>
+                                                {/* Trust Badges on Card */}
+                                                {/* Trust Badges on Card */}
+                                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                                    {product.is_official && (
+                                                        <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                            <BadgeCheck size={10} /> Official
+                                                        </div>
+                                                    )}
+                                                    {product.is_clean_beauty && (
+                                                        <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                            <Leaf size={10} /> Clean
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                            <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
-                                                <img
-                                                    src={product.image}
-                                                    alt={product.title}
-                                                    className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                                    loading="lazy"
-                                                />
-                                                {product.source && (
-                                                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                                        {product.source}
-                                                    </div>
-                                                )}
+                                                {/* Wishlist Button */}
+                                                <button
+                                                    className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        // Placeholder for wishlist logic
+                                                        console.log("Add to wishlist:", product.title);
+                                                    }}
+                                                >
+                                                    <Heart size={16} />
+                                                </button>
+
+                                                <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
+                                                    <img
+                                                        src={product.image || 'https://via.placeholder.com/300?text=No+Image'}
+                                                        alt={product.title || 'Product'}
+                                                        className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                                        loading="lazy"
+                                                        onError={(e) => e.target.style.display = 'none'}
+                                                    />
+                                                    {product.source && (
+                                                        <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                            {product.source}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                                                    {product.title || 'Untitled Product'}
+                                                </h3>
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="text-lg font-bold text-gray-900">₹{(product.price || 0).toLocaleString()}</span>
+                                                    {product.original_price && product.original_price > product.price && (
+                                                        <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                                                {product.title}
-                                            </h3>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-lg font-bold text-gray-900">₹{product.price?.toLocaleString()}</span>
-                                                {product.original_price && product.original_price > product.price && (
-                                                    <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
@@ -622,8 +635,9 @@ const SearchInterface = ({ initialQuery }) => {
                     <FeaturedBrands onBrandClick={handleBrandClick} />
                     <CategoryLabels onCategoryClick={handleCategoryClick} />
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 

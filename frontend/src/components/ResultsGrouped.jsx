@@ -121,7 +121,7 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
                             {!errors[category] && (
                                 <button
                                     onClick={() => handleViewAll(category)}
-                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    className="text-sm font-medium text-gray-600 hover:text-black flex items-center gap-1 transition-colors"
                                 >
                                     View All <ArrowRight size={14} />
                                 </button>
@@ -134,36 +134,36 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
                             </div>
                         ) : isLoading ? (
                             <div className="px-6 py-12 flex items-center justify-center bg-gray-50 rounded-lg mx-6">
-                                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                                <Loader2 className="w-8 h-8 text-black animate-spin" />
                             </div>
                         ) : (
-                            <div className="flex overflow-x-auto gap-4 px-6 pb-4 snap-x no-scrollbar">
+                            <div className="grid grid-cols-2 gap-3 px-4 pb-4 md:flex md:overflow-x-auto md:gap-4 md:px-6 md:pb-4 md:snap-x md:no-scrollbar">
                                 {items.map((item) => (
                                     <div
                                         key={item.id}
                                         onClick={() => handleProductClick(item)}
-                                        className="w-44 md:w-56 flex-shrink-0 snap-start group cursor-pointer"
+                                        className="w-full md:w-72 flex-shrink-0 snap-start group cursor-pointer"
                                     >
-                                        <div className="aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden border border-gray-100 mb-3 relative">
+                                        <div className="aspect-[3/4] bg-white rounded-none mb-4 relative overflow-hidden">
                                             <img
                                                 src={item.image}
                                                 alt={item.title}
-                                                className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500 mix-blend-multiply"
+                                                className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-105 transition-transform duration-700 ease-out"
                                                 loading="lazy"
                                             />
                                             {item.rating > 4 && (
-                                                <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                                    ★ {item.rating}
+                                                <div className="absolute top-2 left-2 bg-white text-black border border-gray-100 text-[10px] uppercase font-bold px-2 py-1 tracking-widest shadow-sm">
+                                                    Top Rated
                                                 </div>
                                             )}
                                         </div>
-                                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[2.5em] group-hover:text-blue-600 transition-colors">
+                                        <h4 className="text-base font-medium text-gray-900 line-clamp-2 min-h-[2.5em] group-hover:text-black transition-colors">
                                             {item.title}
                                         </h4>
-                                        <div className="mt-1 flex items-baseline gap-2">
-                                            <span className="text-sm font-bold text-black">₹{item.price.toLocaleString()}</span>
+                                        <div className="mt-2 flex items-baseline gap-2">
+                                            <span className="text-sm font-bold text-black tracking-wide">₹{item.price.toLocaleString()}</span>
                                             {item.source && (
-                                                <span className="text-[10px] text-gray-500 uppercase">{item.source}</span>
+                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{item.source}</span>
                                             )}
                                         </div>
                                     </div>

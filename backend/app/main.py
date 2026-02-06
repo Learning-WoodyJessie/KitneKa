@@ -168,10 +168,23 @@ feed_service = CuratedFeedService()
 # ...
 
 @app.get("/discovery/search")
-def search_products(q: str, location: Optional[str] = "Mumbai", anonymous_id: Optional[str] = None, db: Session = Depends(get_db)):
+def search_products(
+    q: Optional[str] = None, 
+    brand: Optional[str] = None,
+    location: Optional[str] = "Mumbai", 
+    anonymous_id: Optional[str] = None, 
+    db: Session = Depends(get_db)
+):
     """
     Smart Search: Uses LLM to analyze query + SerpApi to fetch results
     """
+    # Robustness: Allow brand to substitute for q
+    if not q and brand:
+        q = brand
+        
+    if not q:
+        return {"error": "Query parameter 'q' or 'brand' is required."}
+
     search_term = q.strip()
     
     # Pass raw query to smart_searcher which handles URL extraction internally
