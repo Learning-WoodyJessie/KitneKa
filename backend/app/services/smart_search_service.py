@@ -328,7 +328,9 @@ class SmartSearchService:
                         "source": f"{data['display_name']} Official",
                         "link": full_url,
                         "url": full_url,
-                        "thumbnail": "https://cdn-icons-png.flaticon.com/512/3596/3596091.png", # Generic Store Icon or Brand Logo if available
+                        # Use specific image if available, else generic
+                        "thumbnail": data.get("image", "https://cdn-icons-png.flaticon.com/512/3596/3596091.png"),
+                        "image": data.get("image", "https://cdn-icons-png.flaticon.com/512/3596/3596091.png"), 
                         "is_official": True,
                         "is_popular": True,
                         "is_clean_beauty": data.get("is_clean_beauty", False),

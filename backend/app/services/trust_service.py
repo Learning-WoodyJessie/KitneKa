@@ -17,7 +17,7 @@ class TrustService:
         - is_clean_beauty: True if brand is trusted clean beauty
         - is_excluded: True if item seems to be a Tester/Sample
         """
-        url = item.get("merchant_url") or item.get("url")
+        url = item.get("merchant_url") or item.get("url") or item.get("link")
         if not url:
             return item
 

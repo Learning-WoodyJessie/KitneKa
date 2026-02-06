@@ -129,6 +129,7 @@ BRANDS = {
         "aliases": ["mamaearth"],
         "categories": ["beauty", "wellness"],
         "is_clean_beauty": True, # User curated
+        "image": "https://ui-avatars.com/api/?name=Mamaearth&background=a0d468&color=fff&size=512&font-size=0.33",
         "official_domains": [
             {"host": "mamaearth.in", "path_prefix": "/"}
         ]
@@ -138,6 +139,7 @@ BRANDS = {
         "aliases": ["old school rituals"],
         "categories": ["beauty", "wellness"],
         "is_clean_beauty": True, 
+        "image": "https://ui-avatars.com/api/?name=Old+School&background=cba135&color=fff&size=512&font-size=0.33",
         "official_domains": [
             {"host": "oldschoolrituals.in", "path_prefix": "/"}
         ]
@@ -156,6 +158,7 @@ BRANDS = {
         "aliases": ["forest essentials"],
         "categories": ["beauty", "ayurveda"],
         "is_clean_beauty": True,
+        "image": "https://ui-avatars.com/api/?name=Forest+E&background=0f4d19&color=ffd700&size=512&font-size=0.33",
         "official_domains": [
             {"host": "forestessentialsindia.com", "path_prefix": "/"}
         ]
@@ -165,6 +168,7 @@ BRANDS = {
         "aliases": ["plum", "plum goodness"],
         "categories": ["beauty", "skincare"],
         "is_clean_beauty": True,
+        "image": "https://ui-avatars.com/api/?name=Plum&background=5d3a9b&color=fff&size=512&font-size=0.33",
         "official_domains": [
             {"host": "plumgoodness.com", "path_prefix": "/"}
         ]
@@ -174,6 +178,7 @@ BRANDS = {
         "aliases": ["kama ayurveda"],
         "categories": ["beauty", "ayurveda"],
         "is_clean_beauty": True,
+        "image": "https://ui-avatars.com/api/?name=Kama&background=3e2723&color=d4af37&size=512&font-size=0.33",
         "official_domains": [
             {"host": "kamaayurveda.in", "path_prefix": "/"}
         ]

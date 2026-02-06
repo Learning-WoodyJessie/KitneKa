@@ -96,7 +96,7 @@ const SearchInterface = ({ initialQuery }) => {
         'Electronics', 'Home Decor', 'Kitchen', 'Sports', 'Toys', 'Books'
     ];
 
-    const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null) => {
+    const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null, preserveContext = false) => {
         if (e) e.preventDefault();
 
         const q = overrideQuery || query;
@@ -110,7 +110,9 @@ const SearchInterface = ({ initialQuery }) => {
         setError(null);
         setSearched(true);
         setSearchData(null);
-        setBrandContext(null); // Reset brand context on manual search
+        if (!preserveContext) {
+            setBrandContext(null); // Reset brand context ONLY if not explicitly preserving it (e.g. drilling down)
+        }
         setShowCategories(false); // Close menu if open
 
         if (mode === 'text' && !overrideQuery) {
@@ -167,15 +169,20 @@ const SearchInterface = ({ initialQuery }) => {
         navigate(`/search?category=${encodeURIComponent(cat)}`);
     };
 
-    const handleBrandClick = (brandName) => {
+    const handleBrandClick = (brandName, brandUrl) => {
         setBrandContext(brandName);
         setActiveTab('official'); // Default to Official Store tab
         setSearched(true);
         setSearchData(null);
         setError(null);
-        // Trigger search for the brand
-        setQuery(brandName);
-        handleSearch(null, 'text', null, '', brandName);
+
+        if (brandUrl) {
+            // User Request: Use same logic as "Search be URL"
+            handleSearch(null, 'url', null, brandUrl, null, true);
+        } else {
+            // Fallback to text search if no URL (unlikely for registry brands)
+            handleSearch(null, 'text', null, '', brandName, true);
+        }
     };
 
     // Filter Logic
@@ -478,7 +485,8 @@ const SearchInterface = ({ initialQuery }) => {
                                                 // Extract simple name or use title
                                                 // Logic: "Visit Old School Rituals Official Store" -> "Old School Rituals"
                                                 let query = brand.title.replace('Visit ', '').replace(' Official Store', '');
-                                                handleBrandClick(query);
+                                                // Pass Brand Name AND Brand URL (brand.link or brand.url from registry)
+                                                handleBrandClick(query, brand.link || brand.url);
                                             }}
                                             className="bg-white rounded-xl border border-gray-200 p-4 hover:border-black hover:shadow-md transition-all cursor-pointer group flex flex-col gap-4"
                                         >
