@@ -325,6 +325,15 @@ class URLScraperService:
         clean_url = self._resolve_url(url)
         logger.info(f"Extracting product from URL: {clean_url}")
         
+        # Check for Homepage (to avoid specific "Buy X" queries)
+        is_homepage = False
+        try:
+            u_host, u_path, _ = self._normalize_url_for_match(clean_url)
+            if u_path in ["", "/"]:
+                is_homepage = True
+        except:
+             pass
+
         extracted_info = {
             "original_url": url,
             "resolved_url": clean_url,
@@ -360,6 +369,42 @@ class URLScraperService:
             if ld.get('brand'):
                 branch_val = ld['brand'] if isinstance(ld['brand'], str) else ld['brand'].get('name', 'Unknown')
                 extracted_info['brand'] = branch_val
+
+        # HOMEPAGE OVERRIDE
+        if is_homepage:
+             site_name = ""
+             
+             # 1. Try Registry Lookup (Best for Clean Brands)
+             from app.services.registry import BRANDS
+             for b_id, data in BRANDS.items():
+                 for dom in data.get("official_domains", []):
+                     if dom["host"] == u_host:
+                         site_name = data["display_name"]
+                         break
+                 if site_name: break
+             
+             # 2. Try Metadata
+             if not site_name:
+                 if html_meta.get('json_ld') and html_meta['json_ld'].get('name'):
+                      site_name = html_meta['json_ld']['name']
+                 elif html_meta.get('og_site_name'):
+                      site_name = html_meta['og_site_name']
+                 else:
+                      # Fallback: Clean domain name
+                      parts = u_host.split('.')
+                      if len(parts) >= 2:
+                          site_name = parts[0].title() if parts[0] != 'www' else parts[1].title()
+                      else:
+                          site_name = u_host.title()
+             
+             if site_name:
+                 extracted_info['product_name'] = f"{site_name} Official Store"
+                 extracted_info['search_query'] = site_name # Force broad query e.g. "Old School Rituals"
+                 extracted_info['brand'] = site_name
+                 extracted_info['url_type'] = "homepage"
+                 extracted_info['confidence'] = "high"
+                 
+                 return extracted_info
 
         # 3. SerpAPI (Fallback if Metadata weak)
         # Skip if we already have High Confidence JSON-LD
