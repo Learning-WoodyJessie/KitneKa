@@ -90,10 +90,44 @@ class SmartSearchService:
             logger.error(f"LLM Analysis Failed: {e}")
             return {"category": "General", "optimized_term": query, "needs_local": True}
 
+    def _enforce_diversity(self, results, max_share=0.4):
+        """
+        Ensures no single store/domain dominates more than max_share (40%) of results.
+        Prioritizes retaining higher-ranked items.
+        """
+        if not results: return []
+        
+        limit = max(1, int(len(results) * max_share))
+        store_counts = {}
+        diverse_results = []
+        
+        for item in results:
+            # Identify store (domain or source name)
+            source = item.get("store_name") or item.get("source") or "unknown"
+            source = source.lower().replace("www.", "").replace(".com", "").replace(".in", "")
+            
+            # Allow Official Sites to bypass limits (User wants them prioritized)
+            is_official = item.get("is_official", False)
+            
+            current_count = store_counts.get(source, 0)
+            
+            if is_official or current_count < limit:
+                diverse_results.append(item)
+                if not is_official:
+                    store_counts[source] = current_count + 1
+            else:
+                # Skip this item to allow space for other stores
+                pass
+                
+        return diverse_results
+
     def _synthesize_results(self, query, online_data, local_data, instagram_data):
         """
         Uses LLM to rank products and generate recommendations.
         """
+        # Apply Diversity Logic before synthesis
+        online_data = self._enforce_diversity(online_data, max_share=0.40)
+
         client = self._get_client()
         if not client:
              return {
@@ -179,9 +213,24 @@ class SmartSearchService:
                 continue
                 
             # BOOST TRUSTED SOURCES
-            if item.get("is_popular") or item.get("is_official") or item.get("is_clean_beauty"):
-                # Significant boost to bubble these up
+            # 1. Broad Popularity Boost
+            if item.get("is_popular") or item.get("is_official"):
                  add(500, "trusted_source_boost")
+
+            # 2. CLEAN BEAUTY SPECIFIC MARKETPLACE BOOST (User Request)
+            # If item is Clean Beauty (e.g. Mamaearth) and from specific trusted retailers, give EXTRA boost
+            # to ensure they appear alongside official site.
+            trusted_clean_marketplaces = ["nykaa", "amazon", "flipkart", "myntra", "sephora", "tatacliq", "tira", "purplle"]
+            
+            if item.get("is_clean_beauty"):
+                store_id = item.get("store_name", "").lower()
+                source_check = item.get("source", "").lower()
+                
+                # Check if this item is from a trusted marketplace
+                is_trusted_mp = any(mp in store_id or mp in source_check for mp in trusted_clean_marketplaces)
+                
+                if is_trusted_mp:
+                     add(300, "clean_beauty_marketplace_boost")
 
             # --- 1. PRODUCT ID MATCH (Highest Confidence) ---
             if pid_val and pid_val in item_url:
@@ -428,9 +477,48 @@ class SmartSearchService:
         logger.info(f"Fetching Data for: {query}")
         
         # 2. Results Fetching
-        # Use search_products which handles the fallback to organic search if shopping fails
-        scraper_response = self.scraper.search_products(query)
-        serp_results = scraper_response.get("online", [])
+        # 2. FETCH RESULTS (Multi-Query for Diversity)
+        # Check if this is a Brand Search to trigger Category Spread
+        is_brand_search = any(b.lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
+        
+        all_serp_results = []
+        
+        if is_brand_search and not target_url:
+            # Generate sub-queries for diversity
+            sub_queries = [query] # Always include base query
+            
+            # Simple heuristic for common categories to spread results
+            common_cats = ["best seller", "new arrival", "kit", "gift set"]
+            for c in common_cats:
+                sub_queries.append(f"{query} {c}")
+                
+            # Limit to 3 sub-queries to save time/quota (1 base + 2 variations)
+            # Using set to avoid duplicates if query alr contains terms
+            unique_queries = []
+            seen_q = set()
+            for q in sub_queries:
+                if q not in seen_q:
+                    unique_queries.append(q)
+                    seen_q.add(q)
+            
+            # Execute searches (Sequential for now, could be async)
+            logger.info(f"Executing Multi-Query Search for Diversity: {unique_queries[:3]}")
+            for q in unique_queries[:3]:
+                res = self.scraper.search_products(q)
+                all_serp_results.extend(res.get("online", []))
+        else:
+            # Standard single query
+            scraper_response = self.scraper.search_products(query)
+            all_serp_results = scraper_response.get("online", [])
+
+        # Deduplicate by ID or URL
+        seen_ids = set()
+        serp_results = []
+        for item in all_serp_results:
+            uid = item.get("url") or item.get("id")
+            if uid not in seen_ids:
+                seen_ids.add(uid)
+                serp_results.append(item)
         
         # 2a. Direct Integration for Registry Brands (Live Data)
         if "old school rituals" in query.lower():

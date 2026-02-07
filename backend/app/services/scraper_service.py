@@ -96,10 +96,11 @@ class RealScraperService:
                     "delivery": item.get("delivery", "Check Site")
                 })
             
-            # If we found very few direct links, return empty to trigger strict fallback
+            # If we found very few direct links, we still return what we have
             if valid_count < 3:
-                logger.warning(f"Only found {valid_count} valid direct links. Triggering fallback.")
-                return []
+                logger.warning(f"Only found {valid_count} valid direct links. Proceeding with available results.")
+                # Do NOT return empty, return whatever we found
+                # return [] 
 
             return cleaned_results
         except Exception as e:

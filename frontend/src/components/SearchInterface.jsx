@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink, ThumbsUp, ThumbsDown } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
 import BrandGrid from './BrandGrid';
 import CategoryLabels from './CategoryLabels';
@@ -524,13 +524,19 @@ const SearchInterface = ({ initialQuery }) => {
                             )}
 
                             {/* RESULTS GRID OR BRAND GRID */}
-                            {(searchData?.clean_brands?.length > 0 && !brandContext) ? (
-                                /* BRAND SELECTION GRID (Clean Beauty Category View) */
-                                <BrandGrid
-                                    brands={searchData.clean_brands}
-                                    onBrandClick={handleBrandClick}
-                                />
-                            ) : sortedItems.length > 0 ? (
+                            {/* BRAND SELECTION GRID (Clean Beauty Category View) */}
+                            {searchData?.clean_brands?.length > 0 && !brandContext && (
+                                <div className="mb-8">
+                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Official Brands</h3>
+                                    <BrandGrid
+                                        brands={searchData.clean_brands}
+                                        onBrandClick={handleBrandClick}
+                                    />
+                                </div>
+                            )}
+
+                            {/* RESULTS GRID */}
+                            {sortedItems.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                     {sortedItems.map((product) => {
                                         if (!product) return null;
@@ -580,17 +586,40 @@ const SearchInterface = ({ initialQuery }) => {
                                                     )}
                                                 </div>
 
-                                                {/* Wishlist Button */}
-                                                <button
-                                                    className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        // Placeholder for wishlist logic
-                                                        console.log("Add to wishlist:", product.title);
-                                                    }}
-                                                >
-                                                    <Heart size={16} />
-                                                </button>
+                                                {/* Action Buttons: Wishlist, Like, Dislike */}
+                                                <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+                                                    {/* HIDE ACTIONS FOR CLEANER LOOK IF REQUESTED, BUT USER ASKED FOR THEM SPECIFICALLY */}
+                                                    <button
+                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            console.log("Wishlist:", product.title);
+                                                        }}
+                                                        title="Add to Wishlist"
+                                                    >
+                                                        <Heart size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-green-600 hover:bg-white transition-colors shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            console.log("Like:", product.title);
+                                                        }}
+                                                        title="Like"
+                                                    >
+                                                        <ThumbsUp size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-600 hover:bg-white transition-colors shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            console.log("Dislike:", product.title);
+                                                        }}
+                                                        title="Dislike"
+                                                    >
+                                                        <ThumbsDown size={14} />
+                                                    </button>
+                                                </div>
 
                                                 <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
                                                     <img
