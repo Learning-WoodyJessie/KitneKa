@@ -103,8 +103,18 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Categories list for the dropdown
     const CATEGORIES = [
-        'Clothing', 'Footwear', 'Handbags', 'Watches', 'Jewellery', 'Beauty',
-        'Electronics', 'Home Decor', 'Kitchen', 'Sports', 'Toys', 'Books'
+        { name: 'Clothing', path: '/search?q=Women+Clothing' },
+        { name: 'Footwear', path: '/search?q=Women+Footwear' },
+        { name: 'Handbags', path: '/search?q=Handbags' },
+        { name: 'Watches', path: '/search?q=Watches+for+Women' },
+        { name: 'Jewellery', path: '/search?q=Jewellery+Sets' },
+        { name: 'Beauty', path: '/search?q=Beauty+Products' },
+        { name: 'Electronics', path: '/search?q=Electronics' },
+        { name: 'Home Decor', path: '/search?q=Home+Decor' },
+        { name: 'Kitchen', path: '/search?q=Kitchen+Appliances' },
+        { name: 'Sports', path: '/search?q=Sports+Equipment' },
+        { name: 'Toys', path: '/search?q=Toys+and+Games' },
+        { name: 'Books', path: '/search?q=Books' }
     ];
 
     const FEATURED_BRANDS = [
@@ -206,9 +216,9 @@ const SearchInterface = ({ initialQuery }) => {
         }
     };
 
-    const handleCategoryClick = (cat) => {
+    const handleCategoryClick = (path) => {
         setShowCategories(false);
-        navigate(`/search?category=${encodeURIComponent(cat)}`);
+        navigate(path);
     };
 
     const handleBrandClick = (brand) => {
@@ -236,6 +246,7 @@ const SearchInterface = ({ initialQuery }) => {
     // Filter Logic
     const allItems = searchData?.results?.online || [];
     const filteredItems = allItems.filter(item => {
+        // ... (rest of filtering logic) ...
         // BRAND VIEW FILTERING
         if (brandContext) {
             // MERGED VIEW: Show ALL items (Official + Trusted)
@@ -390,11 +401,11 @@ const SearchInterface = ({ initialQuery }) => {
                         </div>
                         {CATEGORIES.map((cat) => (
                             <button
-                                key={cat}
-                                onClick={() => handleCategoryClick(cat)}
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.path)}
                                 className="w-full text-left px-5 py-3 text-gray-700 hover:bg-gray-50 hover:text-black font-medium transition-colors flex items-center justify-between group"
                             >
-                                {cat}
+                                {cat.name}
                                 <ChevronRight size={16} className="text-gray-300 group-hover:text-black" />
                             </button>
                         ))}
