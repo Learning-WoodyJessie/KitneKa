@@ -7,6 +7,7 @@ from app.services.scraper_service import RealScraperService
 from app.services.url_scraper_service import URLScraperService
 from app.services.trust_service import TrustService
 from app.services.registry import BRANDS, STORES
+from app.services.cache_service import get_cached_search, cache_search, get_cached_brand, cache_brand
 
 logger = logging.getLogger(__name__)
 
@@ -599,6 +600,12 @@ class SmartSearchService:
         """
         logger.info(f"Smart Search Analysis for: {query}")
         
+        # CACHE CHECK - Return cached results if available (huge speed boost)
+        cached_result = get_cached_search(query, location)
+        if cached_result:
+            logger.info(f"Returning CACHED results for '{query}'")
+            return cached_result
+        
         # 1. Check if query contains a URL (anywhere in text)
         url_pattern = re.compile(r'https?://\S+')
         extracted_data = None
@@ -767,5 +774,8 @@ class SmartSearchService:
         logger.info(f"Smart Search Response for '{query}': {len(ranked_results)} online results, {len(clean_brands)} clean brands.")
         if clean_brands:
              logger.info(f"Clean Brands Data: {json.dumps(clean_brands, default=str)}")
+        
+        # CACHE SET - Store results for future requests
+        cache_search(query, location, response_payload)
              
         return response_payload

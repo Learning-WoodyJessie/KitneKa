@@ -358,6 +358,19 @@ def compare_prices(title: str, location: str = "Mumbai"):
 def health_check():
     return {"status": "healthy", "service": "BharatPricing API"}
 
+@app.get("/cache/stats")
+def cache_stats():
+    """Get cache statistics."""
+    from app.services.cache_service import get_cache
+    return get_cache().stats()
+
+@app.post("/cache/clear")
+def cache_clear():
+    """Clear all cached data. Use when you want to force refresh."""
+    from app.services.cache_service import clear_all_cache
+    count = clear_all_cache()
+    return {"message": f"Cache cleared", "items_removed": count}
+
 @app.get("/test")
 def test():
     return {
