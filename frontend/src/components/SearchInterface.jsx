@@ -107,6 +107,21 @@ const SearchInterface = ({ initialQuery }) => {
         'Electronics', 'Home Decor', 'Kitchen', 'Sports', 'Toys', 'Books'
     ];
 
+    const FEATURED_BRANDS = [
+        { id: 'fav_1', name: 'FabIndia', logo: 'https://logo.clearbit.com/fabindia.com', tag: 'Ethnic' },
+        { id: 'fav_2', name: 'Manyavar', logo: 'https://logo.clearbit.com/manyavar.com', tag: 'Celebrations' },
+        { id: 'fav_3', name: 'Biba', logo: 'https://logo.clearbit.com/biba.in', tag: 'Trending' },
+        { id: 'fav_4', name: 'Raymond', logo: 'https://logo.clearbit.com/raymond.in', tag: 'Premium' },
+        { id: 'fav_5', name: 'Titan', logo: 'https://logo.clearbit.com/titan.co.in', tag: 'Timeless' },
+        { id: 'fav_6', name: 'Nike', logo: 'https://logo.clearbit.com/nike.com', tag: 'Sport' },
+        { id: 'fav_7', name: 'Adidas', logo: 'https://logo.clearbit.com/adidas.co.in', tag: 'Active' },
+        { id: 'fav_8', name: 'H&M', logo: 'https://logo.clearbit.com/hm.com', tag: 'Fashion' },
+        { id: 'fav_9', name: 'Zara', logo: 'https://logo.clearbit.com/zara.com', tag: 'Chic' },
+        { id: 'fav_10', name: 'Puma', logo: 'https://logo.clearbit.com/puma.com', tag: 'Fast' },
+        { id: 'fav_11', name: 'Lakme', logo: 'https://logo.clearbit.com/lakmeindia.com', tag: 'Beauty' },
+        { id: 'fav_12', name: 'Sephora', logo: 'https://logo.clearbit.com/sephora.com', tag: 'Luxury' },
+    ];
+
     const handleSearch = async (e, mode = 'text', file = null, url = '', overrideQuery = null, preserveContext = false) => {
         if (e) e.preventDefault();
 
@@ -383,6 +398,37 @@ const SearchInterface = ({ initialQuery }) => {
                                 <ChevronRight size={16} className="text-gray-300 group-hover:text-black" />
                             </button>
                         ))}
+
+                        {/* Featured Brands Section (Synced with Navbar) */}
+                        <div className="px-5 py-6 mb-20">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Featured Brands</h3>
+                            <div className="grid grid-cols-3 gap-4">
+                                {FEATURED_BRANDS.map((brand) => (
+                                    <div
+                                        key={brand.id}
+                                        onClick={() => {
+                                            handleBrandClick({ title: brand.name, link: null }); // Use handleBrandClick for consistency
+                                            setShowCategories(false);
+                                        }}
+                                        className="flex flex-col items-center gap-2 cursor-pointer group"
+                                    >
+                                        <div className="w-16 h-16 rounded-full border border-gray-100 bg-white flex items-center justify-center p-2 shadow-sm group-hover:border-black transition-all overflow-hidden">
+                                            <img
+                                                src={brand.logo}
+                                                alt={brand.name}
+                                                className="w-full h-full object-contain mix-blend-multiply"
+                                                onError={(e) => {
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${brand.name}&background=random`
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="text-xs font-medium text-center text-gray-600 group-hover:text-black truncate w-full">
+                                            {brand.name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Drawer Footer */}
