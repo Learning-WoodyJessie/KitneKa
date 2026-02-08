@@ -263,6 +263,18 @@ BRANDS = {
         "official_domains": [
             {"host": "thetribeconcepts.com", "path_prefix": "/"}
         ]
+    },
+    "lakme": {
+        "display_name": "Lakmé",
+        "aliases": ["lakme", "lakmé"],
+        "categories": ["beauty", "makeup"],
+        "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/lakmeindia.com",
+        "banner_image": "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Lakme Lipstick", "Lakme Foundation", "Lakme Eyeconic"],
+        "official_domains": [
+            {"host": "lakmeindia.com", "path_prefix": "/"}
+        ]
     }
 }
 

@@ -38,6 +38,8 @@ class TrustService:
                 # Check Domain
                 for domain in store["domains"]:
                     if host == domain or host.endswith("." + domain):
+                        # POPULAR / TRUSTED FLAG
+                        # Marketplaces, Pharmacies, and Specialists (Sephora/Nykaa) are all 'Popular'
                         item["is_popular"] = True
                         item["store_name"] = store["display_name"]
                         item["store_tier"] = store["tier"]
