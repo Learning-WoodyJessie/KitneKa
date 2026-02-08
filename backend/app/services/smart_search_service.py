@@ -8,6 +8,7 @@ from app.services.url_scraper_service import URLScraperService
 from app.services.trust_service import TrustService
 from app.services.registry import BRANDS, STORES
 from app.services.cache_service import get_cached_search, cache_search, get_cached_brand, cache_brand
+from app.services.smart_match_service import SmartMatchService
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class SmartSearchService:
         self.scraper = RealScraperService()
         self.url_service = URLScraperService()
         self.trust_service = TrustService()
+        self.matcher = SmartMatchService()
 
     def _get_client(self):
         """Lazy load client"""
@@ -744,7 +746,10 @@ class SmartSearchService:
         # Rank Results
         canonical_url = extracted_data.get("canonical_url") if extracted_data else None
         product_id = extracted_data.get("product_id") if extracted_data else None
-        # 2. Rank Results
+        # 4. Rank Results (Legacy)
+        canonical_url = extracted_data.get("canonical_url") if extracted_data else None
+        product_id = extracted_data.get("product_id") if extracted_data else None
+        
         ranked_results = self._rank_results(
             final_results, 
             query=query, 
@@ -753,21 +758,97 @@ class SmartSearchService:
             product_id=product_id
         )
         
-        # 3. Registry Injection (NEW)
-        # Inject official cards if query matches a Brand
-        # MODIFIED: Return these as a separate 'clean_brands' list for specific UI handling
+        # 5. HYBRID SEMANTIC MATCHING (New)
+        # Only trigger if we have a specific product focus (URL or detailed query)
+        # and NOT for broad category/brand searches to preserve performance/behavior.
+        
+        should_run_semantic_match = bool(target_url or (len(query.split()) > 3 and not is_brand_search))
+        
+        exact_matches = []
+        variant_matches = [] # Size/Color/Pack variants
+        similar_matches = []
+        
+        if should_run_semantic_match and self.matcher.client:
+            logger.info("Running Hybrid Semantic Matching...")
+            
+            # A. Extract Attributes for User Query (Target)
+            # Use extracted_data title if available (from URL), else query
+            user_title = extracted_data.get("product_name") if extracted_data else query
+            user_attrs = self.matcher.extract_attributes(user_title)
+            user_brand = (user_attrs.get("brand") or "").lower()
+            
+            if user_brand:
+                # Generate Embedding for User Query
+                user_norm_title = user_attrs.get("normalized_title") or user_title
+                user_embedding = self.matcher.generate_embedding(user_norm_title)
+                
+                # B. Process Top Results (Limit to top 20 to save costs)
+                for item in ranked_results[:20]:
+                    try:
+                        # 1. Quick Brand Filter
+                        item_title = item.get("title", "")
+                        # Simple string check first to save GPT calls
+                        if user_brand not in item_title.lower():
+                             similar_matches.append(item)
+                             continue
+                             
+                        # 2. Extract Result Attributes
+                        res_attrs = self.matcher.extract_attributes(item_title)
+                        res_brand = (res_attrs.get("brand") or "").lower()
+                        
+                        # Double check with GPT extracted brand
+                        if res_brand and user_brand not in res_brand and res_brand not in user_brand:
+                             similar_matches.append(item)
+                             continue
+                             
+                        # 3. Semantic match
+                        res_norm_title = res_attrs.get("normalized_title") or item_title
+                        res_embedding = self.matcher.generate_embedding(res_norm_title)
+                        
+                        similarity = self.matcher.calculate_similarity(user_embedding, res_embedding)
+                        match_type = self.matcher.classify_match(user_attrs, res_attrs, similarity)
+                        
+                        item["similarity_score"] = round(similarity, 2)
+                        item["match_classification"] = match_type
+                        
+                        if match_type == "EXACT_MATCH":
+                            exact_matches.append(item)
+                        elif "VARIANT" in match_type:
+                            item["variant_type"] = match_type
+                            variant_matches.append(item)
+                        else:
+                            similar_matches.append(item)
+                            
+                    except Exception as e:
+                        logger.error(f"Error matching item {item.get('title')}: {e}")
+                        similar_matches.append(item)
+                
+                # Add remaining results
+                similar_matches.extend(ranked_results[20:])
+                
+            else:
+                # If no brand detected, fallback to standard ranking
+                similar_matches = ranked_results
+        else:
+            # Fallback for broad searches
+            similar_matches = ranked_results
+
+        # 6. Score & Re-rank products (Standard Logic)
+        # Apply to all groups
+        exact_matches = self._score_products(exact_matches)
+        variant_matches = self._score_products(variant_matches)
+        similar_matches = self._score_products(similar_matches)
+        
+        # 7. Registry Injection
         clean_brands = self._inject_registry_cards(query, ranked_results)
         
-        # 4. Score & Re-rank products for diversity and relevance
-        scored_results = self._score_products(ranked_results)
-        
-        # 4. Passive History Recording (New)
+        # 8. Passive History Recording
         if db:
             from app.services.db_utils import save_product_snapshot
             try:
-                # We save the top 5 most relevant results to avoid spamming DB with low quality matches
-                # Only save results that are 'exact' matches or top ranked
-                for item in ranked_results[:5]:
+                # Save exact matches as highest priority
+                to_save = exact_matches[:3] + similar_matches[:2]
+                for item in to_save:
                     save_product_snapshot(db, item)
             except Exception as e:
                 logger.error(f"Passive History Save Failed: {e}")
@@ -777,21 +858,24 @@ class SmartSearchService:
             "match_type": "url" if extracted_data else "text",
             "extracted_metadata": extracted_data,
             "results": {
-                "online": scored_results,
+                "online": similar_matches, # Default "all" list for backward compatibility if needed, but UI will prefer groups
                 "instagram": instagram_results,
-                "local": local_results
+                "local": local_results,
+                
+                # New Hybrid Groups
+                "exact_matches": exact_matches,
+                "variant_matches": variant_matches,
+                "similar_matches": similar_matches
             },
-            "clean_brands": clean_brands, # New Explicit Key
-            "recommendation": self._generate_recommendation(ranked_results, target_url, extracted_data),
+            "clean_brands": clean_brands, 
+            "recommendation": self._generate_recommendation(exact_matches + variant_matches, target_url, extracted_data),
             "insight": self._generate_ai_insight(ranked_results, query)
         }
         
-        # DEBUG LOGGING
-        logger.info(f"Smart Search Response for '{query}': {len(ranked_results)} online results, {len(clean_brands)} clean brands.")
-        if clean_brands:
-             logger.info(f"Clean Brands Data: {json.dumps(clean_brands, default=str)}")
-        
-        # CACHE SET - Store results for future requests
+        # Debug Logging
+        logger.info(f"Hybrid Match Results: {len(exact_matches)} Exact, {len(variant_matches)} Variants, {len(similar_matches)} Similar")
+
+        # CACHE SET
         cache_search(query, location, response_payload)
              
         return response_payload

@@ -596,172 +596,61 @@ const SearchInterface = ({ initialQuery }) => {
 
                             {/* RESULTS GRID */}
                             {(() => {
-                                // SEPARATION LOGIC: Exact vs Similar
-                                // Only apply if:
-                                // 1. Not in localized Brand Context
-                                // 2. We actually have items
-                                // 3. We have high-confidence matches to distinguish from generic ones
+                                // HYBRID MATCHING UI LOGIC
+                                // Check if we have the new hybrid groups from backend
+                                const results = searchResults?.results || {};
+                                const hasHybridData = results.exact_matches || results.variant_matches;
 
-                                const isSearchMode = !brandContext;
-                                const highConfidenceTypes = ['id_exact', 'url_canonical', 'url_fuzzy', 'model_exact'];
+                                // Fallback for legacy responses or broad searches
+                                let exactMatches = results.exact_matches || [];
+                                let variantMatches = results.variant_matches || [];
+                                const similarMatches = results.similar_matches || sortedItems;
 
-                                let exactMatches = [];
-                                let similarMatches = [];
-
-                                if (isSearchMode && sortedItems.length > 0) {
-                                    exactMatches = sortedItems.filter(item => highConfidenceTypes.includes(item.match_quality));
-                                    similarMatches = sortedItems.filter(item => !highConfidenceTypes.includes(item.match_quality));
-
-                                    // Fallback: If EVERYTHING is "similar" (e.g. text search), treats top 3 as "Top Results" if they have high score?
-                                    // For now, adhere to Strict Separation: If no exact matches, show everything as standard list.
-                                    if (exactMatches.length === 0) {
-                                        similarMatches = sortedItems; // Reset to show all in one block
-                                    }
-                                } else {
-                                    similarMatches = sortedItems; // Default behavior
+                                // If no hybrid data (e.g. brand search), render everything as before
+                                if (!hasHybridData && !searchMode) {
+                                    // Just use the sortedItems (standard list)
+                                    if (sortedItems.length === 0) return emptyState();
+                                    return renderGrid(sortedItems);
                                 }
 
-                                if (sortedItems.length === 0) {
-                                    return (
-                                        <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                            <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
-                                            <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
-                                        </div>
-                                    );
+                                // Empty State Check
+                                if (exactMatches.length === 0 && variantMatches.length === 0 && similarMatches.length === 0) {
+                                    return emptyState();
                                 }
-
-                                const renderGrid = (items) => (
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                        {items.map((product) => {
-                                            if (!product) return null;
-                                            return (
-                                                <div
-                                                    key={product.id || Math.random()}
-                                                    onClick={() => {
-                                                        // INJECTED CARD LOGIC: Trigger Site Search
-                                                        if (product.is_injected_card) {
-                                                            try {
-                                                                const domain = new URL(product.url).hostname.replace(/^www\./, '');
-                                                                const siteQuery = `site:${domain}`;
-                                                                setQuery(siteQuery);
-                                                                handleSearch(null, 'text', null, '', siteQuery);
-                                                            } catch (e) {
-                                                                console.error("Invalid URL in injected card", product.url);
-                                                                window.open(product.url, '_blank');
-                                                            }
-                                                            return;
-                                                        }
-
-                                                        const productId = product.id || `mock-${Date.now()}`;
-                                                        // Ensure standard data structure
-                                                        const productToSave = {
-                                                            ...product,
-                                                            id: productId,
-                                                            competitors: product.competitors || []
-                                                        };
-                                                        localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
-                                                        // Navigate in same tab
-                                                        navigate(`/product/${productId}`);
-                                                    }}
-                                                    className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
-                                                >
-                                                    {/* Trust Badges on Card */}
-                                                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                                        {product.is_official && (
-                                                            <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                                <BadgeCheck size={10} /> Official
-                                                            </div>
-                                                        )}
-                                                        {product.is_clean_beauty && (
-                                                            <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                                <Leaf size={10} /> Clean
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Action Buttons: Wishlist, Like, Dislike */}
-                                                    <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
-                                                        <button
-                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                console.log("Wishlist:", product.title);
-                                                            }}
-                                                            title="Add to Wishlist"
-                                                        >
-                                                            <Heart size={14} />
-                                                        </button>
-                                                        <button
-                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-green-600 hover:bg-white transition-colors shadow-sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                console.log("Like:", product.title);
-                                                            }}
-                                                            title="Like"
-                                                        >
-                                                            <ThumbsUp size={14} />
-                                                        </button>
-                                                        <button
-                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-600 hover:bg-white transition-colors shadow-sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                console.log("Dislike:", product.title);
-                                                            }}
-                                                            title="Dislike"
-                                                        >
-                                                            <ThumbsDown size={14} />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
-                                                        <img
-                                                            src={product.image || 'https://via.placeholder.com/300?text=No+Image'}
-                                                            alt={product.title || 'Product'}
-                                                            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                                            loading="lazy"
-                                                            onError={(e) => e.target.style.display = 'none'}
-                                                        />
-                                                        {product.source && (
-                                                            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                                                {product.source}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                                                        {product.title || 'Untitled Product'}
-                                                    </h3>
-                                                    <div className="flex items-baseline gap-2">
-                                                        <span className="text-lg font-bold text-gray-900">₹{(product.price || 0).toLocaleString()}</span>
-                                                        {product.original_price && product.original_price > product.price && (
-                                                            <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
 
                                 return (
-                                    <div className="space-y-8">
-                                        {/* EXACT MATCHES */}
+                                    <div className="space-y-12">
+                                        {/* 1. EXACT MATCHES (Green/Gold Highlight) */}
                                         {exactMatches.length > 0 && (
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <BadgeCheck size={16} className="text-blue-600" /> Top Matches
+                                            <div className="bg-green-50/50 p-6 rounded-2xl border border-green-100">
+                                                <h3 className="text-sm font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <BadgeCheck size={18} className="text-green-600" />
+                                                    Top Match (Verified)
                                                 </h3>
                                                 {renderGrid(exactMatches)}
                                             </div>
                                         )}
 
-                                        {/* SIMILAR MATCHES */}
+                                        {/* 2. VARIANTS (Sizes/Colors) */}
+                                        {variantMatches.length > 0 && (
+                                            <div>
+                                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <Layers size={18} className="text-blue-500" />
+                                                    Other Sizes & Variants
+                                                </h3>
+                                                {renderGrid(variantMatches)}
+                                            </div>
+                                        )}
+
+                                        {/* 3. SIMILAR PRODUCTS */}
                                         {similarMatches.length > 0 && (
                                             <div>
-                                                {exactMatches.length > 0 && (
-                                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 mt-8 pt-8 border-t border-gray-100">
-                                                        Similar Products
-                                                    </h3>
+                                                {(exactMatches.length > 0 || variantMatches.length > 0) && (
+                                                    <div className="flex items-center gap-4 my-8">
+                                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                                        <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Similar Products</span>
+                                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                                    </div>
                                                 )}
                                                 {renderGrid(similarMatches)}
                                             </div>
@@ -773,16 +662,54 @@ const SearchInterface = ({ initialQuery }) => {
                         </div>
                     )}
                 </div>
-            ) : (
-                /* LANDING STATE: Featured Brands + Categories Cards */
-                <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
-                    <FeaturedBrands onBrandClick={handleBrandClick} />
-                    <CategoryLabels onCategoryClick={handleCategoryClick} />
+
+                {/* Mobile Drawer */}
+            {isDrawerOpen && (
+                <div className="fixed inset-0 z-[60] lg:hidden">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)} />
+                    <div className="absolute top-0 right-0 w-[80%] max-w-sm h-full bg-white shadow-2xl overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-8">
+                                <h2 className="text-xl font-bold text-gray-900">Filters</h2>
+                                <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            {/* Re-use Sidebar Content for Mobile */}
+                            <div className="space-y-8">
+                                {/* ... mobile filter content ... */}
+                                {/* For brevity, we hide duplicate logic here or reuse components */}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            )
-            }
-        </div >
+        </div>
+    ) : (
+        /* LANDING STATE: Featured Brands + Categories Cards */
+        <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+            <FeaturedBrands onBrandClick={handleBrandClick} />
+            <CategoryLabels onCategoryClick={handleCategoryClick} />
+        </div>
+    )
+}
+    </div >
     );
 };
 
+// Helper for Empty State
+const emptyState = () => (
+    <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
+        <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
+    </div>
+);
+<div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+    <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
+    <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
+</div>
+);
+
 export default SearchInterface;
+```
