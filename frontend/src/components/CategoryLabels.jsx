@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shirt, Footprints, Sparkles, Gem, Watch, Activity, Baby, Glasses, User, Leaf } from 'lucide-react';
+import { Shirt, Footprints, Sparkles, Gem, Watch, Activity, Baby, Glasses, User, Leaf, ShoppingBag } from 'lucide-react';
 
 const CATEGORIES = [
     { id: 'cat_1', name: "Women's Wear", icon: <User />, color: 'bg-pink-100 text-pink-600' },
