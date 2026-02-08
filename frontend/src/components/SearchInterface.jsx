@@ -109,12 +109,6 @@ const SearchInterface = ({ initialQuery }) => {
         { name: 'Watches', path: '/search?q=Watches+for+Women' },
         { name: 'Jewellery', path: '/search?q=Jewellery+Sets' },
         { name: 'Beauty', path: '/search?q=Beauty+Products' },
-        { name: 'Electronics', path: '/search?q=Electronics' },
-        { name: 'Home Decor', path: '/search?q=Home+Decor' },
-        { name: 'Kitchen', path: '/search?q=Kitchen+Appliances' },
-        { name: 'Sports', path: '/search?q=Sports+Equipment' },
-        { name: 'Toys', path: '/search?q=Toys+and+Games' },
-        { name: 'Books', path: '/search?q=Books' }
     ];
 
     const FEATURED_BRANDS = [
