@@ -28,16 +28,16 @@ const Navbar = () => {
     };
 
     const categories = [
-        { name: 'Clean Beauty', path: '/search?category=Clean+Beauty' },
-        { name: 'Clothing', path: '/search?q=Women+Clothing' },
         { name: "Women's Wear", path: '/search?q=Women+Clothing' },
         { name: "Men's Wear", path: '/search?q=Men+Clothing' },
         { name: 'Kidswear', path: '/search?q=Kids+Clothing' },
+        { name: 'Sportswear', path: '/search?q=Sportswear' },
         { name: 'Footwear', path: '/search?q=Women+Footwear' },
         { name: 'Handbags', path: '/search?q=Handbags' },
         { name: 'Watches', path: '/search?q=Watches+for+Women' },
         { name: 'Jewellery', path: '/search?q=Jewellery+Sets' },
         { name: 'Beauty', path: '/search?q=Beauty+Products' },
+        { name: 'Clean Beauty', path: '/search?category=Clean+Beauty' },
     ];
 
     const FEATURED_BRANDS = [

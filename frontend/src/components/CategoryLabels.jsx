@@ -2,15 +2,16 @@ import React from 'react';
 import { Shirt, Footprints, Sparkles, Gem, Watch, Activity, Baby, Glasses, User, Leaf } from 'lucide-react';
 
 const CATEGORIES = [
-    { id: 'cat_clean', name: "Clean Beauty", icon: <Leaf />, color: 'bg-green-100 text-green-700' },
     { id: 'cat_1', name: "Women's Wear", icon: <User />, color: 'bg-pink-100 text-pink-600' },
     { id: 'cat_2', name: "Men's Wear", icon: <Shirt />, color: 'bg-blue-100 text-blue-600' },
     { id: 'cat_3', name: "Kids Wear", icon: <Baby />, color: 'bg-yellow-100 text-yellow-600' },
-    { id: 'cat_4', name: "Footwear", icon: <Footprints />, color: 'bg-orange-100 text-orange-600' },
-    { id: 'cat_5', name: "Beauty", icon: <Sparkles />, color: 'bg-purple-100 text-purple-600' },
-    { id: 'cat_6', name: "Jewellery", icon: <Gem />, color: 'bg-indigo-100 text-indigo-600' },
-    { id: 'cat_7', name: "Watches", icon: <Watch />, color: 'bg-gray-100 text-gray-600' },
     { id: 'cat_8', name: "Sportswear", icon: <Activity />, color: 'bg-green-100 text-green-600' },
+    { id: 'cat_4', name: "Footwear", icon: <Footprints />, color: 'bg-orange-100 text-orange-600' },
+    { id: 'cat_handbags', name: "Handbags", icon: <ShoppingBag />, color: 'bg-red-100 text-red-600' },
+    { id: 'cat_7', name: "Watches", icon: <Watch />, color: 'bg-gray-100 text-gray-600' },
+    { id: 'cat_6', name: "Jewellery", icon: <Gem />, color: 'bg-indigo-100 text-indigo-600' },
+    { id: 'cat_5', name: "Beauty", icon: <Sparkles />, color: 'bg-purple-100 text-purple-600' },
+    { id: 'cat_clean', name: "Clean Beauty", icon: <Leaf />, color: 'bg-green-100 text-green-700' },
 ];
 
 const CategoryLabels = ({ onCategoryClick }) => {
