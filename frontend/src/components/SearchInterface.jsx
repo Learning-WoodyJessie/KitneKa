@@ -595,125 +595,181 @@ const SearchInterface = ({ initialQuery }) => {
                             )}
 
                             {/* RESULTS GRID */}
-                            {sortedItems.length > 0 ? (
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {sortedItems.map((product) => {
-                                        if (!product) return null;
-                                        return (
-                                            <div
-                                                key={product.id || Math.random()}
-                                                onClick={() => {
-                                                    // INJECTED CARD LOGIC: Trigger Site Search
-                                                    if (product.is_injected_card) {
-                                                        try {
-                                                            const domain = new URL(product.url).hostname.replace(/^www\./, '');
-                                                            const siteQuery = `site:${domain}`;
-                                                            setQuery(siteQuery);
-                                                            handleSearch(null, 'text', null, '', siteQuery);
-                                                        } catch (e) {
-                                                            console.error("Invalid URL in injected card", product.url);
-                                                            window.open(product.url, '_blank');
+                            {(() => {
+                                // SEPARATION LOGIC: Exact vs Similar
+                                // Only apply if:
+                                // 1. Not in localized Brand Context
+                                // 2. We actually have items
+                                // 3. We have high-confidence matches to distinguish from generic ones
+
+                                const isSearchMode = !brandContext;
+                                const highConfidenceTypes = ['id_exact', 'url_canonical', 'url_fuzzy', 'model_exact'];
+
+                                let exactMatches = [];
+                                let similarMatches = [];
+
+                                if (isSearchMode && sortedItems.length > 0) {
+                                    exactMatches = sortedItems.filter(item => highConfidenceTypes.includes(item.match_quality));
+                                    similarMatches = sortedItems.filter(item => !highConfidenceTypes.includes(item.match_quality));
+
+                                    // Fallback: If EVERYTHING is "similar" (e.g. text search), treats top 3 as "Top Results" if they have high score?
+                                    // For now, adhere to Strict Separation: If no exact matches, show everything as standard list.
+                                    if (exactMatches.length === 0) {
+                                        similarMatches = sortedItems; // Reset to show all in one block
+                                    }
+                                } else {
+                                    similarMatches = sortedItems; // Default behavior
+                                }
+
+                                if (sortedItems.length === 0) {
+                                    return (
+                                        <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                            <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
+                                            <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
+                                        </div>
+                                    );
+                                }
+
+                                const renderGrid = (items) => (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                        {items.map((product) => {
+                                            if (!product) return null;
+                                            return (
+                                                <div
+                                                    key={product.id || Math.random()}
+                                                    onClick={() => {
+                                                        // INJECTED CARD LOGIC: Trigger Site Search
+                                                        if (product.is_injected_card) {
+                                                            try {
+                                                                const domain = new URL(product.url).hostname.replace(/^www\./, '');
+                                                                const siteQuery = `site:${domain}`;
+                                                                setQuery(siteQuery);
+                                                                handleSearch(null, 'text', null, '', siteQuery);
+                                                            } catch (e) {
+                                                                console.error("Invalid URL in injected card", product.url);
+                                                                window.open(product.url, '_blank');
+                                                            }
+                                                            return;
                                                         }
-                                                        return;
-                                                    }
 
-                                                    const productId = product.id || `mock-${Date.now()}`;
-                                                    // Ensure standard data structure
-                                                    const productToSave = {
-                                                        ...product,
-                                                        id: productId,
-                                                        competitors: product.competitors || []
-                                                    };
-                                                    localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
-                                                    // Navigate in same tab
-                                                    navigate(`/product/${productId}`);
-                                                }}
-                                                className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
-                                            >
-                                                {/* Trust Badges on Card */}
-                                                {/* Trust Badges on Card */}
-                                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                                                    {product.is_official && (
-                                                        <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                            <BadgeCheck size={10} /> Official
-                                                        </div>
-                                                    )}
-                                                    {product.is_clean_beauty && (
-                                                        <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
-                                                            <Leaf size={10} /> Clean
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                        const productId = product.id || `mock-${Date.now()}`;
+                                                        // Ensure standard data structure
+                                                        const productToSave = {
+                                                            ...product,
+                                                            id: productId,
+                                                            competitors: product.competitors || []
+                                                        };
+                                                        localStorage.setItem(`product_shared_${productId}`, JSON.stringify(productToSave));
+                                                        // Navigate in same tab
+                                                        navigate(`/product/${productId}`);
+                                                    }}
+                                                    className={`bg-white rounded-xl border p-4 hover:shadow-lg transition-all cursor-pointer group relative ${product.is_injected_card ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
+                                                >
+                                                    {/* Trust Badges on Card */}
+                                                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                                        {product.is_official && (
+                                                            <div className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                                <BadgeCheck size={10} /> Official
+                                                            </div>
+                                                        )}
+                                                        {product.is_clean_beauty && (
+                                                            <div className="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 w-fit">
+                                                                <Leaf size={10} /> Clean
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                                {/* Action Buttons: Wishlist, Like, Dislike */}
-                                                <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
-                                                    {/* HIDE ACTIONS FOR CLEANER LOOK IF REQUESTED, BUT USER ASKED FOR THEM SPECIFICALLY */}
-                                                    <button
-                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            console.log("Wishlist:", product.title);
-                                                        }}
-                                                        title="Add to Wishlist"
-                                                    >
-                                                        <Heart size={14} />
-                                                    </button>
-                                                    <button
-                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-green-600 hover:bg-white transition-colors shadow-sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            console.log("Like:", product.title);
-                                                        }}
-                                                        title="Like"
-                                                    >
-                                                        <ThumbsUp size={14} />
-                                                    </button>
-                                                    <button
-                                                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-600 hover:bg-white transition-colors shadow-sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            console.log("Dislike:", product.title);
-                                                        }}
-                                                        title="Dislike"
-                                                    >
-                                                        <ThumbsDown size={14} />
-                                                    </button>
-                                                </div>
+                                                    {/* Action Buttons: Wishlist, Like, Dislike */}
+                                                    <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+                                                        <button
+                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                console.log("Wishlist:", product.title);
+                                                            }}
+                                                            title="Add to Wishlist"
+                                                        >
+                                                            <Heart size={14} />
+                                                        </button>
+                                                        <button
+                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-green-600 hover:bg-white transition-colors shadow-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                console.log("Like:", product.title);
+                                                            }}
+                                                            title="Like"
+                                                        >
+                                                            <ThumbsUp size={14} />
+                                                        </button>
+                                                        <button
+                                                            className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-600 hover:bg-white transition-colors shadow-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                console.log("Dislike:", product.title);
+                                                            }}
+                                                            title="Dislike"
+                                                        >
+                                                            <ThumbsDown size={14} />
+                                                        </button>
+                                                    </div>
 
-                                                <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
-                                                    <img
-                                                        src={product.image || 'https://via.placeholder.com/300?text=No+Image'}
-                                                        alt={product.title || 'Product'}
-                                                        className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                                        loading="lazy"
-                                                        onError={(e) => e.target.style.display = 'none'}
-                                                    />
-                                                    {product.source && (
-                                                        <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                                            {product.source}
-                                                        </div>
-                                                    )}
+                                                    <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
+                                                        <img
+                                                            src={product.image || 'https://via.placeholder.com/300?text=No+Image'}
+                                                            alt={product.title || 'Product'}
+                                                            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                                            loading="lazy"
+                                                            onError={(e) => e.target.style.display = 'none'}
+                                                        />
+                                                        {product.source && (
+                                                            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                                {product.source}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                                                        {product.title || 'Untitled Product'}
+                                                    </h3>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className="text-lg font-bold text-gray-900">₹{(product.price || 0).toLocaleString()}</span>
+                                                        {product.original_price && product.original_price > product.price && (
+                                                            <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                                                    {product.title || 'Untitled Product'}
+                                            );
+                                        })}
+                                    </div>
+                                );
+
+                                return (
+                                    <div className="space-y-8">
+                                        {/* EXACT MATCHES */}
+                                        {exactMatches.length > 0 && (
+                                            <div>
+                                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <BadgeCheck size={16} className="text-blue-600" /> Top Matches
                                                 </h3>
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className="text-lg font-bold text-gray-900">₹{(product.price || 0).toLocaleString()}</span>
-                                                    {product.original_price && product.original_price > product.price && (
-                                                        <span className="text-xs text-gray-400 line-through">₹{product.original_price.toLocaleString()}</span>
-                                                    )}
-                                                </div>
+                                                {renderGrid(exactMatches)}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
-                                    <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
-                                </div>
-                            )}
+                                        )}
+
+                                        {/* SIMILAR MATCHES */}
+                                        {similarMatches.length > 0 && (
+                                            <div>
+                                                {exactMatches.length > 0 && (
+                                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 mt-8 pt-8 border-t border-gray-100">
+                                                        Similar Products
+                                                    </h3>
+                                                )}
+                                                {renderGrid(similarMatches)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+
+                            })()}
                         </div>
                     )}
                 </div>
