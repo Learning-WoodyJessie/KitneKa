@@ -193,9 +193,53 @@ class SmartSearchService:
             product['_is_trusted_store'] = any(ts in source_clean for ts in trusted_store_names)
             scored.append(product)
         
+        # OUTLIER FILTERING - Remove invalid products
+        # 1. Statistical outlier detection using IQR (both high and low)
+        # 2. Remove samples/testers
+        # 3. Remove products without proper titles
+        
+        # Calculate IQR for price outlier detection
+        all_prices = [p.get('extracted_price') or p.get('price', 0) for p in scored]
+        valid_prices = sorted([p for p in all_prices if p > 0])
+        
+        if len(valid_prices) >= 4:
+            q1_idx = len(valid_prices) // 4
+            q3_idx = (3 * len(valid_prices)) // 4
+            q1 = valid_prices[q1_idx]
+            q3 = valid_prices[q3_idx]
+            iqr = q3 - q1
+            lower_bound = max(10, q1 - 1.5 * iqr)  # At least ₹10
+            upper_bound = q3 + 3 * iqr  # More lenient for high prices (3x IQR)
+            logger.info(f"Price bounds: ₹{lower_bound:.0f} - ₹{upper_bound:.0f} (Q1={q1}, Q3={q3}, IQR={iqr})")
+        else:
+            lower_bound = 10  # Fallback minimum
+            upper_bound = float('inf')
+        
+        filtered = []
+        for p in scored:
+            price = p.get('extracted_price') or p.get('price', 0)
+            title = (p.get('title') or '').lower()
+            
+            # Skip if price is a statistical outlier
+            if price > 0 and (price < lower_bound or price > upper_bound):
+                logger.info(f"Filtered price outlier (₹{price}): {p.get('title', '')[:50]}")
+                continue
+            
+            # Skip samples, testers, damaged items
+            exclude_terms = ['sample', 'tester', 'tstr', 'damaged', 'defective', 'demo']
+            if any(term in title for term in exclude_terms):
+                logger.info(f"Filtered excluded item: {p.get('title', '')[:50]}")
+                continue
+            
+            # Skip if title is too short (likely garbage data)
+            if len(title) < 10:
+                continue
+            
+            filtered.append(p)
+        
         # Sort by score descending
-        scored.sort(key=lambda x: x.get('_score', 0), reverse=True)
-        return scored
+        filtered.sort(key=lambda x: x.get('_score', 0), reverse=True)
+        return filtered
 
     def _enforce_diversity(self, results, max_share=0.4):
         """
