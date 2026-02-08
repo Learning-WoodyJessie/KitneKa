@@ -33,7 +33,13 @@ app = FastAPI(title="BharatPricing API", description="B2B Pricing Intelligence D
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"], # Allow dev ports
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173", 
+        "https://kitneka-7o3d.onrender.com",
+        "https://kitneka.onrender.com",
+        "*"
+    ], # Allow dev ports & production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

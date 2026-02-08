@@ -479,7 +479,7 @@ class SmartSearchService:
         # 2. Results Fetching
         # 2. FETCH RESULTS (Multi-Query for Diversity)
         # Check if this is a Brand Search to trigger Category Spread
-        is_brand_search = any(b.lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
+        is_brand_search = any(b['display_name'].lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
         
         all_serp_results = []
         

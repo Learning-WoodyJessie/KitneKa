@@ -17,6 +17,9 @@ BRANDS = {
         "aliases": ["nike"],
         "categories": ["fashion", "sports"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/nike.com",
+        "banner_image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Nike Air Jordan", "Nike Shoes", "Nike Running"],
         "official_domains": [
             {"host": "nike.com", "path_prefix": "/in/"}
         ]
@@ -26,6 +29,9 @@ BRANDS = {
         "aliases": ["adidas"],
         "categories": ["fashion", "sports"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/adidas.co.in",
+        "banner_image": "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Adidas Ultraboost", "Adidas Originals", "Adidas Slides"],
         "official_domains": [
             {"host": "adidas.co.in", "path_prefix": "/"}
         ]
@@ -35,6 +41,9 @@ BRANDS = {
         "aliases": ["puma"],
         "categories": ["fashion", "sports"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/puma.com",
+        "banner_image": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Puma Sneakers", "Puma One8", "Puma Running"],
         "official_domains": [
             {"host": "in.puma.com", "path_prefix": "/"}
         ]
@@ -44,6 +53,9 @@ BRANDS = {
         "aliases": ["h&m", "h and m"],
         "categories": ["fashion"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/hm.com",
+        "banner_image": "https://images.unsplash.com/photo-1574634534894-89d7576c8259?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["H&M Dresses", "H&M Tops", "H&M Men"],
         "official_domains": [
             {"host": "www2.hm.com", "path_prefix": "/en_in/"}
         ]
@@ -53,6 +65,9 @@ BRANDS = {
         "aliases": ["michael kors", "mk", "michaelkors"],
         "categories": ["fashion", "luxury", "accessories"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/michaelkors.global",
+        "banner_image": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Michael Kors Bags", "Michael Kors Watches"],
         "official_domains": [
             {"host": "michaelkors.global", "path_prefix": "/in/en/"},
             {"host": "michaelkors.com", "path_prefix": "/in/"} # Backup
@@ -63,6 +78,9 @@ BRANDS = {
         "aliases": ["fossil"],
         "categories": ["fashion", "accessories", "watches"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/fossil.com",
+        "banner_image": "https://images.unsplash.com/photo-1524592094714-0f0654e20314?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Fossil Gen 6", "Fossil Watches For Men", "Fossil Bags"],
         "official_domains": [
             {"host": "fossil.com", "path_prefix": "/en-in/"}
         ]
@@ -72,6 +90,9 @@ BRANDS = {
         "aliases": ["titan"],
         "categories": ["accessories", "watches"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/titan.co.in",
+        "banner_image": "https://images.unsplash.com/photo-1622434641406-a158105c91d3?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Titan Raga", "Titan Smart Watch", "Titan Eye Plus"],
         "official_domains": [
             {"host": "titan.co.in", "path_prefix": "/"}
         ]
@@ -81,6 +102,9 @@ BRANDS = {
         "aliases": ["biba"],
         "categories": ["fashion", "ethnic"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/biba.in",
+        "banner_image": "https://images.unsplash.com/photo-1583391733958-152cb4835667?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Biba Kurtis", "Biba Dresses", "Biba Salwar Suits"],
         "official_domains": [
             {"host": "biba.in", "path_prefix": "/"}
         ]
@@ -90,6 +114,9 @@ BRANDS = {
         "aliases": ["fabindia", "fab india"],
         "categories": ["fashion", "ethnic", "lifestyle"],
         "is_clean_beauty": False, # Often sustainable but check specific clean criteria
+        "image": "https://logo.clearbit.com/fabindia.com",
+        "banner_image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Fabindia Kurtas", "Fabindia Home Decor", "Fabindia Saree"],
         "official_domains": [
             {"host": "fabindia.com", "path_prefix": "/"}
         ]
@@ -99,6 +126,9 @@ BRANDS = {
         "aliases": ["manyavar"],
         "categories": ["fashion", "ethnic", "wedding"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/manyavar.com",
+        "banner_image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Manyavar Sherwani", "Manyavar Kurta", "Mohey Lehenga"],
         "official_domains": [
             {"host": "manyavar.com", "path_prefix": "/"}
         ]
@@ -108,6 +138,9 @@ BRANDS = {
         "aliases": ["shoppers stop"],
         "categories": ["fashion", "beauty"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/shoppersstop.com",
+        "banner_image": "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Watches", "Perfumes", "Handbags"],
         "official_domains": [
             {"host": "shoppersstop.com", "path_prefix": "/"}
         ]
@@ -118,6 +151,9 @@ BRANDS = {
         "aliases": ["m.a.c", "mac", "mac cosmetics"],
         "categories": ["beauty", "makeup"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/maccosmetics.in",
+        "banner_image": "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["MAC Lipstick", "MAC Foundation", "Ruby Woo"],
         "official_domains": [
             {"host": "maccosmetics.in", "path_prefix": "/"}, # India site often redirects to locators
             {"host": "maccosmetics.com", "path_prefix": "/"},
@@ -161,6 +197,9 @@ BRANDS = {
         "aliases": ["faces canada", "facescanada"],
         "categories": ["beauty", "makeup"],
         "is_clean_beauty": False,
+        "image": "https://logo.clearbit.com/facescanada.com",
+        "banner_image": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2000&auto=format&fit=crop",
+        "popular_searches": ["Faces Canada Lipstick", "Faces Canada Kajal"],
         "official_domains": [
             {"host": "facescanada.com", "path_prefix": "/"}
         ]
