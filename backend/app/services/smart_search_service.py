@@ -640,7 +640,15 @@ class SmartSearchService:
         
         all_serp_results = []
         
+        # Updated Condition: Use Marketplace Mix for Brands OR Valid URL Searches
+        # This ensures URL searches also check Amazon/Flipkart/etc. explicitly
+        should_use_mix = False
         if is_brand_search and not target_url:
+             should_use_mix = True
+        elif target_url and extracted_data and extracted_data.get("search_query"):
+             should_use_mix = True
+             
+        if should_use_mix:
             # MARKETPLACE MIX: Query each major marketplace separately for equal representation
             # Note: site: operator doesn't work in Google Shopping - use store name instead
             marketplaces = [
