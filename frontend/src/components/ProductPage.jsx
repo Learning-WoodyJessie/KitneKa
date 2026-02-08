@@ -124,7 +124,7 @@ const ProductPage = () => {
     // LIST OF POPULAR RETAILERS (Normalized)
     const POPULAR_RETAILERS = [
         'amazon', 'flipkart', 'myntra', 'ikea', 'h&m', 'zara', 'nike', 'adidas',
-        'uniqlo', 'tata cliq', 'nykaa', 'ajio', 'michael kors'
+        'uniqlo', 'tata cliq', 'nykaa', 'ajio', 'michael kors', 'lakme', 'sephora'
     ];
 
     // SAMPLE/TRIAL STORES - These often sell samples, minis, or trial sizes

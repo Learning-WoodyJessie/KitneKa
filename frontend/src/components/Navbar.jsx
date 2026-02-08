@@ -47,6 +47,8 @@ const Navbar = () => {
         { id: 'fav_8', name: 'H&M', logo: 'https://logo.clearbit.com/hm.com', tag: 'Fashion' },
         { id: 'fav_9', name: 'Zara', logo: 'https://logo.clearbit.com/zara.com', tag: 'Chic' },
         { id: 'fav_10', name: 'Puma', logo: 'https://logo.clearbit.com/puma.com', tag: 'Fast' },
+        { id: 'fav_11', name: 'Lakme', logo: 'https://logo.clearbit.com/lakmeindia.com', tag: 'Beauty' },
+        { id: 'fav_12', name: 'Sephora', logo: 'https://logo.clearbit.com/sephora.com', tag: 'Luxury' },
     ];
 
     return (
