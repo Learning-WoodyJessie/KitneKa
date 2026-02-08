@@ -29,6 +29,9 @@ const Navbar = () => {
 
     const categories = [
         { name: 'Clothing', path: '/search?q=Women+Clothing' },
+        { name: "Women's Wear", path: '/search?q=Women+Clothing' },
+        { name: "Men's Wear", path: '/search?q=Men+Clothing' },
+        { name: 'Kidswear', path: '/search?q=Kids+Clothing' },
         { name: 'Footwear', path: '/search?q=Women+Footwear' },
         { name: 'Handbags', path: '/search?q=Handbags' },
         { name: 'Watches', path: '/search?q=Watches+for+Women' },
