@@ -30,8 +30,8 @@ def _get_env_bool(key: str, default: bool) -> bool:
 
 # Configurable TTLs via environment
 CACHE_ENABLED = _get_env_bool("CACHE_ENABLED", True)
-CACHE_TTL_SEARCH = _get_env_int("CACHE_TTL_SEARCH", 3600)  # 1 hour default
-CACHE_TTL_BRAND = _get_env_int("CACHE_TTL_BRAND", 21600)   # 6 hours default
+CACHE_TTL_SEARCH = _get_env_int("CACHE_TTL_SEARCH", 28800)  # 8 hours default
+CACHE_TTL_BRAND = _get_env_int("CACHE_TTL_BRAND", 28800)    # 8 hours default
 
 logger.info(f"Cache Config: enabled={CACHE_ENABLED}, search_ttl={CACHE_TTL_SEARCH}s, brand_ttl={CACHE_TTL_BRAND}s")
 
@@ -44,9 +44,25 @@ class CacheService:
         self._hits = 0
         self._misses = 0
     
+    def _normalize_query(self, query: str) -> str:
+        """Normalize search query for better cache hit rate.
+        
+        - lowercase
+        - remove extra whitespace
+        - normalize common variations
+        """
+        import re
+        q = str(query).lower().strip()
+        q = re.sub(r'\s+', ' ', q)  # Multiple spaces -> single space
+        q = re.sub(r'[&+]', 'and', q)  # & or + -> 'and'
+        q = re.sub(r"[''`]", '', q)  # Remove quotes
+        q = re.sub(r'\s*-\s*', ' ', q)  # Dashes with spaces -> space
+        return q
+    
     def _make_key(self, prefix: str, *args) -> str:
         """Create a cache key from prefix and arguments."""
-        key_parts = [prefix] + [str(a).lower().strip() for a in args]
+        normalized_args = [self._normalize_query(a) if isinstance(a, str) else str(a) for a in args]
+        key_parts = [prefix] + normalized_args
         key_str = ":".join(key_parts)
         # Hash long keys to keep them manageable
         if len(key_str) > 100:
