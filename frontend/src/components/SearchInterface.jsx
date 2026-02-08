@@ -103,6 +103,7 @@ const SearchInterface = ({ initialQuery }) => {
 
     // Categories list for the dropdown
     const CATEGORIES = [
+        { name: 'Clean Beauty', path: '/search?category=Clean+Beauty' },
         { name: 'Clothing', path: '/search?q=Women+Clothing' },
         { name: "Women's Wear", path: '/search?q=Women+Clothing' },
         { name: "Men's Wear", path: '/search?q=Men+Clothing' },
@@ -213,9 +214,13 @@ const SearchInterface = ({ initialQuery }) => {
         }
     };
 
-    const handleCategoryClick = (path) => {
+    const handleCategoryClick = (input) => {
         setShowCategories(false);
-        navigate(path);
+        if (input.startsWith('/')) {
+            navigate(input);
+        } else {
+            navigate(`/search?category=${encodeURIComponent(input)}`);
+        }
     };
 
     const handleBrandClick = (brand) => {

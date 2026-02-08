@@ -28,6 +28,7 @@ const Navbar = () => {
     };
 
     const categories = [
+        { name: 'Clean Beauty', path: '/search?category=Clean+Beauty' },
         { name: 'Clothing', path: '/search?q=Women+Clothing' },
         { name: "Women's Wear", path: '/search?q=Women+Clothing' },
         { name: "Men's Wear", path: '/search?q=Men+Clothing' },
