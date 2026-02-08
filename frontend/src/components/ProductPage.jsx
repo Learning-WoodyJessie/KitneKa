@@ -9,6 +9,8 @@ const ProductPage = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [comparedPrices, setComparedPrices] = useState([]); // NEW: Multi-store prices
+    const [comparingPrices, setComparingPrices] = useState(false); // Loading state for comparison
 
     // Offers Tab State
     const [activeOfferTab, setActiveOfferTab] = useState('popular');
@@ -21,14 +23,36 @@ const ProductPage = () => {
             try {
                 // 1. Try LocalStorage
                 const cachedData = localStorage.getItem(`product_shared_${id}`);
+                let productData = null;
+
                 if (cachedData) {
-                    setProduct(JSON.parse(cachedData));
-                    setLoading(false);
-                    return;
+                    productData = JSON.parse(cachedData);
+                    setProduct(productData);
+                } else {
+                    // 2. Fallback: API
+                    const productRes = await axios.get(`${API_BASE}/products/${id}`);
+                    productData = productRes.data;
+                    setProduct(productData);
                 }
-                // 2. Fallback: API
-                const productRes = await axios.get(`${API_BASE}/products/${id}`);
-                setProduct(productRes.data);
+
+                // 3. NEW: Fetch multi-store prices using product title
+                if (productData?.title) {
+                    setComparingPrices(true);
+                    try {
+                        const compareRes = await axios.get(`${API_BASE}/product/compare`, {
+                            params: { title: productData.title }
+                        });
+                        if (compareRes.data?.prices) {
+                            setComparedPrices(compareRes.data.prices);
+                        }
+                    } catch (compareErr) {
+                        console.warn("Price comparison failed:", compareErr);
+                        // Not critical - continue with single store
+                    } finally {
+                        setComparingPrices(false);
+                    }
+                }
+
             } catch (err) {
                 console.error("Failed to load product", err);
                 setError("Product not found. It may have expired or changed.");
@@ -105,7 +129,7 @@ const ProductPage = () => {
 
     // Determine if seller is popular
     const isPopularStore = (sellerName) => {
-        const name = sellerName.toLowerCase();
+        const name = (sellerName || '').toLowerCase();
         // Check list
         if (POPULAR_RETAILERS.some(r => name.includes(r))) return true;
         // Check if it matches product brand (Official Site)
@@ -113,18 +137,36 @@ const ProductPage = () => {
         return false;
     };
 
-    // Prepare Offer Data
-    const allOffers = (product.competitors || product.competitor_prices || []).map(comp => ({
-        seller: comp.name || comp.source,
-        price: comp.price || product.price,
-        shipping: comp.shipping || 0,
-        eta: comp.eta || '3-5 Days',
-        url: comp.url || product.url,
-        stock: 'In Stock'
-    }));
+    // Prepare Offer Data - PRIORITIZE comparedPrices from /product/compare API
+    let allOffers = [];
+
+    if (comparedPrices.length > 0) {
+        // Use multi-store prices from API
+        allOffers = comparedPrices.map(comp => ({
+            seller: comp.source || 'Store',
+            price: comp.price || 0,
+            oldPrice: comp.old_price,
+            shipping: 0,
+            eta: '2-5 Days',
+            url: comp.url || product.url,
+            image: comp.image,
+            stock: 'In Stock'
+        }));
+    } else {
+        // Fallback: Use product.competitors (original behavior)
+        allOffers = (product.competitors || product.competitor_prices || []).map(comp => ({
+            seller: comp.name || comp.source,
+            price: comp.price || product.price,
+            shipping: comp.shipping || 0,
+            eta: comp.eta || '3-5 Days',
+            url: comp.url || product.url,
+            stock: 'In Stock'
+        }));
+    }
 
     // Add current product as an offer if not already in list
-    if (!allOffers.find(o => o.seller === product.source)) {
+    const currentSource = (product.source || '').toLowerCase();
+    if (!allOffers.find(o => (o.seller || '').toLowerCase() === currentSource)) {
         allOffers.unshift({
             seller: product.source || "Featured Store",
             price: product.price,
@@ -138,11 +180,11 @@ const ProductPage = () => {
 
     // Sort by Total Price
     allOffers.sort((a, b) => (a.price + a.shipping) - (b.price + b.shipping));
-    const bestOffer = allOffers[0];
+    const bestOffer = allOffers[0] || { price: product.price, seller: product.source, url: product.url };
 
     // Split Offers
-    const popularOffers = allOffers.filter(o => isPopularStore(o.seller));
-    const otherOffers = allOffers.filter(o => !isPopularStore(o.seller));
+    const popularOffers = allOffers.filter(o => isPopularStore(o.seller)).slice(0, 15); // Limit to 15
+    const otherOffers = allOffers.filter(o => !isPopularStore(o.seller)).slice(0, 15);   // Limit to 15
 
     // Fallback: If no popular offers found, put top 3 best price offers in popular
     if (popularOffers.length === 0 && otherOffers.length > 0) {
@@ -381,7 +423,7 @@ const ProductPage = () => {
                             onClick={() => setActiveOfferTab('popular')}
                             className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeOfferTab === 'popular' ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
-                            Top Retailers ({popularOffers.length})
+                            Top Retailers ({comparingPrices ? '...' : popularOffers.length})
                         </button>
                         <button
                             onClick={() => setActiveOfferTab('others')}
