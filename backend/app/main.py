@@ -305,6 +305,55 @@ def resolve_link(url: str):
         print(f"Error resolving link: {e}")
         return {"url": url} # Fallback to original
 
+@app.get("/product/compare")
+def compare_prices(title: str, location: str = "Mumbai"):
+    """
+    Given a product title, search across all marketplaces
+    and return prices sorted lowest-first for price comparison.
+    Uses the existing smart_search service with multi-marketplace queries.
+    """
+    try:
+        # Use smart search which already queries multiple marketplaces
+        results = smart_searcher.smart_search(title, location=location)
+        online_results = results.get("results", {}).get("online", [])
+        
+        # Sort by price (lowest first) for comparison view
+        sorted_results = sorted(
+            [r for r in online_results if r.get("price", 0) > 0],
+            key=lambda x: x.get("price", float("inf"))
+        )
+        
+        # Group by source for easy comparison
+        sources_seen = set()
+        unique_by_source = []
+        for r in sorted_results:
+            source = r.get("source", "Unknown")
+            if source not in sources_seen:
+                sources_seen.add(source)
+                unique_by_source.append({
+                    "source": source,
+                    "title": r.get("title"),
+                    "price": r.get("price"),
+                    "old_price": r.get("extracted_old_price") or r.get("old_price"),
+                    "discount": r.get("discount_pct"),
+                    "url": r.get("url"),
+                    "image": r.get("image") or r.get("thumbnail"),
+                    "rating": r.get("rating"),
+                    "reviews": r.get("reviews")
+                })
+        
+        return {
+            "query": title,
+            "total_results": len(online_results),
+            "unique_stores": len(unique_by_source),
+            "prices": unique_by_source,
+            "lowest_price": unique_by_source[0] if unique_by_source else None,
+            "highest_price": unique_by_source[-1] if unique_by_source else None
+        }
+    except Exception as e:
+        print(f"Error comparing prices: {e}")
+        return {"error": str(e), "prices": []}
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "BharatPricing API"}

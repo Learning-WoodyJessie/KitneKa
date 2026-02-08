@@ -90,6 +90,113 @@ class SmartSearchService:
             logger.error(f"LLM Analysis Failed: {e}")
             return {"category": "General", "optimized_term": query, "needs_local": True}
 
+    def _score_products(self, products: list) -> list:
+        """
+        Score products for ranking without user data.
+        Uses: store availability, discount, price competitiveness, title quality,
+              trusted store bonus (from registry), clean beauty bonus.
+        """
+        from collections import defaultdict
+        from app.services.registry import STORES, BRANDS, CLEAN_BEAUTY_BRANDS
+        
+        # Build trusted store name set from registry
+        trusted_store_names = set()
+        for store in STORES:
+            trusted_store_names.add(store['display_name'].lower())
+            for domain in store.get('domains', []):
+                trusted_store_names.add(domain.lower().replace('.com', '').replace('.in', ''))
+        
+        # Build clean beauty brand keywords
+        clean_beauty_keywords = set()
+        for brand_id, brand_data in BRANDS.items():
+            if brand_data.get('is_clean_beauty'):
+                clean_beauty_keywords.add(brand_data['display_name'].lower())
+                clean_beauty_keywords.update(alias.lower() for alias in brand_data.get('aliases', []))
+        
+        # Group products by normalized title for store counting
+        title_groups = defaultdict(list)
+        for p in products:
+            title = (p.get('title') or '').lower().strip()
+            key = ' '.join(title.split()[:8])
+            title_groups[key].append(p)
+        
+        scored = []
+        for product in products:
+            score = 0
+            title = (product.get('title') or '').lower().strip()
+            source = (product.get('source') or '').lower()
+            key = ' '.join(title.split()[:8])
+            same_products = title_groups.get(key, [product])
+            
+            # 1. STORE AVAILABILITY (0-50 pts)
+            sources = set(p.get('source', '').lower() for p in same_products)
+            store_count = len(sources)
+            if store_count >= 4:
+                score += 50
+            elif store_count == 3:
+                score += 40
+            elif store_count == 2:
+                score += 25
+            else:
+                score += 10
+            
+            # 2. TRUSTED STORE BONUS (0-20 pts) - from registry
+            source_clean = source.replace('.com', '').replace('.in', '').replace(' ', '').lower()
+            if any(ts in source_clean or source_clean in ts for ts in trusted_store_names):
+                score += 20
+            
+            # 3. DISCOUNT (0-25 pts)
+            old_price = product.get('extracted_old_price') or product.get('old_price', 0)
+            current_price = product.get('extracted_price') or product.get('price', 0)
+            if old_price and current_price and old_price > current_price:
+                discount_pct = (old_price - current_price) / old_price
+                if discount_pct >= 0.40:
+                    score += 25
+                elif discount_pct >= 0.30:
+                    score += 20
+                elif discount_pct >= 0.20:
+                    score += 15
+                elif discount_pct >= 0.10:
+                    score += 10
+            
+            # 4. PRICE COMPETITIVENESS (0-15 pts)
+            if store_count >= 2:
+                prices = [p.get('extracted_price') or p.get('price', 0) for p in same_products]
+                prices = [p for p in prices if p > 0]
+                if len(prices) >= 2:
+                    price_variance = (max(prices) - min(prices)) / max(prices)
+                    if price_variance <= 0.10:
+                        score += 15
+                    elif price_variance <= 0.20:
+                        score += 10
+                    elif price_variance <= 0.30:
+                        score += 5
+            
+            # 5. CLEAN BEAUTY BONUS (0-15 pts) - from registry BRANDS
+            if any(cb in title for cb in clean_beauty_keywords):
+                score += 15
+                product['is_clean_beauty'] = True
+            
+            # 6. TITLE QUALITY (0-10 pts)
+            brand_keywords = list(clean_beauty_keywords) + ['nike', 'adidas', 'puma', 'zara', 'h&m']
+            has_brand = any(b in title for b in brand_keywords)
+            has_variant = any(v in title for v in ['size', 'ml', 'pack', 'set', 'g ', 'gm', 'gram', 'piece'])
+            if has_brand and has_variant:
+                score += 10
+            elif has_brand:
+                score += 7
+            else:
+                score += 3
+            
+            product['_score'] = score
+            product['_store_count'] = store_count
+            product['_is_trusted_store'] = any(ts in source_clean for ts in trusted_store_names)
+            scored.append(product)
+        
+        # Sort by score descending
+        scored.sort(key=lambda x: x.get('_score', 0), reverse=True)
+        return scored
+
     def _enforce_diversity(self, results, max_share=0.4):
         """
         Ensures no single store/domain dominates more than max_share (40%) of results.
@@ -125,8 +232,7 @@ class SmartSearchService:
         """
         Uses LLM to rank products and generate recommendations.
         """
-        # Apply Diversity Logic before synthesis
-        online_data = self._enforce_diversity(online_data, max_share=0.40)
+        # DISABLED: Diversity filter removed per user request - show all results\n        # online_data = self._enforce_diversity(online_data, max_share=0.40)
 
         client = self._get_client()
         if not client:
@@ -477,34 +583,36 @@ class SmartSearchService:
         logger.info(f"Fetching Data for: {query}")
         
         # 2. Results Fetching
-        # 2. FETCH RESULTS (Multi-Query for Diversity)
-        # Check if this is a Brand Search to trigger Category Spread
+        # 2. FETCH RESULTS (Multi-Query for Marketplace Mix)
+        # Check if this is a Brand Search to trigger Marketplace Spread
         is_brand_search = any(b['display_name'].lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
         
         all_serp_results = []
         
         if is_brand_search and not target_url:
-            # Generate sub-queries for diversity
-            sub_queries = [query] # Always include base query
+            # MARKETPLACE MIX: Query each major marketplace separately for equal representation
+            # Note: site: operator doesn't work in Google Shopping - use store name instead
+            marketplaces = [
+                "",  # Base query (often returns official site)
+                "Amazon",
+                "Flipkart", 
+                "Nykaa",
+                "Myntra",
+                "Ajio",
+                "Tata Cliq",
+                "Purplle"
+            ]
             
-            # Simple heuristic for common categories to spread results
-            common_cats = ["best seller", "new arrival", "kit", "gift set"]
-            for c in common_cats:
-                sub_queries.append(f"{query} {c}")
-                
-            # Limit to 3 sub-queries to save time/quota (1 base + 2 variations)
-            # Using set to avoid duplicates if query alr contains terms
-            unique_queries = []
-            seen_q = set()
-            for q in sub_queries:
-                if q not in seen_q:
-                    unique_queries.append(q)
-                    seen_q.add(q)
+            logger.info(f"Executing Multi-Marketplace Search for: {query}")
             
-            # Execute searches (Sequential for now, could be async)
-            logger.info(f"Executing Multi-Query Search for Diversity: {unique_queries[:3]}")
-            for q in unique_queries[:3]:
-                res = self.scraper.search_products(q)
+            for marketplace in marketplaces:
+                if marketplace:
+                    sub_query = f"{query} {marketplace}"
+                else:
+                    sub_query = query
+                    
+                logger.info(f"  Searching: {sub_query}")
+                res = self.scraper.search_products(sub_query)
                 all_serp_results.extend(res.get("online", []))
         else:
             # Standard single query
@@ -583,6 +691,9 @@ class SmartSearchService:
         # MODIFIED: Return these as a separate 'clean_brands' list for specific UI handling
         clean_brands = self._inject_registry_cards(query, ranked_results)
         
+        # 4. Score & Re-rank products for diversity and relevance
+        scored_results = self._score_products(ranked_results)
+        
         # 4. Passive History Recording (New)
         if db:
             from app.services.db_utils import save_product_snapshot
@@ -599,7 +710,7 @@ class SmartSearchService:
             "match_type": "url" if extracted_data else "text",
             "extracted_metadata": extracted_data,
             "results": {
-                "online": ranked_results,
+                "online": scored_results,
                 "instagram": instagram_results,
                 "local": local_results
             },

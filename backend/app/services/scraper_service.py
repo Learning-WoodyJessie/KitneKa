@@ -59,22 +59,9 @@ class RealScraperService:
                 # URL Cleaning & Filtering
                 merchant_url = url
                 if "google.com" in url or "google.co.in" in url:
-                    # 1. Try to extract real URL from redirect (e.g. url?q=)
+                    # Try to extract real URL from redirect (e.g. url?q=)
                     merchant_url = self._clean_google_url(url)
-                    
-                    # 2. Filtering Logic
-                    # Allow 'aclk' (Ad Click) redirects if cleaner fails to find destination
-                    # But if we did clean it, merchant_url will be the specific site.
-                    if merchant_url == url and "/aclk" in url:
-                        pass 
-                    elif "ibp=oshop" in url:
-                        pass
-                    elif "/search" in url and "ibp=oshop" not in url:
-                        continue
-                    elif "google.com" in merchant_url or "google.co.in" in merchant_url:
-                        #Likely a search page
-                        if "url?q=" not in merchant_url:
-                             continue
+                    # Keep all results - no filtering
                 
                 # Use the clean merchant URL as the primary 'url'
                 url = merchant_url
