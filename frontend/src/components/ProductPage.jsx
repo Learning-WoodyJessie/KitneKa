@@ -127,6 +127,22 @@ const ProductPage = () => {
         'uniqlo', 'tata cliq', 'nykaa', 'ajio', 'michael kors'
     ];
 
+    // SAMPLE/TRIAL STORES - These often sell samples, minis, or trial sizes
+    // Flag these to prevent misleading "GREAT BUY" recommendations
+    const SAMPLE_STORES = [
+        'smytten',      // Known for samples/minis
+        'myglamm',      // Often has sample sizes
+        'freecultr',    // Trial offers
+        'vaana',        // Small/trial sizes
+        'gharstuff'     // Unverified small sizes
+    ];
+
+    // Check if store sells samples
+    const isSampleStore = (sellerName) => {
+        const name = (sellerName || '').toLowerCase();
+        return SAMPLE_STORES.some(s => name.includes(s));
+    };
+
     // Determine if seller is popular
     const isPopularStore = (sellerName) => {
         const name = (sellerName || '').toLowerCase();
@@ -198,7 +214,14 @@ const ProductPage = () => {
     const getRecommendation = () => {
         if (!allOffers.length) return null;
 
-        const prices = allOffers.map(o => o.price);
+        // EXCLUDE SAMPLE STORES from price analysis to avoid misleading recommendations
+        const realOffers = allOffers.filter(o => !isSampleStore(o.seller));
+        const hasSampleStores = allOffers.length > realOffers.length;
+
+        // Use real offers for calculations, fallback to all if no real offers
+        const offersForCalc = realOffers.length > 0 ? realOffers : allOffers;
+
+        const prices = offersForCalc.map(o => o.price);
         const minPrice = Math.min(...prices);
         const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
 
@@ -453,6 +476,7 @@ const ProductPage = () => {
                                                 <div className="font-bold text-gray-900">{offer.seller}</div>
                                                 {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 ml-2 uppercase tracking-wide">BEST DEAL</span>}
                                                 {isPopularStore(offer.seller) && <span className="ml-2 text-[10px] font-bold border border-gray-200 text-gray-500 px-2 py-0.5 uppercase tracking-wide">VERIFIED</span>}
+                                                {isSampleStore(offer.seller) && <span className="ml-2 text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 uppercase tracking-wide">SAMPLE</span>}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 ₹{offer.price.toLocaleString()}
