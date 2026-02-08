@@ -505,8 +505,16 @@ class SmartSearchService:
         # Check against Registry
         for b_id, data in BRANDS.items():
             # MATCH LOGIC:
-            # 1. Exact/Alias match (Existing)
-            matches_brand = any(alias in q_lower for alias in data["aliases"] + [data["display_name"].lower()])
+            # 1. Exact/Alias match (STRICT Word Boundary)
+            # Replaced loose substring check to prevent "mk" matching "pumpkin" etc.
+            check_terms = data["aliases"] + [data["display_name"].lower()]
+            matches_brand = False
+            for term in check_terms:
+                # Regex: (Start or Non-Word) + Term + (End or Non-Word)
+                pattern = r'(?:^|\W)' + re.escape(term) + r'(?:$|\W)'
+                if re.search(pattern, q_lower):
+                    matches_brand = True
+                    break
             
             # 2. Category Match (New)
             matches_category = is_category_search and data.get("is_clean_beauty", False)
