@@ -458,8 +458,26 @@ class RealScraperService:
                 make_item(2, "Cetaphil Gentle Skin Cleanser", 350, "https://m.media-amazon.com/images/I/61g+2M+g+oL._SX522_.jpg")
             ]
         
+        # MOCK FOR MAMAEARTH (Fix for User Demo)
+        if "mamaearth" in q:
+            items = [
+                # Exact Match Candidates
+                make_item(101, "Mamaearth Daily Glow Face Cream With Vitamin C & Turmeric for Skin 80 g", 249, "https://m.media-amazon.com/images/I/51+P+jXg+dL._SY695_.jpg", "Amazon"),
+                make_item(102, "Mamaearth Onion Hair Oil for Hair Growth - 250ml", 419, "https://m.media-amazon.com/images/I/611b+iB+9ZL._SY741_.jpg", "Flipkart"),
+                make_item(103, "Mamaearth Beetroot Hydraful Light Moisturizing Cream", 349, "https://m.media-amazon.com/images/I/61s-dI5+aDL._SY741_.jpg", "Nykaa"),
+                
+                # Variants (Size/Color)
+                make_item(201, "Mamaearth Onion Hair Oil - 150ml", 299, "https://m.media-amazon.com/images/I/611b+iB+9ZL._SY741_.jpg", "Amazon"),
+                make_item(202, "Mamaearth Beetroot Hydraful Moisturizer - 50g", 199, "https://m.media-amazon.com/images/I/61s-dI5+aDL._SY741_.jpg", "Blinkit"),
+                
+                # Similar / Other Products
+                make_item(301, "Mamaearth Ubtan Face Wash with Turmeric & Saffron", 249, "https://m.media-amazon.com/images/I/61p3lA4N3uL._SY741_.jpg", "Myntra"),
+                make_item(302, "Mamaearth Tea Tree Face Wash", 249, "https://m.media-amazon.com/images/I/41-9F-7+MGL._SX522_.jpg", "Purplle"),
+                make_item(303, "Mamaearth Vitamin C Face Serum", 599, "https://m.media-amazon.com/images/I/61g+2M+g+oL._SX522_.jpg", "Amazon")
+            ]
+        
         # MOCK FOR OLD SCHOOL RITUALS (User Verification Request)
-        if "old school rituals" in q or "old school" in q:
+        elif "old school rituals" in q or "old school" in q:
             items = []
             variants = [
                 ("Face Wash", 450, "https://m.media-amazon.com/images/I/51+P+jXg+dL._SY695_.jpg"),
