@@ -1,3 +1,4 @@
+from typing import List, Dict, Optional
 from openai import OpenAI
 import json
 import logging
