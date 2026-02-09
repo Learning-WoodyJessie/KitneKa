@@ -862,31 +862,11 @@ class SmartSearchService:
         variant_matches = self._score_products(variant_matches)
         similar_matches = self._score_products(similar_matches)
         
-    def _deduplicate_results(self, items: List[Dict]) -> List[Dict]:
-        """
-        Removes duplicates based on (Normalized Title + Source + Price).
-        Keeps the first occurrence (which is usually higher ranked).
-        """
-        seen = set()
-        unique_items = []
         
-        for item in items:
-            # Create a unique key
-            title = (item.get("title") or "").lower().strip()
-            source = (item.get("source") or "").lower().strip()
-            price = item.get("price")
-            
-            # Key: (Title, Source, Price)
-            # We use a simplified title (first 30 chars) to catch minor variations like "..." suffix
-            # but strict on source and price.
-            dist_key = (title[:30], source, price)
-            
-            if dist_key not in seen:
-                seen.add(dist_key)
-                unique_items.append(item)
-                
-        return unique_items
+
         
+
+
         # 7. Registry Injection
         clean_brands = self._inject_registry_cards(query, ranked_results)
         
@@ -927,3 +907,28 @@ class SmartSearchService:
         cache_search(query, location, response_payload)
              
         return response_payload
+
+    def _deduplicate_results(self, items: List[Dict]) -> List[Dict]:
+        """
+        Removes duplicates based on (Normalized Title + Source + Price).
+        Keeps the first occurrence (which is usually higher ranked).
+        """
+        seen = set()
+        unique_items = []
+        
+        for item in items:
+            # Create a unique key
+            title = (item.get("title") or "").lower().strip()
+            source = (item.get("source") or "").lower().strip()
+            price = item.get("price")
+            
+            # Key: (Title, Source, Price)
+            # We use a simplified title (first 30 chars) to catch minor variations like "..." suffix
+            # but strict on source and price.
+            dist_key = (title[:30], source, price)
+            
+            if dist_key not in seen:
+                seen.add(dist_key)
+                unique_items.append(item)
+                
+        return unique_items
