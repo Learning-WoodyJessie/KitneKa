@@ -621,7 +621,7 @@ const SearchInterface = ({ initialQuery }) => {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                                     <div className="flex items-baseline gap-2">
                                         <h2 className="text-xl font-bold text-gray-900">
-                                            {brandContext ? brandContext : (searchMode ? 'Search Results' : 'Top Picks')}
+                                            {brandContext ? brandContext : (searched ? 'Search Results' : 'Top Picks')}
                                         </h2>
                                         <span className="text-sm text-gray-500 font-medium">({filteredItems.length} items)</span>
                                     </div>
@@ -709,7 +709,7 @@ const SearchInterface = ({ initialQuery }) => {
                                 {/* RESULTS GRID */}
                                 {(() => {
                                     // HYBRID MATCHING UI LOGIC
-                                    const results = searchResults?.results || {};
+                                    const results = searchData?.results || {};
                                     const hasHybridData = results.exact_matches || results.variant_matches;
 
                                     let exactMatches = results.exact_matches || [];
@@ -717,7 +717,7 @@ const SearchInterface = ({ initialQuery }) => {
                                     const similarMatches = results.similar_matches || sortedItems;
 
                                     // If no hybrid data (e.g. brand search), render everything as before
-                                    if (!hasHybridData && !searchMode) {
+                                    if (!hasHybridData && !searched) {
                                         if (sortedItems.length === 0) return emptyState();
                                         return renderGrid(sortedItems);
                                     }
