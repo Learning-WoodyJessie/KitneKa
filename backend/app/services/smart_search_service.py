@@ -773,9 +773,24 @@ class SmartSearchService:
             
             # A. Extract Attributes for User Query (Target)
             # Use extracted_data title if available (from URL), else query
+            # A. Extract Attributes for User Query (Target)
+            # Use extracted_data keys if available (from URL scraper)
             user_title = extracted_data.get("product_name") if extracted_data else query
+            
+            # 1. Try to get brand from metadata first
+            input_brand = extracted_data.get("brand") if extracted_data else None
+            
+            # 2. Extract attributes (we still need other attrs like size/type)
             user_attrs = self.matcher.extract_attributes(user_title)
+            
+            # 3. Override brand if metadata had it (it's usually more accurate from scraper)
+            if input_brand:
+                user_attrs["brand"] = input_brand
+            
             user_brand = (user_attrs.get("brand") or "").lower()
+            
+            logger.info(f"Hybrid Match User Attrs: {user_attrs}")
+            logger.info(f"Hybrid Match User Brand: '{user_brand}'")
             
             if user_brand:
                 # Generate Embedding for User Query
@@ -789,6 +804,7 @@ class SmartSearchService:
                         item_title = item.get("title", "")
                         # Simple string check first to save GPT calls
                         if user_brand not in item_title.lower():
+                             logger.info(f"Skipping Brand Mismatch: {user_brand} not in {item_title}")
                              similar_matches.append(item)
                              continue
                              

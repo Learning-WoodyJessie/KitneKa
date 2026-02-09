@@ -106,10 +106,10 @@ class SmartMatchService:
         Classifies the match based on user-defined rules.
         Returns: 'EXACT_MATCH', 'SIZE_VARIANT', 'COLOR_VARIANT', 'PACK_VARIANT', 'SIMILAR_PRODUCT', or 'DIFFERENT_PRODUCT'
         """
-        # Thresholds from Plan
-        EXACT_THRESHOLD = 0.95
-        VARIANT_THRESHOLD = 0.88
-        SIMILAR_THRESHOLD = 0.75
+        # Thresholds from Plan (Adjusted for Real World Noise)
+        EXACT_THRESHOLD = 0.90
+        VARIANT_THRESHOLD = 0.75
+        SIMILAR_THRESHOLD = 0.60
 
         # Attribute Comparisons
         def normalize(val): 
