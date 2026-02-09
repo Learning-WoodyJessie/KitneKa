@@ -28,6 +28,10 @@ const SearchInterface = ({ initialQuery }) => {
     const [showCategories, setShowCategories] = useState(false);
     const categoryMenuRef = useRef(null);
     const drawerRef = useRef(null); // New ref for the side drawer
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [priceRange, setPriceRange] = useState([0, 50000]);
+    const [inStockOnly, setInStockOnly] = useState(false);
+    const [selectedStores, setSelectedStores] = useState([]);
 
     // Image/URL search states
     const [showImageModal, setShowImageModal] = useState(false);
