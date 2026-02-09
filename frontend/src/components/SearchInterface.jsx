@@ -8,6 +8,7 @@ import RecommendationBanner from './RecommendationBanner';
 import Loader from './Loader';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { API_BASE } from '../config';
 
 const SearchInterface = ({ initialQuery }) => {
     const navigate = useNavigate();
@@ -42,10 +43,8 @@ const SearchInterface = ({ initialQuery }) => {
     const [cleanBeautyOnly, setCleanBeautyOnly] = useState(false); // Controlled by "Clean Beauty" Category Tile
     const [sortBy, setSortBy] = useState('relevance'); // 'relevance' | 'price_asc' | 'price_desc'
 
-    // API Base URL for production
-    const API_BASE = import.meta.env.VITE_API_URL || '';
-
     // Close categories menu when clicking outside
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             // Check if click is outside BOTH the trigger button and the drawer itself

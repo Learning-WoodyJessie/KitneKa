@@ -3,6 +3,7 @@ import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, 
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SeasonalityWidget from '../components/SeasonalityWidget';
+import { API_BASE } from '../config';
 
 const HomePage = () => {
     // --- SEARCH STATE ---
@@ -22,7 +23,6 @@ const HomePage = () => {
     const [showImageSearch, setShowImageSearch] = useState(false);
 
     // --- UTILS & CONSTANTS ---
-    const API_BASE = import.meta.env.VITE_API_URL || '';
     const INDIAN_CITIES = [
         "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai",
         "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat"

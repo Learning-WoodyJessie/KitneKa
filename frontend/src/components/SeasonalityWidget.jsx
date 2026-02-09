@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, TrendingUp } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE } from '../config';
 
 const SeasonalityWidget = () => {
     const [tips, setTips] = useState([]);
@@ -9,8 +10,7 @@ const SeasonalityWidget = () => {
     useEffect(() => {
         const fetchTips = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-                const response = await axios.get(`${apiUrl}/seasonality/tips`);
+                const response = await axios.get(`${API_BASE}/seasonality/tips`);
                 setTips(response.data.tips);
             } catch (error) {
                 console.error("Failed to fetch seasonal tips", error);

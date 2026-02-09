@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronLeft, Share2, Star, ShoppingBag, Truck, CheckCircle, AlertCircle, ExternalLink, Heart, ThumbsUp, ThumbsDown, Sparkles, AlertTriangle, TrendingDown, Info } from 'lucide-react';
 import PriceHistoryChart from './PriceHistoryChart';
+import { API_BASE } from '../config';
 
 const ProductPage = () => {
     const { id } = useParams();
@@ -14,8 +15,6 @@ const ProductPage = () => {
 
     // Offers Tab State
     const [activeOfferTab, setActiveOfferTab] = useState('popular');
-
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
     useEffect(() => {
         const fetchData = async () => {
