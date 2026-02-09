@@ -285,6 +285,80 @@ const SearchInterface = ({ initialQuery }) => {
     }
     // For 'relevance', we do NOT sort, preserving the server's sophisticated ranking (which acts like Popularity)
 
+    const handleProductClick = (product) => {
+        // Save to history/context if needed
+        navigate(`/product/${product.id}`);
+    };
+
+    // Helper to render Product Grid
+    const renderGrid = (items) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {items.map((item, idx) => (
+                <div
+                    key={`${item.id}-${idx}`}
+                    onClick={() => handleProductClick(item)}
+                    className="group relative bg-white rounded-2xl border border-gray-100 hover:border-black/10 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
+                >
+                    {/* Image */}
+                    <div className="aspect-[3/4] bg-gray-50 relative overflow-hidden">
+                        <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700"
+                            loading="lazy"
+                        />
+
+                        {/* BADGES - Top Left */}
+                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                            {/* Official Store Badge */}
+                            {(item.is_official || item.source === 'Official Site') && (
+                                <div className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                                    <BadgeCheck size={12} className="text-white" />
+                                    <span>Official</span>
+                                </div>
+                            )}
+                            {/* REMOVED: Clean Beauty Tag as per user request */}
+                        </div>
+
+                        {/* Wishlist Button - Top Right */}
+                        <button
+                            className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // Add to wishlist logic here
+                            }}
+                        >
+                            <Heart size={16} />
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.source}</span>
+                            {item.rating && (
+                                <div className="flex items-center gap-1 text-[10px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
+                                    {item.rating} ★
+                                </div>
+                            )}
+                        </div>
+
+                        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[2.5em] mb-2 group-hover:text-black">
+                            {item.title}
+                        </h3>
+
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-base font-bold text-gray-900">₹{item.price?.toLocaleString()}</span>
+                            {item.original_price && item.original_price > item.price && (
+                                <span className="text-xs text-gray-400 line-through">₹{item.original_price?.toLocaleString()}</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
             {/* GLOBAL LOADER */}
