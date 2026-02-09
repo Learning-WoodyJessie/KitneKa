@@ -468,202 +468,240 @@ const SearchInterface = ({ initialQuery }) => {
             {searched ? (
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="h-10 w-10 text-black animate-spin mb-4" />
-                            <p className="text-gray-500 font-medium animate-pulse">Searching best prices for you...</p>
+                        /* LOADING STATE */
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-pulse">
+                            {[...Array(8)].map((_, i) => (
+                                <div key={i} className="aspect-[3/4] bg-gray-100 rounded-2xl"></div>
+                            ))}
                         </div>
                     ) : (
-                        /* General Search Results Grid */
-                        <div className="space-y-6">
-
-                            {/* RECOMMENDATION BANNER (New) */}
-                            {/* RECOMMENDATION & INSIGHT BANNER */}
-                            {/* Show if we have EITHER a specific pick OR an AI insight */}
-                            {/* RECOMMENDATION BANNER (Temporarily disabled for debugging) */}
-                            {/* {(searchData?.recommendation || searchData?.insight) && filterType === 'popular' && sortBy === 'relevance' && (
-                                <RecommendationBanner
-                                    recommendation={searchData.recommendation}
-                                    insight={searchData.insight}
-                                />
-                            )} */}
-
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-gray-900">
-                                    Search Results {searchData?.query ? `for "${searchData.query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${searchData.query.length > 40 ? '...' : ''}"` : query && `for "${query.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}${query.length > 40 ? '...' : ''}"`}
-                                </h2>
-                                <span className="text-sm text-gray-500">
-                                    {/* Counting Logic: If Brand Grid, count brands. Else items */}
-                                    {searchData?.clean_brands?.length > 0 && !brandContext ?
-                                        `${searchData.clean_brands.length} brands found` :
-                                        `${filteredItems.length} items found`
-                                    }
-                                </span>
-                            </div>
-
-                            {/* Trust Filters: Popular / All / Clean Beauty - OR Brand View Tabs */}
-                            {brandContext ? (
-                                /* BRAND RESULTS: compact header (small card style) + Official / Trusted tabs */
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    {/* Compact brand: small logo + name + optional official link */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full border border-gray-200 overflow-hidden bg-gray-50 flex-shrink-0">
-                                            <img
-                                                src={activeBrandData?.image || ''}
-                                                alt=""
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => { e.target.style.display = 'none'; }}
-                                            />
+                        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+                            {/* DESKTOP SIDEBAR */}
+                            <div className="hidden lg:block lg:col-span-3 space-y-8 sticky top-24 h-fit max-h-[calc(100vh-8rem)] overflow-y-auto pr-4 scrollbar-hide">
+                                {/* Price Range */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Price Range</h3>
+                                    <div className="px-2">
+                                        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                            <span>₹{priceRange[0]}</span>
+                                            <span>₹{priceRange[1]}</span>
                                         </div>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <span className="font-semibold text-gray-900 truncate">{brandContext}</span>
-                                            {(activeBrandData?.link || activeBrandData?.url) && (
-                                                <a
-                                                    href={activeBrandData.link || activeBrandData.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 shrink-0"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    Official site <ExternalLink size={12} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {/* "Search within Brand" Input */}
-                                    <div className="relative group">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                                         <input
-                                            type="text"
-                                            placeholder={`Search ${brandContext}...`}
-                                            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black w-64 transition-all"
+                                            type="range"
+                                            min="0"
+                                            max="50000"
+                                            step="100"
+                                            value={priceRange[1]}
+                                            onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
+                                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
                                         />
                                     </div>
                                 </div>
 
-                            ) : (
-                                /* STANDARD TABS */
-                                (!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                                        {/* Tabs */}
-                                        <div className="flex bg-gray-100 p-1 rounded-lg">
-                                            <button
-                                                onClick={() => {
-                                                    setFilterType('popular');
-                                                    setSortBy('relevance');
-                                                }}
-                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                            >
-                                                Popular & Trusted
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setFilterType('all');
-                                                    setSortBy('price_asc');
-                                                }}
-                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                            >
-                                                All Results
-                                            </button>
-                                        </div>
-
-                                        {/* Sort By Control - High/Low removed as per request */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-500">Sort by:</span>
-                                            <select
-                                                value={sortBy}
-                                                onChange={(e) => setSortBy(e.target.value)}
-                                                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
-                                            >
-                                                <option value="relevance">Popularity</option>
-                                                <option value="price_asc">Price: Low to High</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                )
-                            )}
-
-                            {/* RESULTS GRID OR BRAND GRID */}
-                            {/* BRAND SELECTION GRID (Clean Beauty Category View) */}
-                            {searchData?.clean_brands?.length > 0 && !brandContext && (
-                                <div className="mb-8">
-                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Official Brands</h3>
-                                    <BrandGrid
-                                        brands={searchData.clean_brands}
-                                        onBrandClick={handleBrandClick}
-                                    />
+                                {/* Availability Toggle */}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-700">In Stock Only</span>
+                                    <button
+                                        onClick={() => setInStockOnly(!inStockOnly)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${inStockOnly ? 'bg-black' : 'bg-gray-200'}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${inStockOnly ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
                                 </div>
-                            )}
 
-                            {/* RESULTS GRID */}
-                            {(() => {
-                                // HYBRID MATCHING UI LOGIC
-                                // Check if we have the new hybrid groups from backend
-                                const results = searchResults?.results || {};
-                                const hasHybridData = results.exact_matches || results.variant_matches;
-
-                                // Fallback for legacy responses or broad searches
-                                let exactMatches = results.exact_matches || [];
-                                let variantMatches = results.variant_matches || [];
-                                const similarMatches = results.similar_matches || sortedItems;
-
-                                // If no hybrid data (e.g. brand search), render everything as before
-                                if (!hasHybridData && !searchMode) {
-                                    // Just use the sortedItems (standard list)
-                                    if (sortedItems.length === 0) return emptyState();
-                                    return renderGrid(sortedItems);
-                                }
-
-                                // Empty State Check
-                                if (exactMatches.length === 0 && variantMatches.length === 0 && similarMatches.length === 0) {
-                                    return emptyState();
-                                }
-
-                                return (
-                                    <div className="space-y-12">
-                                        {/* 1. EXACT MATCHES (Green/Gold Highlight) */}
-                                        {exactMatches.length > 0 && (
-                                            <div className="bg-green-50/50 p-6 rounded-2xl border border-green-100">
-                                                <h3 className="text-sm font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <BadgeCheck size={18} className="text-green-600" />
-                                                    Top Match (Verified)
-                                                </h3>
-                                                {renderGrid(exactMatches)}
-                                            </div>
-                                        )}
-
-                                        {/* 2. VARIANTS (Sizes/Colors) */}
-                                        {variantMatches.length > 0 && (
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <Layers size={18} className="text-blue-500" />
-                                                    Other Sizes & Variants
-                                                </h3>
-                                                {renderGrid(variantMatches)}
-                                            </div>
-                                        )}
-
-                                        {/* 3. SIMILAR PRODUCTS */}
-                                        {similarMatches.length > 0 && (
-                                            <div>
-                                                {(exactMatches.length > 0 || variantMatches.length > 0) && (
-                                                    <div className="flex items-center gap-4 my-8">
-                                                        <div className="h-px bg-gray-200 flex-1"></div>
-                                                        <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Similar Products</span>
-                                                        <div className="h-px bg-gray-200 flex-1"></div>
-                                                    </div>
-                                                )}
-                                                {renderGrid(similarMatches)}
-                                            </div>
-                                        )}
+                                {/* Marketplaces */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Stores</h3>
+                                    <div className="space-y-2">
+                                        {['Amazon', 'Flipkart', 'Myntra', 'Ajio', 'Nykaa', 'Tata Cliq'].map(store => (
+                                            <label key={store} className="flex items-center gap-3 cursor-pointer group">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedStores.includes(store) ? 'bg-black border-black text-white' : 'border-gray-300 group-hover:border-gray-400'}`}>
+                                                    {selectedStores.includes(store) && <Check size={12} />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={selectedStores.includes(store)}
+                                                    onChange={() => {
+                                                        setSelectedStores(prev =>
+                                                            prev.includes(store)
+                                                                ? prev.filter(s => s !== store)
+                                                                : [...prev, store]
+                                                        );
+                                                    }}
+                                                />
+                                                <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">{store}</span>
+                                            </label>
+                                        ))}
                                     </div>
-                                );
+                                </div>
+                            </div>
 
-                            })()}
+                            {/* RESULTS AREA */}
+                            <div className="col-span-12 lg:col-span-9">
+                                {/* Top Bar: Count & Sort */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                    <div className="flex items-baseline gap-2">
+                                        <h2 className="text-xl font-bold text-gray-900">
+                                            {brandContext ? brandContext : (searchMode ? 'Search Results' : 'Top Picks')}
+                                        </h2>
+                                        <span className="text-sm text-gray-500 font-medium">({filteredItems.length} items)</span>
+                                    </div>
+
+                                    {/* Trust Filters: Popular / All / Clean Beauty - OR Brand View Tabs */}
+                                    {brandContext ? (
+                                        /* BRAND RESULTS header */
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full border border-gray-200 overflow-hidden bg-gray-50 flex-shrink-0">
+                                                    <img
+                                                        src={activeBrandData?.image || ''}
+                                                        alt=""
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="font-semibold text-gray-900 truncate">{brandContext}</span>
+                                                    {(activeBrandData?.link || activeBrandData?.url) && (
+                                                        <a
+                                                            href={activeBrandData.link || activeBrandData.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 shrink-0"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Official site <ExternalLink size={12} />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* STANDARD TABS */
+                                        (!searchData?.clean_brands || searchData.clean_brands.length === 0) && (
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilterType('popular');
+                                                            setSortBy('relevance');
+                                                        }}
+                                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'popular' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                                    >
+                                                        Popular & Trusted
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilterType('all');
+                                                            setSortBy('price_asc');
+                                                        }}
+                                                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterType === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                                    >
+                                                        All Results
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-500">Sort by:</span>
+                                                    <select
+                                                        value={sortBy}
+                                                        onChange={(e) => setSortBy(e.target.value)}
+                                                        className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                                                    >
+                                                        <option value="relevance">Popularity</option>
+                                                        <option value="price_asc">Price: Low to High</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+
+                                {/* BRAND SELECTION GRID (Clean Beauty Category View) */}
+                                {searchData?.clean_brands?.length > 0 && !brandContext && (
+                                    <div className="mb-8">
+                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Official Brands</h3>
+                                        <BrandGrid
+                                            brands={searchData.clean_brands}
+                                            onBrandClick={handleBrandClick}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* RESULTS GRID */}
+                                {(() => {
+                                    // HYBRID MATCHING UI LOGIC
+                                    const results = searchResults?.results || {};
+                                    const hasHybridData = results.exact_matches || results.variant_matches;
+
+                                    let exactMatches = results.exact_matches || [];
+                                    let variantMatches = results.variant_matches || [];
+                                    const similarMatches = results.similar_matches || sortedItems;
+
+                                    // If no hybrid data (e.g. brand search), render everything as before
+                                    if (!hasHybridData && !searchMode) {
+                                        if (sortedItems.length === 0) return emptyState();
+                                        return renderGrid(sortedItems);
+                                    }
+
+                                    // Empty State Check
+                                    if (exactMatches.length === 0 && variantMatches.length === 0 && similarMatches.length === 0) {
+                                        return emptyState();
+                                    }
+
+                                    return (
+                                        <div className="space-y-12">
+                                            {/* 1. EXACT MATCHES */}
+                                            {exactMatches.length > 0 && (
+                                                <div className="bg-green-50/50 p-6 rounded-2xl border border-green-100">
+                                                    <h3 className="text-sm font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                        <BadgeCheck size={18} className="text-green-600" />
+                                                        Top Match (Verified)
+                                                    </h3>
+                                                    {renderGrid(exactMatches)}
+                                                </div>
+                                            )}
+
+                                            {/* 2. VARIANTS */}
+                                            {variantMatches.length > 0 && (
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                        <Layers size={18} className="text-blue-500" />
+                                                        Other Sizes & Variants
+                                                    </h3>
+                                                    {renderGrid(variantMatches)}
+                                                </div>
+                                            )}
+
+                                            {/* 3. SIMILAR PRODUCTS */}
+                                            {similarMatches.length > 0 && (
+                                                <div>
+                                                    {(exactMatches.length > 0 || variantMatches.length > 0) && (
+                                                        <div className="flex items-center gap-4 my-8">
+                                                            <div className="h-px bg-gray-200 flex-1"></div>
+                                                            <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Similar Products</span>
+                                                            <div className="h-px bg-gray-200 flex-1"></div>
+                                                        </div>
+                                                    )}
+                                                    {renderGrid(similarMatches)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     )}
                 </div>
+            ) : (
+                /* LANDING STATE: Featured Brands + Categories Cards */
+                <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+                    <FeaturedBrands onBrandClick={handleBrandClick} />
+                    <CategoryLabels onCategoryClick={handleCategoryClick} />
+                </div>
+            )}
 
-                {/* Mobile Drawer */}
+            {/* Mobile Drawer */}
             {isDrawerOpen && (
                 <div className="fixed inset-0 z-[60] lg:hidden">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)} />
@@ -676,23 +714,11 @@ const SearchInterface = ({ initialQuery }) => {
                                 </button>
                             </div>
                             {/* Re-use Sidebar Content for Mobile */}
-                            <div className="space-y-8">
-                                {/* ... mobile filter content ... */}
-                                {/* For brevity, we hide duplicate logic here or reuse components */}
-                            </div>
                         </div>
                     </div>
                 </div>
+            )}
         </div>
-    ) : (
-        /* LANDING STATE: Featured Brands + Categories Cards */
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
-            <FeaturedBrands onBrandClick={handleBrandClick} />
-            <CategoryLabels onCategoryClick={handleCategoryClick} />
-        </div>
-    )
-}
-    </div >
     );
 };
 
@@ -704,12 +730,5 @@ const emptyState = () => (
         <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
     </div>
 );
-<div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-    <h3 className="text-lg font-medium text-gray-900">No matching results</h3>
-    <p className="text-gray-500">Try switching to "All Results" or turning off filters.</p>
-</div>
-);
 
 export default SearchInterface;
-```
