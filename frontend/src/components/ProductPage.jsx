@@ -377,9 +377,9 @@ const ProductPage = () => {
                             <div>
                                 <p className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Best Market Price</p>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-bold text-gray-900">₹{bestOffer.price.toLocaleString()}</span>
-                                    {bestOffer.price < (product.original_price || bestOffer.price * 1.2) && (
-                                        <span className="text-lg text-gray-400 line-through">₹{Math.round(bestOffer.price * 1.2).toLocaleString()}</span>
+                                    <span className="text-4xl font-bold text-gray-900">₹{(bestOffer.price || 0).toLocaleString()}</span>
+                                    {(bestOffer.price || 0) < ((product.original_price || 0) || (bestOffer.price || 0) * 1.2) && (
+                                        <span className="text-lg text-gray-400 line-through">₹{Math.round((bestOffer.price || 0) * 1.2).toLocaleString()}</span>
                                     )}
                                 </div>
                                 <p className="text-sm text-green-600 font-medium mt-1">
@@ -478,7 +478,7 @@ const ProductPage = () => {
                                                 {isSampleStore(offer.seller) && <span className="ml-2 text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 uppercase tracking-wide">SAMPLE</span>}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-gray-900">
-                                                ₹{offer.price.toLocaleString()}
+                                                ₹{(offer.price || 0).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600">
                                                 {offer.shipping === 0 ? <span className="text-green-600 font-bold text-xs uppercase">Free</span> : `+₹${offer.shipping}`}
@@ -534,8 +534,8 @@ const ProductPage = () => {
                                     Premium {product.category || "Apparel"} - Variant {i + 1}
                                 </h3>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-gray-900">₹{Math.round(bestOffer.price * (0.8 + Math.random() * 0.4)).toLocaleString()}</span>
-                                    <span className="text-xs text-gray-400 line-through">₹{Math.round(bestOffer.price * 1.5).toLocaleString()}</span>
+                                    <span className="font-bold text-gray-900">₹{Math.round((bestOffer.price || 0) * (0.8 + Math.random() * 0.4)).toLocaleString()}</span>
+                                    <span className="text-xs text-gray-400 line-through">₹{Math.round((bestOffer.price || 0) * 1.5).toLocaleString()}</span>
                                 </div>
                             </div>
                         ))}
