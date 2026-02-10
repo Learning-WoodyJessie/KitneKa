@@ -72,7 +72,7 @@ const PriceHistoryChart = ({ currentPrice, priceHistory }) => {
                 <div className="bg-white p-3 border border-gray-100 shadow-xl rounded-lg text-sm">
                     <p className="font-medium text-gray-500 mb-1">{label}</p>
                     <p className="text-blue-600 font-bold text-lg">
-                        ₹{payload[0].value.toLocaleString()}
+                        ₹{(payload[0].value || 0).toLocaleString()}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">Best Market Price</p>
                 </div>
@@ -87,8 +87,8 @@ const PriceHistoryChart = ({ currentPrice, priceHistory }) => {
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">Price History</h3>
                     <p className="text-sm text-gray-500">
-                        Lowest: <span className="font-medium text-green-600">₹{stats.min.toLocaleString()}</span> •
-                        Highest: <span className="font-medium text-red-500">₹{stats.max.toLocaleString()}</span>
+                        Lowest: <span className="font-medium text-green-600">₹{(stats.min || 0).toLocaleString()}</span> •
+                        Highest: <span className="font-medium text-red-500">₹{(stats.max || 0).toLocaleString()}</span>
                     </p>
                 </div>
 
@@ -98,8 +98,8 @@ const PriceHistoryChart = ({ currentPrice, priceHistory }) => {
                             key={range.label}
                             onClick={() => setActiveRange(range)}
                             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${activeRange.label === range.label
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-900'
                                 }`}
                         >
                             {range.label}

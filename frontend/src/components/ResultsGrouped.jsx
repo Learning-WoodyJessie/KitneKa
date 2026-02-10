@@ -160,7 +160,7 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
                                             {item.title}
                                         </h4>
                                         <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-sm font-bold text-black tracking-wide">₹{item.price.toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-black tracking-wide">₹{(item.price || 0).toLocaleString()}</span>
                                             {item.source && (
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest">{item.source}</span>
                                             )}

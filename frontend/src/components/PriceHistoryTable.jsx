@@ -94,7 +94,7 @@ const PriceHistoryTable = ({ historyData }) => {
                                     {row.store}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                    ₹{row.price.toLocaleString()}
+                                    ₹{(row.price || 0).toLocaleString()}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href={row.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1">
