@@ -596,9 +596,27 @@ class SmartSearchService:
         return None
 
     # Placeholder for the new _generate_ai_insight method
+    # Placeholder for the new _generate_ai_insight method
     def _generate_ai_insight(self, ranked_online, query):
         # Delegate to the real synthesis method
         return self._synthesize_results(query, ranked_online, [], [])
+
+    def _extract_model_numbers(self, text: str) -> List[str]:
+        """
+        Extracts alphanumeric model codes (e.g., MK6475, WH-1000XM4, iPhone15)
+        Ignores generic terms like 'Women', 'Watch', 'Size', 'Pack'
+        """
+        # Look for tokens with mixed alpha+digits OR pure digits of specific length (e.g. 501)
+        tokens = text.split()
+        models = []
+        for t in tokens:
+            t_clean = re.sub(r'[^\w\-]', '', t).upper()
+            # Heuristic: Model numbers often have digits, are >3 chars, and aren't common words
+            if (any(c.isdigit() for c in t_clean) and len(t_clean) > 3) or (t_clean.isalpha() and t_clean.isupper() and len(t_clean) > 4):
+                 # Filter out common false positives
+                 if t_clean not in ["SIZE", "PACK", "WITH", "BLACK", "WHITE", "BLUE", "GOLD", "WOMEN", "MENS", "KIDS"]:
+                    models.append(t_clean)
+        return models
 
     def smart_search(self, query: str, location: str = "Mumbai", db=None):
         """
@@ -642,12 +660,14 @@ class SmartSearchService:
         
         logger.info(f"Fetching Data for: {query}, Target URL: {target_url}")
         
-        logger.info(f"Fetching Data for: {query}")
-        
-        # 2. Results Fetching
+        # Detect Model Numbers in Query (Critical for "Compare Prices" exact match)
+        query_models = self._extract_model_numbers(query)
+        logger.info(f"Detected Model Numbers in Query: {query_models}")
+
         # 2. FETCH RESULTS (Multi-Query for Marketplace Mix)
         # Check if this is a Brand Search to trigger Marketplace Spread
         is_brand_search = any(b['display_name'].lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
+
         
         all_serp_results = []
         
@@ -688,6 +708,29 @@ class SmartSearchService:
             # Standard single query
             scraper_response = self.scraper.search_products(query)
             all_serp_results = scraper_response.get("online", [])
+
+        # STRICT MODEL FILTERING (User Request: "Not other watches")
+        # If we identified specific model numbers in the query (e.g. MK6475),
+        # remove any results that DO NOT contain at least one of them.
+        if query_models:
+            logger.info(f"Applying Strict Model Filtering for: {query_models}")
+            model_filtered_results = []
+            for item in all_serp_results:
+                title = item.get("title", "").upper()
+                # Check if ANY of the query models appear in the title
+                if any(m in title for m in query_models):
+                    model_filtered_results.append(item)
+                else:
+                    logger.debug(f"Filtered out (Model Mismatch): {item.get('title')}")
+            
+            # Safety Check: If filtering removed EVERYTHING (too strict), fall back to original
+            # but getting 0 is better than getting wrong products for "Compare" use case.
+            if model_filtered_results:
+                logger.info(f"Model Filter kept {len(model_filtered_results)} / {len(all_serp_results)} items")
+                all_serp_results = model_filtered_results
+            else:
+                logger.warning("Model Filter removed all items. Returning 0 to avoid irrelevant results.")
+                all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
 
         # Deduplicate by ID or URL
         seen_ids = set()
