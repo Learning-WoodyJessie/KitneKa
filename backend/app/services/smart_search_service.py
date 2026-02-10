@@ -732,6 +732,37 @@ class SmartSearchService:
                 logger.warning("Model Filter removed all items. Returning 0 to avoid irrelevant results.")
                 all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
 
+        # FALLBACK: STRICT ATTRIBUTE FILTERING (For Clothes/General Items without Model #)
+        # If no model number, we MUST still ensure Brand and core attributes match to avoid "Similar" junk.
+        elif target_url or len(query.split()) > 3:
+             # Only run this if we have a specific target (URL search) or detailed query
+             try:
+                 # Extract expected attributes from the query
+                 expected_attrs = self.matcher.extract_attributes(query)
+                 expected_brand = expected_attrs.get("brand")
+                 expected_color = expected_attrs.get("color")
+                 
+                 if expected_brand:
+                     logger.info(f"Applying Strict Brand Filtering for: {expected_brand}")
+                     brand_filtered = []
+                     for item in all_serp_results:
+                         title_lower = item.get("title", "").lower()
+                         # Fuzzy brand check
+                         if expected_brand.lower() in title_lower:
+                             brand_filtered.append(item)
+                     
+                     if brand_filtered:
+                        all_serp_results = brand_filtered
+                        
+                 # Optional: Color filtering (be lenient, only prioritize, don't hard filter to 0)
+                 if expected_color:
+                     color_filtered = [i for i in all_serp_results if expected_color.lower() in i.get("title", "").lower()]
+                     if color_filtered:
+                         logger.info(f"Prioritizing {len(color_filtered)} items matching color: {expected_color}")
+                         all_serp_results = color_filtered # Only keep color matches if they exist
+             except Exception as e:
+                 logger.error(f"Attribute Filtering Failed: {e}")
+
         # Deduplicate by ID or URL
         seen_ids = set()
         serp_results = []
