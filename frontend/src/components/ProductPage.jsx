@@ -34,14 +34,15 @@ const ProductPage = () => {
                     setProduct(productData);
                 }
 
-                // 3. NEW: Fetch multi-store prices using product title
+                // 3. NEW: Fetch multi-store prices using product title (Critical for URL search items)
                 if (productData?.title) {
                     setComparingPrices(true);
                     try {
+                        console.log("Triggering comparison for:", productData.title);
                         const compareRes = await axios.get(`${API_BASE}/product/compare`, {
                             params: { title: productData.title }
                         });
-                        if (compareRes.data?.prices) {
+                        if (compareRes.data?.prices && compareRes.data.prices.length > 0) {
                             setComparedPrices(compareRes.data.prices);
                         }
                     } catch (compareErr) {

@@ -83,10 +83,11 @@ const ResultsGrouped = ({ context, type = 'BRAND' }) => { // type: 'BRAND' or 'C
     };
 
     const handleProductClick = (product) => {
-        // Same logic as SearchInterface - simplified here, ideally shared utility
-        const productId = product.id;
-        localStorage.setItem(`product_shared_${productId}`, JSON.stringify(product));
-        navigate(`/product/${productId}`);
+        // Save to history/context - CRITICAL for "Product Not Found" fix
+        if (product && product.id) {
+            localStorage.setItem(`product_shared_${product.id}`, JSON.stringify(product));
+            navigate(`/product/${product.id}`);
+        }
     };
 
     const handleViewAll = (category) => {

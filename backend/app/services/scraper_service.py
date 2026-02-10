@@ -119,22 +119,25 @@ class RealScraperService:
             return url
         
         try:
-            # List of params to strip
-            bad_params = ['srsltid', 'gclid', 'fbclid', 'dclid', 'msclkid']
+            # List of params to strip - be specific to avoid removing valid ID params
+            bad_params = ['srsltid', 'gclid', 'fbclid', 'dclid', 'msclkid', 'ved', 'usg', 'sa']
             
-            # Simple regex remove for each param
             cleaned_url = url
             for param in bad_params:
-                # Remove param at start of query string (?param=val)
+                # Remove param at start of query string (?param=val) or (&param=val)
                 cleaned_url = re.sub(f'[?&]{param}=[^&]*', '', cleaned_url)
             
-            # Fix up query string separators if we removed the first param but kept others
+            # Fix up query string separators
             if '?' not in cleaned_url and '&' in cleaned_url:
                 cleaned_url = cleaned_url.replace('&', '?', 1)
                 
             # Remove trailing ? or &
             if cleaned_url.endswith('?') or cleaned_url.endswith('&'):
                 cleaned_url = cleaned_url[:-1]
+            
+            # If the URL ends up empty or broken, return original
+            if not cleaned_url.startswith('http'):
+                return url
                 
             return cleaned_url
         except:

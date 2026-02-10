@@ -289,8 +289,11 @@ const SearchInterface = ({ initialQuery }) => {
     // For 'relevance', we do NOT sort, preserving the server's sophisticated ranking (which acts like Popularity)
 
     const handleProductClick = (product) => {
-        // Save to history/context if needed
-        navigate(`/product/${product.id}`);
+        // Save to history/context to avoid 404 on next page for scraped items
+        if (product && product.id) {
+            localStorage.setItem(`product_shared_${product.id}`, JSON.stringify(product));
+            navigate(`/product/${product.id}`);
+        }
     };
 
     // Helper to render Product Grid
