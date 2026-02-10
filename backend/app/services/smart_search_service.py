@@ -679,6 +679,10 @@ class SmartSearchService:
              should_use_mix = True
         elif target_url and extracted_data and extracted_data.get("search_query"):
              should_use_mix = True
+        # NEW: If we have a specific model number, FORCE mix to find it on all platforms
+        elif query_models:
+             should_use_mix = True
+             logger.info(f"Model number detected ({query_models}), forcing Marketplace Mix.")
              
         if should_use_mix:
             # MARKETPLACE MIX: Query each major marketplace separately for equal representation
