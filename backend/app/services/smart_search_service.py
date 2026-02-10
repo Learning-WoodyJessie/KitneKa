@@ -611,10 +611,11 @@ class SmartSearchService:
         models = []
         for t in tokens:
             t_clean = re.sub(r'[^\w\-]', '', t).upper()
-            # Heuristic: Model numbers often have digits, are >3 chars, and aren't common words
-            if (any(c.isdigit() for c in t_clean) and len(t_clean) > 3) or (t_clean.isalpha() and t_clean.isupper() and len(t_clean) > 4):
+            # Strict Rule: Model numbers MUST have at least one digit (e.g. MK3192, iphone15)
+            # Pure alpha words (MICHAEL, ROSE, GOLD) are almost never unique model IDs in this context.
+            if any(c.isdigit() for c in t_clean) and len(t_clean) > 2:
                  # Filter out common false positives
-                 if t_clean not in ["SIZE", "PACK", "WITH", "BLACK", "WHITE", "BLUE", "GOLD", "WOMEN", "MENS", "KIDS"]:
+                 if t_clean not in ["SIZE", "PACK", "WITH", "BLACK", "WHITE", "BLUE", "GOLD", "WOMEN", "MENS", "KIDS", "ROSE", "GOLD", "WATCH", "DARCI", "1PC", "2PC", "100ML", "50ML", "500G", "1KG"]:
                     models.append(t_clean)
         return models
 

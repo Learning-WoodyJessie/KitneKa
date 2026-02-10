@@ -12,9 +12,49 @@ const ProductPage = () => {
     const [error, setError] = useState(null);
     const [comparedPrices, setComparedPrices] = useState([]); // NEW: Multi-store prices
     const [comparingPrices, setComparingPrices] = useState(false); // Loading state for comparison
+    const [similarProducts, setSimilarProducts] = useState([]); // NEW: Similar products
 
     // Offers Tab State
     const [activeOfferTab, setActiveOfferTab] = useState('popular');
+
+    // Fetch Similar Products (Real Data)
+    useEffect(() => {
+        if (!product?.title) return;
+
+        const fetchSimilar = async () => {
+            try {
+                // Construct query: Brand + Category OR Short Title
+                let query = "";
+                if (product.brand) {
+                    query = `${product.brand} ${product.category || ""}`.trim();
+                } else {
+                    // If no brand, use first 4 words of title
+                    query = product.title.split(' ').slice(0, 4).join(' ');
+                }
+
+                // Avoid searching for specific model numbers to get broader "similar" items
+                // Strips MK3192 etc. if present in the short query
+                query = query.replace(/[A-Z0-9]{4,}/g, '').trim();
+
+                console.log("Fetching similar products for:", query);
+                const res = await axios.get(`${API_BASE}/search`, {
+                    params: { q: query }
+                });
+
+                if (res.data?.results?.online) {
+                    // Filter out current product and limit to 5
+                    const filtered = res.data.results.online
+                        .filter(p => p.id !== product.id && p.title !== product.title)
+                        .slice(0, 5);
+                    setSimilarProducts(filtered);
+                }
+            } catch (e) {
+                console.error("Similar fetch failed", e);
+            }
+        };
+
+        fetchSimilar();
+    }, [product]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -517,31 +557,40 @@ const ProductPage = () => {
                 </div>
 
                 {/* SECTION: SIMILAR PRODUCTS */}
-                <div className="pt-8 border-t border-gray-100">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6 px-1">Similar Products</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer group">
-                                <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
-                                    <img
-                                        src={`https://images.unsplash.com/photo-${152 + i}?auto=format&fit=crop&w=400&q=80`} // Mock Images
-                                        alt="Similar"
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        onError={(e) => e.target.src = 'https://placehold.co/400x500?text=Product'}
-                                    />
-                                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {similarProducts.length > 0 && (
+                    <div className="pt-8 border-t border-gray-100">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6 px-1">Similar Products</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {similarProducts.map((simProduct, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => handleProductClick(simProduct)}
+                                    className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer group"
+                                >
+                                    <div className="aspect-[3/4] bg-gray-50 rounded-lg mb-4 overflow-hidden relative">
+                                        <img
+                                            src={simProduct.image || 'https://placehold.co/400x500?text=Product'}
+                                            alt={simProduct.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            onError={(e) => e.target.src = 'https://placehold.co/400x500?text=Product'}
+                                        />
+                                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1 group-hover:text-blue-600">
+                                        {simProduct.title}
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-900">₹{(simProduct.price || 0).toLocaleString()}</span>
+                                        {simProduct.original_price > simProduct.price && (
+                                            <span className="text-xs text-gray-400 line-through">₹{simProduct.original_price.toLocaleString()}</span>
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">{simProduct.source}</div>
                                 </div>
-                                <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1 group-hover:text-blue-600">
-                                    Premium {product.category || "Apparel"} - Variant {i + 1}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-gray-900">₹{Math.round((bestOffer.price || 0) * (0.8 + Math.random() * 0.4)).toLocaleString()}</span>
-                                    <span className="text-xs text-gray-400 line-through">₹{Math.round((bestOffer.price || 0) * 1.5).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
 
             </main>
         </div>

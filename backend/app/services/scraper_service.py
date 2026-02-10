@@ -63,6 +63,11 @@ class RealScraperService:
                     merchant_url = self._clean_google_url(url)
                     # Keep all results - no filtering
                 
+                # DOMAIN FILTERING (User Request: Block YouTube/Social)
+                if not self._is_valid_domain(merchant_url):
+                    logger.info(f"Filtered invalid domain: {merchant_url}")
+                    continue
+
                 # Use the clean merchant URL as the primary 'url'
                 url = merchant_url
 
@@ -142,6 +147,27 @@ class RealScraperService:
             return cleaned_url
         except:
             return url
+
+    def _is_valid_domain(self, url: str) -> bool:
+        """
+        Checks if the domain is a valid shopping site.
+        Blocks social media, video sites, and known non-retail domains.
+        """
+        if not url: return False
+        
+        blocked_domains = [
+            'youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com',
+            'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+            'pinterest.com', 'linkedin.com', 'tiktok.com',
+            'reddit.com', 'quora.com', 'wikipedia.org'
+        ]
+        
+        url_lower = url.lower()
+        for domain in blocked_domains:
+            if domain in url_lower:
+                return False
+                
+        return True
 
     async def search_playwright(self, query: str):
         # ... (Implementation kept as fallback)
