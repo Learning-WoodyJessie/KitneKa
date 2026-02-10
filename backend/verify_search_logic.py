@@ -21,11 +21,14 @@ def _extract_model_numbers(text: str) -> List[str]:
     return models
 
 def run_test():
-    query = "Michael Kors Women Darci Rose Gold Watch MK3192"
-    print(f"\n--- TESTING SEARCH LOGIC FOR: '{query}' ---\n")
+    # SIMULATE MARKETPLACE MIX (as enabled in smart_search)
+    # We query specific stores because the generic query failed to find Amazon
+    base_query = "Michael Kors Parker MK5896"
+    
+    print(f"\n--- TESTING SEARCH LOGIC FOR: '{base_query}' ---\n")
     
     # 1. Detect Models
-    models = _extract_model_numbers(query)
+    models = _extract_model_numbers(base_query)
     print(f"Detected Models: {models}")
     
     if not models:
@@ -40,11 +43,13 @@ def run_test():
     
     # SIMULATE MARKETPLACE MIX (as enabled in smart_search)
     # We query specific stores because the generic query failed to find Amazon
+    base_query = "Michael Kors Parker MK5896"
+    
     mix_queries = [
-        f"{query}",                # Generic
-        f"MK3192 amazon.in",       # Amazon Specific
-        f"MK3192 flipkart.com",    # Flipkart Specific
-        f"MK3192 myntra.com"       # Myntra Specific
+        f"{base_query}",                # Generic
+        f"MK5896 amazon.in",       # Amazon Specific
+        f"MK5896 flipkart.com",    # Flipkart Specific
+        f"MK5896 myntra.com"       # Myntra Specific
     ]
     
     results = []

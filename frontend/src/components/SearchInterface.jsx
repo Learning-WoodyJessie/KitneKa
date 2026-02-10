@@ -697,16 +697,7 @@ const SearchInterface = ({ initialQuery }) => {
                                     )}
                                 </div>
 
-                                {/* BRAND SELECTION GRID (Clean Beauty Category View) */}
-                                {searchData?.clean_brands?.length > 0 && !brandContext && (
-                                    <div className="mb-8">
-                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Official Brands</h3>
-                                        <BrandGrid
-                                            brands={searchData.clean_brands}
-                                            onBrandClick={handleBrandClick}
-                                        />
-                                    </div>
-                                )}
+                                {/* BRAND SELECTION GRID REMOVED PER USER REQUEST */}
 
                                 {/* RESULTS GRID */}
                                 {(() => {

@@ -619,6 +619,27 @@ class SmartSearchService:
                     models.append(t_clean)
         return models
 
+    def _extract_series_name(self, text: str) -> Optional[str]:
+        """
+        Extracts known series/collection names for watches and accessories.
+        Helps when no specific model number is present (e.g. 'Michael Kors Lexington')
+        """
+        if not text: return None
+        
+        # Common Watch/Bag Series (Expand as needed)
+        known_series = [
+            "LEXINGTON", "BRADSHAW", "RUNWAY", "DARCI", "SOFIE", "PYPER", "PARKER", "SLIM", "RITZ", 
+            "GEN 5", "GEN 6", "VANDERBILT", "EVEREST", "LAYTON", "TIBBY"
+        ]
+        
+        text_upper = text.upper()
+        for series in known_series:
+            # check for word boundary to avoid partial matches
+            if f" {series} " in f" {text_upper} " or text_upper.startswith(f"{series} ") or text_upper.endswith(f" {series}"):
+                return series
+                
+        return None
+
     def smart_search(self, query: str, location: str = "Mumbai", db=None):
         """
         Orchestrates the search:
@@ -737,9 +758,28 @@ class SmartSearchService:
                 logger.warning("Model Filter removed all items. Returning 0 to avoid irrelevant results.")
                 all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
 
-        # FALLBACK: STRICT ATTRIBUTE FILTERING (For Clothes/General Items without Model #)
+                all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
+
+        # FALLBACK 1: SERIES/COLLECTION FILTERING (For Watches/Bags without Model #)
+        # If no model number, check for known Series (Lexington, Bradshaw, etc.)
+        elif True: # Always check this if no model filter applied
+             series_name = self._extract_series_name(query)
+             if series_name:
+                 logger.info(f"Series Name Detected: {series_name}. Applying Strict Series Filter.")
+                 series_filtered = []
+                 for item in all_serp_results:
+                     if series_name in item.get("title", "").upper():
+                         series_filtered.append(item)
+                 
+                 if series_filtered:
+                     all_serp_results = series_filtered
+                     logger.info(f"Series Filter kept {len(all_serp_results)} items matching '{series_name}'")
+                 else:
+                     logger.warning(f"Series Filter found 0 items for '{series_name}'. keeping broad results.")
+
+        # FALLBACK 2: STRICT ATTRIBUTE FILTERING (For Clothes/General Items without Model #)
         # If no model number, we MUST still ensure Brand and core attributes match to avoid "Similar" junk.
-        elif target_url or len(query.split()) > 3:
+        if (target_url or len(query.split()) > 3) and not query_models and not self._extract_series_name(query):
              # Only run this if we have a specific target (URL search) or detailed query
              try:
                  # Extract expected attributes from the query
@@ -907,6 +947,14 @@ class SmartSearchService:
                         item["similarity_score"] = round(similarity, 2)
                         item["match_classification"] = match_type
                         
+                        # NEW: Force Official Store results to be EXACT matches if they have high similarity
+                        # This ensures they appear in the main comparison table (User Request)
+                        if item.get("is_official") or item.get("source") == "Official Site":
+                             if similarity > 0.8: # high confidence it's the right product
+                                 match_type = "EXACT_MATCH"
+                                 item["match_classification"] = "EXACT_MATCH"
+                                 logger.info(f"Boosting Official Store result to EXACT_MATCH: {item.get('title')}")
+
                         if match_type == "EXACT_MATCH":
                             exact_matches.append(item)
                         elif "VARIANT" in match_type:
