@@ -291,6 +291,55 @@ const SearchInterface = ({ initialQuery }) => {
     }
     // For 'relevance', we do NOT sort, preserving the server's sophisticated ranking (which acts like Popularity)
 
+    // =========================================================================
+    // HYBRID SEARCH LIFTED LOGIC (Compute Counts for Header)
+    // =========================================================================
+    const results = searchData?.results || {};
+    const hasHybridData = results.exact_matches || results.variant_matches;
+
+    // Filter function for Hybrid Results (Ignoring Popularity Tab generally, but respecting price/stock/store)
+    const applyHybridFilters = (list) => {
+        if (!list) return [];
+        return list.filter(item => {
+            if (brandContext) return true;
+
+            // Price
+            const price = item.price || 0;
+            if (price < priceRange[0] || price > priceRange[1]) return false;
+
+            // Stock
+            if (inStockOnly && !item.in_stock) return false;
+
+            // Store
+            if (selectedStores.length > 0) {
+                // flexible match
+                const source = item.source || "";
+                if (!selectedStores.some(s => source.includes(s))) return false;
+            }
+
+            return true;
+        });
+    };
+
+    const exactMatches = applyHybridFilters(results.exact_matches || []);
+    const variantMatches = applyHybridFilters(results.variant_matches || []);
+
+    // Similar matches fallback to sortedItems (legacy) if backend list is missing
+    let similarMatches = results.similar_matches ? applyHybridFilters(results.similar_matches) : sortedItems;
+
+    // Dedupe similar against exact/variant
+    const exactIds = new Set([...exactMatches, ...variantMatches].map(i => i.link || i.id));
+    similarMatches = similarMatches.filter(i => !exactIds.has(i.link || i.id));
+
+    // Combined "Other Results"
+    const otherMatches = [...variantMatches, ...similarMatches];
+
+    // Compute Count for Header
+    // If we are in Search Mode (and not just Brand Browsing), we use the Hybrid Count if available
+    const displayCount = (hasHybridData || searched)
+        ? (exactMatches.length + otherMatches.length)
+        : filteredItems.length;
+
     const handleProductClick = (product) => {
         // Save to history/context to avoid 404 on next page for scraped items
         if (product && product.id) {
@@ -667,7 +716,7 @@ const SearchInterface = ({ initialQuery }) => {
                                         <h2 className="text-xl font-bold text-gray-900">
                                             {brandContext ? brandContext : (searched ? 'Search Results' : 'Top Picks')}
                                         </h2>
-                                        <span className="text-sm text-gray-500 font-medium">({filteredItems.length} items)</span>
+                                        <span className="text-sm text-gray-500 font-medium">({displayCount} items)</span>
                                     </div>
 
                                     {/* Trust Filters: Popular / All / Clean Beauty - OR Brand View Tabs */}
@@ -743,73 +792,20 @@ const SearchInterface = ({ initialQuery }) => {
 
                                 {/* RESULTS GRID */}
                                 {(() => {
-                                    // HYBRID MATCHING UI LOGIC
-                                    const results = searchData?.results || {};
-                                    const hasHybridData = results.exact_matches || results.variant_matches;
 
-                                    // Filter function re-used from above (need to extract it or wrap logic)
-                                    // For now, we'll manually filter exact/variant to be safe and consistent
-                                    const applyFilters = (list) => {
-                                        if (!list) return [];
-                                        return list.filter(item => {
-                                            if (brandContext) return true;
 
-                                            // Price
-                                            const price = item.price || 0;
-                                            if (price < priceRange[0] || price > priceRange[1]) return false;
-
-                                            // Stock
-                                            if (inStockOnly && !item.in_stock) return false;
-
-                                            // Store
-                                            if (selectedStores.length > 0) {
-                                                // flexible match
-                                                const source = item.source || "";
-                                                if (!selectedStores.some(s => source.includes(s))) return false;
-                                            }
-
-                                            return true;
-                                        });
-                                    };
-
-                                    let exactMatches = applyFilters(results.exact_matches || []);
-                                    let variantMatches = applyFilters(results.variant_matches || []);
-                                    // Similar matches usually come from sortedItems which is ALREADY filtered, 
-                                    // but if we use results.similar_matches directly, we must filter it.
-                                    // However, similar_matches from backend aren't filtered by frontend logic yet.
-                                    // We'll use the backend list if available, else sortedItems (legacy path)
-                                    let similarMatches = results.similar_matches ? applyFilters(results.similar_matches) : sortedItems;
-
-                                    // Dedupe similar against exact/variant to be safe
-                                    const exactIds = new Set([...exactMatches, ...variantMatches].map(i => i.link || i.id));
-                                    similarMatches = similarMatches.filter(i => !exactIds.has(i.link || i.id));
-
-                                    const totalCount = exactMatches.length + variantMatches.length + similarMatches.length;
-
-                                    // If no hybrid data (e.g. brand search), render everything as before
-                                    if (!hasHybridData && !searched) {
-                                        if (sortedItems.length === 0) return emptyState();
-                                        return renderGrid(sortedItems);
-                                    }
-
-                                    // Empty State Check
-                                    if (totalCount === 0) {
+                                    // Check Empty State
+                                    if (displayCount === 0) {
                                         return emptyState();
                                     }
 
-                                    // UPDATE COUNT IN HEADER (Hack: Update the DOM element directly or use a Ref? 
-                                    // React state update would cause re-render loop. 
-                                    // We will just render the count accurately here if we moved the header inside, 
-                                    // but the header is outside. 
-                                    // CORRECT FIX: The header uses `filteredItems.length`. 
-                                    // We should update `filteredItems` to be the union of these lists in the main state? 
-                                    // No, simpler to just hide the main header count if we are in Hybrid mode and show it here?
-                                    // Or just accept the discrepancy? Users hate "0 items". 
-                                    // Let's hide the outer count and show it here.)
+                                    // If NOT Hybrid and NOT Searched (e.g. standard brand view), 
+                                    // and we have items (count > 0 checked above), render sortedItems
+                                    if (!hasHybridData && !searched) {
+                                        return renderGrid(sortedItems);
+                                    }
 
-                                    // Combine Variants and Similar items into "Other Results"
-                                    // Variants come first, then Similar items
-                                    const otherMatches = [...variantMatches, ...similarMatches];
+
 
                                     return (
                                         <div className="space-y-10">

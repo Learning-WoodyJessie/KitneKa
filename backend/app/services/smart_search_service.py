@@ -904,10 +904,11 @@ class SmartSearchService:
                      score = 95 # Assume correct if decent
             
              # CLASSIFY
-             if score >= 90:
+             # Relaxed thresholds to ensure "Top Match" appears more often for strong candidates
+             if score >= 85:  # Was 90
                  item["match_classification"] = "EXACT_MATCH"
                  exact_matches.append(item)
-             elif score >= 70:
+             elif score >= 60: # Was 70
                  item["match_classification"] = "VARIANT_MATCH"
                  variant_matches.append(item)
              else:
