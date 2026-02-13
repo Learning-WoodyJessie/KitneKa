@@ -610,14 +610,122 @@ class SmartSearchService:
         tokens = text.split()
         models = []
         for t in tokens:
-            t_clean = re.sub(r'[^\w\-]', '', t).upper()
+            # CLEAN: Remove all non-alphanumeric characters (including hyphens) for standardization
+            # MK-7548 -> MK7548
+            t_clean = re.sub(r'[^a-zA-Z0-9]', '', t).upper()
+            
             # Strict Rule: Model numbers MUST have at least one digit (e.g. MK3192, iphone15)
             # Pure alpha words (MICHAEL, ROSE, GOLD) are almost never unique model IDs in this context.
             if any(c.isdigit() for c in t_clean) and len(t_clean) > 2:
+                 # Check for India/International suffix "I" (e.g. MK7548I -> MK7548)
+                 # Only strip if it ends with digit+I to avoid stripping valid models ending in I
+                 if t_clean.endswith('I') and len(t_clean) > 3 and t_clean[-2].isdigit():
+                     logger.info(f"Stripping 'I' suffix from model: {t_clean} -> {t_clean[:-1]}")
+                     t_clean = t_clean[:-1]
+
                  # Filter out common false positives
                  if t_clean not in ["SIZE", "PACK", "WITH", "BLACK", "WHITE", "BLUE", "GOLD", "WOMEN", "MENS", "KIDS", "ROSE", "GOLD", "WATCH", "DARCI", "1PC", "2PC", "100ML", "50ML", "500G", "1KG"]:
                     models.append(t_clean)
         return models
+
+        return models
+
+    def _calculate_match_score(self, target_model: str, target_brand: str, target_fingerprint: dict, candidate_title: str, candidate_source: str, candidate_image_url: str = None) -> dict:
+        """
+        Calculates a compatibility score (0-150) for Tiered Matching.
+        Tiers:
+          - Tier 1: Exact Model Match (Score >= 90)
+          - Tier 2: Fingerprint Match (Score 70-89)
+          - Tier 3: Similar/Fuzzy (Score < 70)
+        """
+        score = 0
+        reasons = []
+        # Normalize title for matching: Remove hyphens/spaces for loose check
+        title_upper = candidate_title.upper()
+        title_clean = re.sub(r'[^a-zA-Z0-9]', '', title_upper)
+        
+        # 1. MODEL MATCH (+90 pts) - The "Gold Standard" in absence of GTIN
+        # Handle Alias: MK7548I == MK7548
+        # We assume target_model is already stripped/normalized (e.g. "MK7548")
+        if target_model:
+            # Check in raw title OR cleaned title (handles "MK-7548" in title matching "MK7548" target)
+            if target_model in title_upper or target_model in title_clean:
+                score += 90
+                reasons.append("Model Match")
+        
+        # 2. BRAND MATCH (+20 pts)
+        if target_brand and target_brand.upper() in title_upper:
+            score += 20
+            reasons.append("Brand Match")
+            
+        # 3. FINGERPRINT MATCH (+10 pts per attribute)
+        # Collection (e.g. "COREY", "PARKER", "LEXINGTON")
+        if target_fingerprint.get("collection"):
+            coll = target_fingerprint["collection"].upper()
+            if coll in title_upper:
+                score += 15 # Stronger signal
+                reasons.append(f"Collection: {coll}")
+            else:
+                 # CONFLICT: Target is "Corey" but Candidate is "Parker"
+                 # We need to extract candidate's collection to know for sure
+                 candidate_series = self._extract_series_name(candidate_title)
+                 if candidate_series and candidate_series != coll:
+                     score -= 30 
+                     reasons.append(f"Conflict: Series {candidate_series}")
+        
+        # Color (e.g. "ROSE GOLD")
+        if target_fingerprint.get("color"):
+            color = target_fingerprint["color"].upper()
+            if color in title_upper:
+                score += 10
+                reasons.append(f"Color: {color}")
+                
+        # Material (e.g. "STAINLESS")
+        if target_fingerprint.get("material"):
+            mat = target_fingerprint["material"].upper()
+            if mat in title_upper:
+                score += 10
+                reasons.append(f"Material: {mat}")
+
+        # 4. VISUAL VERIFICATION (Phase 4) 👁️
+        # Trigger if:
+        # a) We have a Target Image (from URL or Upload) AND Candidate Image
+        # b) Candidate Source is NOT Official (Official is trusted)
+        # c) Text Score is HIGH (Validate Match) OR Query was Image-Based (Find Visual Match)
+        target_image = target_fingerprint.get("image_url")
+        is_image_search = target_fingerprint.get("is_image_search", False)
+        
+        if target_image and candidate_image_url and candidate_source != "Official Site":
+             # Logic: Only verify if we have a model match or strong signal but want to confirm
+             # OR if we have NO model match but strong visual signal is needed (Image Search)
+             
+             # Clause: If text score is high (Candidate matches text), verify visually to screen False Positives (Straps)
+             # Clause: If text score is low BUT query was image-based, verify visually to find matches (allow 0 text score)
+             should_verify = (score >= 90) or (is_image_search) 
+             
+             if should_verify:
+                 # Call GPT-4 Vision (Slow/Costly - use sparsely in real prod, here we demonstrate)
+                 logger.info(f"Triggering Visual Verification for: {candidate_title}")
+                 visual_result = self.matcher.compare_images(target_image, candidate_image_url)
+                 
+                 v_score = visual_result.get("visual_score", 0)
+                 v_type = visual_result.get("match_type", "UNCERTAIN")
+                 
+                 reasons.append(f"Visual Score: {v_score} ({v_type})")
+                 
+                 if v_score >= 85: 
+                     # Phase 4 Update: If Visual Score is very high, it should be a Top Match
+                     # even if text is poor (e.g. "Summer Dress" query matching specific dress image)
+                     score += 90 
+                     reasons.append("Visually Verified (Exact)")
+                 elif v_score >= 70:
+                      score += 50
+                      reasons.append("Visually Verified (Similar)")
+                 elif v_score < 40 and score >= 90:
+                     score -= 50 # Penalize False Positives (Item looks different despite text match)
+                     reasons.append("Visual Mismatch")
+
+        return {"score": score, "reasons": reasons}
 
     def _extract_series_name(self, text: str) -> Optional[str]:
         """
@@ -629,13 +737,14 @@ class SmartSearchService:
         # Common Watch/Bag Series (Expand as needed)
         known_series = [
             "LEXINGTON", "BRADSHAW", "RUNWAY", "DARCI", "SOFIE", "PYPER", "PARKER", "SLIM", "RITZ", 
-            "GEN 5", "GEN 6", "VANDERBILT", "EVEREST", "LAYTON", "TIBBY"
+            "GEN 5", "GEN 6", "VANDERBILT", "EVEREST", "LAYTON", "TIBBY", "COREY", "EMERY", "SAGE", "LENNOX"
         ]
         
         text_upper = text.upper()
         for series in known_series:
             # check for word boundary to avoid partial matches
-            if f" {series} " in f" {text_upper} " or text_upper.startswith(f"{series} ") or text_upper.endswith(f" {series}"):
+            pattern = r'(?:^|\W)' + re.escape(series) + r'(?:$|\W)'
+            if re.search(pattern, text_upper):
                 return series
                 
         return None
@@ -686,6 +795,34 @@ class SmartSearchService:
         query_models = self._extract_model_numbers(query)
         logger.info(f"Detected Model Numbers in Query: {query_models}")
 
+        # Extract Fingerprint (Collection, Brand, etc.)
+        # We use simple extraction first, can fallback to LLM matcher if needed
+        # Assuming Brand is usually first word or we can look it up
+        target_brand = None
+        for b_name in BRANDS:
+             if b_name.lower() in query.lower():
+                 target_brand = BRANDS[b_name]["display_name"]
+                 break
+        
+        target_fingerprint = {
+            "collection": self._extract_series_name(query),
+            "color": None, # complex to extract without LLM, skipping for now or using simple logic
+            "material": "STAINLESS" if "stainless" in query.lower() else None
+        }
+        if "rose gold" in query.lower(): target_fingerprint["color"] = "ROSE GOLD"
+        elif "gold" in query.lower(): target_fingerprint["color"] = "GOLD"
+        elif "silver" in query.lower(): target_fingerprint["color"] = "SILVER"
+
+        # Populate Target Image for Visual Verification (Phase 4)
+        if extracted_data and extracted_data.get("image"):
+            target_fingerprint["image_url"] = extracted_data["image"]
+            target_fingerprint["is_image_search"] = True 
+            logger.info(f"Visual Verification Enabled. Target Image: {extracted_data['image']}")
+        elif "http" in query and (".jpg" in query or ".png" in query or ".webp" in query):
+             # Direct Image URL search
+             target_fingerprint["image_url"] = query
+             target_fingerprint["is_image_search"] = True
+
         # 2. FETCH RESULTS (Multi-Query for Marketplace Mix)
         # Check if this is a Brand Search to trigger Marketplace Spread
         is_brand_search = any(b['display_name'].lower() in query.lower() for b in BRANDS.values()) or len(query.split()) < 2
@@ -735,305 +872,89 @@ class SmartSearchService:
             scraper_response = self.scraper.search_products(query)
             all_serp_results = scraper_response.get("online", [])
 
-        # STRICT MODEL FILTERING (User Request: "Not other watches")
-        # If we identified specific model numbers in the query (e.g. MK6475),
-        # remove any results that DO NOT contain at least one of them.
-        if query_models:
-            logger.info(f"Applying Strict Model Filtering for: {query_models}")
-            model_filtered_results = []
-            for item in all_serp_results:
-                title = item.get("title", "").upper()
-                # Check if ANY of the query models appear in the title
-                if any(m in title for m in query_models):
-                    model_filtered_results.append(item)
-                else:
-                    logger.debug(f"Filtered out (Model Mismatch): {item.get('title')}")
-            
-            # Safety Check: If filtering removed EVERYTHING (too strict), fall back to original
-            # but getting 0 is better than getting wrong products for "Compare" use case.
-            if model_filtered_results:
-                logger.info(f"Model Filter kept {len(model_filtered_results)} / {len(all_serp_results)} items")
-                all_serp_results = model_filtered_results
-            else:
-                logger.warning("Model Filter removed all items. Returning 0 to avoid irrelevant results.")
-                all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
-
-                all_serp_results = [] # Strict means strict. Better to show nothing than wrong item.
-
-        # FALLBACK 1: SERIES/COLLECTION FILTERING (For Watches/Bags without Model #)
-        # If no model number, check for known Series (Lexington, Bradshaw, etc.)
-        elif True: # Always check this if no model filter applied
-             series_name = self._extract_series_name(query)
-             if series_name:
-                 logger.info(f"Series Name Detected: {series_name}. Applying Strict Series Filter.")
-                 series_filtered = []
-                 for item in all_serp_results:
-                     if series_name in item.get("title", "").upper():
-                         series_filtered.append(item)
-                 
-                 if series_filtered:
-                     all_serp_results = series_filtered
-                     logger.info(f"Series Filter kept {len(all_serp_results)} items matching '{series_name}'")
-                 else:
-                     logger.warning(f"Series Filter found 0 items for '{series_name}'. keeping broad results.")
-
-        # FALLBACK 2: STRICT ATTRIBUTE FILTERING (For Clothes/General Items without Model #)
-        # If no model number, we MUST still ensure Brand and core attributes match to avoid "Similar" junk.
-        if (target_url or len(query.split()) > 3) and not query_models and not self._extract_series_name(query):
-             # Only run this if we have a specific target (URL search) or detailed query
-             try:
-                 # Extract expected attributes from the query
-                 expected_attrs = self.matcher.extract_attributes(query)
-                 expected_brand = expected_attrs.get("brand")
-                 expected_color = expected_attrs.get("color")
-                 
-                 if expected_brand:
-                     logger.info(f"Applying Strict Brand Filtering for: {expected_brand}")
-                     brand_filtered = []
-                     for item in all_serp_results:
-                         title_lower = item.get("title", "").lower()
-                         # Fuzzy brand check
-                         if expected_brand.lower() in title_lower:
-                             brand_filtered.append(item)
-                     
-                     if brand_filtered:
-                        all_serp_results = brand_filtered
-                        
-                 # Optional: Color filtering (be lenient, only prioritize, don't hard filter to 0)
-                 if expected_color:
-                     color_filtered = [i for i in all_serp_results if expected_color.lower() in i.get("title", "").lower()]
-                     if color_filtered:
-                         logger.info(f"Prioritizing {len(color_filtered)} items matching color: {expected_color}")
-                         all_serp_results = color_filtered # Only keep color matches if they exist
-             except Exception as e:
-                 logger.error(f"Attribute Filtering Failed: {e}")
-
-        # Deduplicate by ID or URL
-        seen_ids = set()
-        serp_results = []
-        for item in all_serp_results:
-            uid = item.get("url") or item.get("id")
-            if uid not in seen_ids:
-                seen_ids.add(uid)
-                serp_results.append(item)
-        
-        # 2a. Direct Integration for Registry Brands (Live Data)
-        if "old school rituals" in query.lower():
-             logger.info("Triggering Direct Shopify Fetch for Old School Rituals")
-             direct_items = self.scraper.fetch_direct_shopify("https://www.oldschoolrituals.in")
-             if direct_items:
-                 logger.info(f"Replacing SERP results with {len(direct_items)} Direct Items.")
-                 serp_results = direct_items
-
-
-
-        local_results = self.scraper.search_local_stores(query, location)
-        instagram_results = self.scraper.search_instagram(query, location)
-        
-        # 3. Synthesis
-        final_results = []
-        
-        # INJECT SOURCE ITEM: If we started with a URL, ensure it's in the results!
-        if extracted_data and extracted_data.get("title"):
-             source_item = {
-                 "title": extracted_data.get("title"),
-                 "price": extracted_data.get("price"),
-                 "currency": extracted_data.get("currency", "INR"),
-                 "link": target_url,
-                 "url": target_url, # CRITICAL: TrustService & Ranking rely on 'url' key
-                 "source": self.url_service._get_domain(target_url), # simple helper or just domain
-                 "thumbnail": extracted_data.get("image"),
-                 "is_source_url": True 
-             }
-             final_results.append(source_item)
-
-        final_results.extend(serp_results)
-        
-        # 2b. Strict Filtering for Ambiguous Brands (User Feedback)
-        # remove "fruit", "eating", "kg" for Plum
-        if "plum" in query.lower():
-             logger.info("Applying strict filtering for 'Plum' to remove fruits/groceries.")
-             filtered_results = []
-             negative_terms = ["fruit", "dry fruit", "eating", "fresh plum", "1kg", "500g", "250g", "cake", "candy"]
-             for item in final_results:
-                 title_lower = item.get("title", "").lower()
-                 if not any(term in title_lower for term in negative_terms):
-                     filtered_results.append(item)
-                 else:
-                     logger.info(f"Filtered out irrelevant item: {item.get('title')}")
-             final_results = filtered_results
-
-        # Rank Results
-        canonical_url = extracted_data.get("canonical_url") if extracted_data else None
-        product_id = extracted_data.get("product_id") if extracted_data else None
-        # 4. Rank Results (Legacy)
-        canonical_url = extracted_data.get("canonical_url") if extracted_data else None
-        product_id = extracted_data.get("product_id") if extracted_data else None
-        
-        ranked_results = self._rank_results(
-            final_results, 
-            query=query, 
-            target_url=target_url,
-            canonical_url=canonical_url,
-            product_id=product_id
-        )
-        
-        # 5. HYBRID SEMANTIC MATCHING (New)
-        # Only trigger if we have a specific product focus (URL or detailed query)
-        # and NOT for broad category/brand searches to preserve performance/behavior.
-        
-        should_run_semantic_match = bool(target_url or (len(query.split()) > 3 and not is_brand_search))
-        
+        # TIERED RESULT CLASSIFICATION
         exact_matches = []
-        variant_matches = [] # Size/Color/Pack variants
+        variant_matches = []
         similar_matches = []
         
-        if should_run_semantic_match and self.matcher.client:
-            logger.info("Running Hybrid Semantic Matching...")
-            
-            # A. Extract Attributes for User Query (Target)
-            # Use extracted_data title if available (from URL), else query
-            # A. Extract Attributes for User Query (Target)
-            # Use extracted_data keys if available (from URL scraper)
-            user_title = extracted_data.get("product_name") if extracted_data else query
-            
-            # 1. Try to get brand from metadata first
-            input_brand = extracted_data.get("brand") if extracted_data else None
-            
-            # 2. Extract attributes (we still need other attrs like size/type)
-            user_attrs = self.matcher.extract_attributes(user_title)
-            
-            # 3. Override brand if metadata had it (it's usually more accurate from scraper)
-            if input_brand:
-                user_attrs["brand"] = input_brand
-            
-            user_brand = (user_attrs.get("brand") or "").lower()
-            
-            logger.info(f"Hybrid Match User Attrs: {user_attrs}")
-            logger.info(f"Hybrid Match User Brand: '{user_brand}'")
-            
-            if user_brand:
-                # Generate Embedding for User Query
-                user_norm_title = user_attrs.get("normalized_title") or user_title
-                user_embedding = self.matcher.generate_embedding(user_norm_title)
-                
-                # B. Process Top Results (Limit to top 20 to save costs)
-                for item in ranked_results[:20]:
-                    try:
-                        # 1. Quick Brand Filter
-                        item_title = item.get("title", "")
-                        # Simple string check first to save GPT calls
-                        if user_brand not in item_title.lower():
-                             logger.info(f"Skipping Brand Mismatch: {user_brand} not in {item_title}")
-                             similar_matches.append(item)
-                             continue
-                             
-                        # 2. Extract Result Attributes
-                        res_attrs = self.matcher.extract_attributes(item_title)
-                        res_brand = (res_attrs.get("brand") or "").lower()
-                        
-                        # Double check with GPT extracted brand
-                        if res_brand and user_brand not in res_brand and res_brand not in user_brand:
-                             similar_matches.append(item)
-                             continue
-                             
-                        # 3. Semantic match
-                        res_norm_title = res_attrs.get("normalized_title") or item_title
-                        res_embedding = self.matcher.generate_embedding(res_norm_title)
-                        
-                        similarity = self.matcher.calculate_similarity(user_embedding, res_embedding)
-                        match_type = self.matcher.classify_match(user_attrs, res_attrs, similarity)
-                        
-                        item["similarity_score"] = round(similarity, 2)
-                        item["match_classification"] = match_type
-                        
-                        # NEW: Force Official Store results to be EXACT matches if they have high similarity
-                        # This ensures they appear in the main comparison table (User Request)
-                        if item.get("is_official") or item.get("source") == "Official Site":
-                             if similarity > 0.8: # high confidence it's the right product
-                                 match_type = "EXACT_MATCH"
-                                 item["match_classification"] = "EXACT_MATCH"
-                                 logger.info(f"Boosting Official Store result to EXACT_MATCH: {item.get('title')}")
-
-                        if match_type == "EXACT_MATCH":
-                            exact_matches.append(item)
-                        elif "VARIANT" in match_type:
-                            item["variant_type"] = match_type
-                            variant_matches.append(item)
-                        else:
-                            similar_matches.append(item)
-                            
-                    except Exception as e:
-                        logger.error(f"Error matching item {item.get('title')}: {e}")
-                        similar_matches.append(item)
-                
-                # Add remaining results
-                similar_matches.extend(ranked_results[20:])
-                
-            else:
-                # If no brand detected, fallback to standard ranking
-                similar_matches = ranked_results
-        else:
-            # Fallback for broad searches
-            similar_matches = ranked_results
-
-        # 6. Deduplicate Results
-        # Ensure we don't show identical items from same source with same price
-        exact_matches = self._deduplicate_results(exact_matches)
-        variant_matches = self._deduplicate_results(variant_matches)
-        similar_matches = self._deduplicate_results(similar_matches)
-
-        # 7. Score & Re-rank products (Standard Logic)
-        # Apply to all groups
-        exact_matches = self._score_products(exact_matches)
-        variant_matches = self._score_products(variant_matches)
-        similar_matches = self._score_products(similar_matches)
+        # Use first model as target if available
+        target_model_clean = query_models[0] if query_models else None
         
-        
+        for item in all_serp_results:
+             # Calculate Score
+             calc = self._calculate_match_score(
+                 target_model=target_model_clean, 
+                 target_brand=target_brand, 
+                 target_fingerprint=target_fingerprint, 
+                 candidate_title=item.get("title", ""),
+                 candidate_source=item.get("source", ""),
+                 candidate_image_url=item.get("thumbnail") or item.get("image")
+             )
+             score = calc["score"]
+             item["match_score"] = score
+             item["match_reasons"] = calc["reasons"]
+             
+             # NEW: Force Official Store results to be EXACT matches if they have high similarity matches
+             if item.get("is_official") or item.get("source") == "Official Site":
+                 # If model matches or score is decent, boost it
+                 if target_model_clean and target_model_clean in item.get("title", "").upper():
+                     score += 100 # Super boost
+                     item["match_score"] += 100
+                 elif score > 50:
+                     score = 95 # Assume correct if decent
+            
+             # CLASSIFY
+             if score >= 90:
+                 item["match_classification"] = "EXACT_MATCH"
+                 exact_matches.append(item)
+             elif score >= 70:
+                 item["match_classification"] = "VARIANT_MATCH"
+                 variant_matches.append(item)
+             else:
+                 item["match_classification"] = "SIMILAR"
+                 similar_matches.append(item)
 
-        
-
-
-        # 7. Registry Injection
-        clean_brands = self._inject_registry_cards(query, ranked_results)
-        
-        # 8. Passive History Recording
-        if db:
-            from app.services.db_utils import save_product_snapshot
-            try:
-                # Save exact matches as highest priority
-                to_save = exact_matches[:3] + similar_matches[:2]
-                for item in to_save:
-                    save_product_snapshot(db, item)
-            except Exception as e:
-                logger.error(f"Passive History Save Failed: {e}")
-        
-        response_payload = {
-            "query": query,
-            "match_type": "url" if extracted_data else "text",
-            "extracted_metadata": extracted_data,
-            "results": {
-                "online": similar_matches, # Default "all" list for backward compatibility if needed, but UI will prefer groups
-                "instagram": instagram_results,
-                "local": local_results,
-                
-                # New Hybrid Groups
-                "exact_matches": exact_matches,
-                "variant_matches": variant_matches,
-                "similar_matches": similar_matches
-            },
-            "clean_brands": clean_brands, 
-            "recommendation": self._generate_recommendation(exact_matches + variant_matches, target_url, extracted_data),
-            "insight": self._generate_ai_insight(ranked_results, query)
+        # 4. Synthesize with LLM (Optional, mostly for "Top Pick" text)
+        # We skip this for raw search speed usually, but if needed:
+        recommendation_data = {
+            "best_value": None,
+            "authenticity_note": "Ensure seller has good ratings.",
+            "recommendation_text": "Found these matches based on your search."
         }
         
-        # Debug Logging
-        logger.info(f"Hybrid Match Results: {len(exact_matches)} Exact, {len(variant_matches)} Variants, {len(similar_matches)} Similar")
+        # Deduping (Simple ID/URL check)
+        # Note: We should dedupe WITHIN lists to avoid duplicates across tiers if logic was loose
+        # But here we partitioned them so they are unique sets logic-wise. 
+        # But multiple marketplaces might return same item.
+        def _dedupe(items):
+             seen = set()
+             unique = []
+             for i in items:
+                 k = i.get("link") or i.get("url")
+                 if k and k not in seen:
+                     seen.add(k)
+                     unique.append(i)
+             return unique
 
-        # CACHE SET
-        cache_search(query, location, response_payload)
-             
-        return response_payload
+        final_response = {
+            "original_query": query,
+            "query_type": "product", # or 'brand'
+            "results": {
+                "online": _dedupe(all_serp_results), # Dataset for legacy frontend
+                "local": [],
+                "instagram": [],
+                "exact_matches": _dedupe(exact_matches),
+                "variant_matches": _dedupe(variant_matches),
+                "similar_matches": _dedupe(similar_matches)
+            },
+            "recommendation": recommendation_data,
+            "clean_brands": self._inject_registry_cards(query, all_serp_results)
+        }
+        
+        # Cache the result
+        cache_search(query, location, final_response)
+        
+        return final_response                         # Fuzzy brand check
 
     def _deduplicate_results(self, items: List[Dict]) -> List[Dict]:
         """

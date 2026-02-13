@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink, ThumbsUp, ThumbsDown, Layers } from 'lucide-react';
+import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink, ThumbsUp, ThumbsDown, Layers, Eye } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
 
 import CategoryLabels from './CategoryLabels';
@@ -317,36 +317,75 @@ const SearchInterface = ({ initialQuery }) => {
                         {/* BADGES - Top Left */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1">
                             {/* Official Store Badge */}
+                            {/* Official Store Badge */}
                             {(item.is_official || item.source === 'Official Site') && (
                                 <div className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
                                     <BadgeCheck size={12} className="text-white" />
                                     <span>Official</span>
                                 </div>
                             )}
-                            {/* REMOVED: Clean Beauty Tag as per user request */}
+
+                            {/* Exact Match Badge (Model Match) */}
+                            {item.match_classification === 'EXACT_MATCH' && !item.is_official && (
+                                <div className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                                    <Check size={12} className="text-white" />
+                                    <span>Top Match</span>
+                                </div>
+                            )}
+
+                            {/* Variant Badge */}
+                            {item.match_classification === 'VARIANT_MATCH' && (
+                                <div className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                                    <Layers size={12} className="text-white" />
+                                    <span>Variant</span>
+                                </div>
+                            )}
+
+
                         </div>
 
-                        {/* Wishlist Button - Top Right */}
-                        <button
-                            className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                // Add to wishlist logic here
-                            }}
-                        >
-                            <Heart size={16} />
-                        </button>
+                        {/* Action Buttons - Top Right */}
+                        <div className="absolute top-2 right-2 flex flex-col gap-2">
+                            {/* Favorite */}
+                            <button
+                                className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Add to wishlist logic here
+                                }}
+                            >
+                                <Heart size={16} />
+                            </button>
+
+                            {/* Like */}
+                            <button
+                                className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-green-500 hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Like logic here
+                                }}
+                            >
+                                <ThumbsUp size={16} />
+                            </button>
+
+                            {/* Dislike */}
+                            <button
+                                className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-gray-900 hover:bg-white transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Dislike logic here
+                                }}
+                            >
+                                <ThumbsDown size={16} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}
                     <div className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-1">
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.source}</span>
-                            {item.rating && (
-                                <div className="flex items-center gap-1 text-[10px] font-bold bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
-                                    {item.rating} ★
-                                </div>
-                            )}
+
                         </div>
 
                         <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[2.5em] mb-2 group-hover:text-black">

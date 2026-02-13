@@ -149,3 +149,47 @@ class SmartMatchService:
             return "SIMILAR_PRODUCT"
             
         return "DIFFERENT_PRODUCT"
+
+    def compare_images(self, target_url: str, candidate_url: str) -> Dict[str, Any]:
+        """
+        Uses GPT-4o-mini Vision to visually compare two product images.
+        Returns visual_score (0-100) and reasoning.
+        """
+        client = self._get_client()
+        if not client or not target_url or not candidate_url:
+            return {"score": 0, "reason": "Missing inputs or client"}
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are an Expert Product Authenticator. Compare Image A and Image B.
+                        Assess if they are the EXACT SAME PRODUCT model (ignore lighting/angle).
+                        
+                        Return JSON:
+                        {
+                            "visual_score": 0-100 (100 = Identical, 80 = Same Model different Color, 10 = Distinctly Different),
+                            "match_type": "IDENTICAL" | "COLOR_VARIANT" | "DIFFERENT_ITEM" | "UNCERTAIN",
+                            "key_differences": "strap texture, dial markers, etc"
+                        }
+                        """
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Image A (Target):"},
+                            {"type": "image_url", "image_url": {"url": target_url}},
+                            {"type": "text", "text": "Image B (Candidate):"},
+                            {"type": "image_url", "image_url": {"url": candidate_url}}
+                        ]
+                    }
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=150
+            )
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"Visual Verification Failed: {e}")
+            return {"score": 0, "reason": str(e)}
