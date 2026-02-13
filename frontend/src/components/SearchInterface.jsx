@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, ArrowRight, Check, Plus, ChevronDown, Camera, X, Menu, ShoppingBag, User, Heart, ChevronRight, ShieldCheck, BadgeCheck, Leaf, ExternalLink, ThumbsUp, ThumbsDown, Layers } from 'lucide-react';
 import FeaturedBrands from './FeaturedBrands';
-import BrandGrid from './BrandGrid';
+
 import CategoryLabels from './CategoryLabels';
 import RecommendationBanner from './RecommendationBanner';
 import Loader from './Loader';
