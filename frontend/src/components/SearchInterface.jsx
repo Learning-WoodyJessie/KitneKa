@@ -269,6 +269,9 @@ const SearchInterface = ({ initialQuery }) => {
 
         // 2. Tab Filter
         if (filterType === 'popular') {
+            // ALWAYS SHOW EXACT MATCHES (Top Picks) regardless of popularity
+            if (item.match_classification === 'EXACT_MATCH') return true;
+
             // Show if Popular OR Official (Clean Beauty alone is no longer enough to be "Popular" if the store is untrusted)
             return item.is_popular || item.is_official;
         }
@@ -744,9 +747,44 @@ const SearchInterface = ({ initialQuery }) => {
                                     const results = searchData?.results || {};
                                     const hasHybridData = results.exact_matches || results.variant_matches;
 
-                                    let exactMatches = results.exact_matches || [];
-                                    let variantMatches = results.variant_matches || [];
-                                    const similarMatches = results.similar_matches || sortedItems;
+                                    // Filter function re-used from above (need to extract it or wrap logic)
+                                    // For now, we'll manually filter exact/variant to be safe and consistent
+                                    const applyFilters = (list) => {
+                                        if (!list) return [];
+                                        return list.filter(item => {
+                                            if (brandContext) return true;
+
+                                            // Price
+                                            const price = item.price || 0;
+                                            if (price < priceRange[0] || price > priceRange[1]) return false;
+
+                                            // Stock
+                                            if (inStockOnly && !item.in_stock) return false;
+
+                                            // Store
+                                            if (selectedStores.length > 0) {
+                                                // flexible match
+                                                const source = item.source || "";
+                                                if (!selectedStores.some(s => source.includes(s))) return false;
+                                            }
+
+                                            return true;
+                                        });
+                                    };
+
+                                    let exactMatches = applyFilters(results.exact_matches || []);
+                                    let variantMatches = applyFilters(results.variant_matches || []);
+                                    // Similar matches usually come from sortedItems which is ALREADY filtered, 
+                                    // but if we use results.similar_matches directly, we must filter it.
+                                    // However, similar_matches from backend aren't filtered by frontend logic yet.
+                                    // We'll use the backend list if available, else sortedItems (legacy path)
+                                    let similarMatches = results.similar_matches ? applyFilters(results.similar_matches) : sortedItems;
+
+                                    // Dedupe similar against exact/variant to be safe
+                                    const exactIds = new Set([...exactMatches, ...variantMatches].map(i => i.link || i.id));
+                                    similarMatches = similarMatches.filter(i => !exactIds.has(i.link || i.id));
+
+                                    const totalCount = exactMatches.length + variantMatches.length + similarMatches.length;
 
                                     // If no hybrid data (e.g. brand search), render everything as before
                                     if (!hasHybridData && !searched) {
@@ -755,45 +793,55 @@ const SearchInterface = ({ initialQuery }) => {
                                     }
 
                                     // Empty State Check
-                                    if (exactMatches.length === 0 && variantMatches.length === 0 && similarMatches.length === 0) {
+                                    if (totalCount === 0) {
                                         return emptyState();
                                     }
 
+                                    // UPDATE COUNT IN HEADER (Hack: Update the DOM element directly or use a Ref? 
+                                    // React state update would cause re-render loop. 
+                                    // We will just render the count accurately here if we moved the header inside, 
+                                    // but the header is outside. 
+                                    // CORRECT FIX: The header uses `filteredItems.length`. 
+                                    // We should update `filteredItems` to be the union of these lists in the main state? 
+                                    // No, simpler to just hide the main header count if we are in Hybrid mode and show it here?
+                                    // Or just accept the discrepancy? Users hate "0 items". 
+                                    // Let's hide the outer count and show it here.)
+
+                                    // Combine Variants and Similar items into "Other Results"
+                                    // Variants come first, then Similar items
+                                    const otherMatches = [...variantMatches, ...similarMatches];
+
                                     return (
-                                        <div className="space-y-12">
-                                            {/* 1. EXACT MATCHES */}
+                                        <div className="space-y-10">
+                                            {/* 1. TOP MATCHES (Exact) */}
                                             {exactMatches.length > 0 && (
-                                                <div className="bg-green-50/50 p-6 rounded-2xl border border-green-100">
-                                                    <h3 className="text-sm font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                        <BadgeCheck size={18} className="text-green-600" />
-                                                        Top Match (Verified)
-                                                    </h3>
-                                                    {renderGrid(exactMatches)}
+                                                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                                                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-4 flex items-center justify-between">
+                                                        <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                                                            <BadgeCheck size={20} className="text-green-400" />
+                                                            Top Matches
+                                                        </h3>
+                                                        <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-md">{exactMatches.length} found</span>
+                                                    </div>
+                                                    <div className="p-6 bg-gray-50">
+                                                        {renderGrid(exactMatches)}
+                                                    </div>
                                                 </div>
                                             )}
 
-                                            {/* 2. VARIANTS */}
-                                            {variantMatches.length > 0 && (
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                        <Layers size={18} className="text-blue-500" />
-                                                        Other Sizes & Variants
-                                                    </h3>
-                                                    {renderGrid(variantMatches)}
-                                                </div>
-                                            )}
-
-                                            {/* 3. SIMILAR PRODUCTS */}
-                                            {similarMatches.length > 0 && (
-                                                <div>
-                                                    {(exactMatches.length > 0 || variantMatches.length > 0) && (
-                                                        <div className="flex items-center gap-4 my-8">
+                                            {/* 2. OTHER RESULTS (Variants + Similar) */}
+                                            {otherMatches.length > 0 && (
+                                                <div className="relative pt-4">
+                                                    {/* Separator / Header if Top Matches exist */}
+                                                    {exactMatches.length > 0 && (
+                                                        <div className="flex items-center gap-4 mb-8">
                                                             <div className="h-px bg-gray-200 flex-1"></div>
-                                                            <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Similar Products</span>
+                                                            <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">Similar Items</span>
                                                             <div className="h-px bg-gray-200 flex-1"></div>
                                                         </div>
                                                     )}
-                                                    {renderGrid(similarMatches)}
+
+                                                    {renderGrid(otherMatches)}
                                                 </div>
                                             )}
                                         </div>
