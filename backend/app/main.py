@@ -317,10 +317,14 @@ def compare_prices(title: str, location: str = "Mumbai", image_url: str = None):
         results = smart_searcher.smart_search(title, location=location, image_url=image_url)
         online_results = results.get("results", {}).get("online", [])
         
-        # Sort by price (lowest first) for comparison view
+        # Sort by match quality first (EXACT → VARIANT → SIMILAR), then price within each tier
+        MATCH_TIER = {"EXACT_MATCH": 0, "VARIANT_MATCH": 1, "SIMILAR": 2}
         sorted_results = sorted(
             [r for r in online_results if r.get("price", 0) > 0],
-            key=lambda x: x.get("price", float("inf"))
+            key=lambda x: (
+                MATCH_TIER.get(x.get("match_classification", "SIMILAR"), 2),
+                x.get("price", float("inf"))
+            )
         )
         
         # Group by source for easy comparison
