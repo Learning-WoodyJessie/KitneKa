@@ -306,7 +306,7 @@ def resolve_link(url: str):
         return {"url": url} # Fallback to original
 
 @app.get("/product/compare")
-def compare_prices(title: str, location: str = "Mumbai"):
+def compare_prices(title: str, location: str = "Mumbai", image_url: str = None):
     """
     Given a product title, search across all marketplaces
     and return prices sorted lowest-first for price comparison.
@@ -314,7 +314,7 @@ def compare_prices(title: str, location: str = "Mumbai"):
     """
     try:
         # Use smart search which already queries multiple marketplaces
-        results = smart_searcher.smart_search(title, location=location)
+        results = smart_searcher.smart_search(title, location=location, image_url=image_url)
         online_results = results.get("results", {}).get("online", [])
         
         # Sort by price (lowest first) for comparison view
@@ -336,11 +336,18 @@ def compare_prices(title: str, location: str = "Mumbai"):
                     "price": r.get("price"),
                     "old_price": r.get("extracted_old_price") or r.get("old_price"),
                     "discount": r.get("discount_pct"),
-                    "url": r.get("url"),
+                    # Direct product URL: prefer `link` (SerpAPI direct), fall back to `url`
+                    "url": r.get("link") or r.get("url"),
                     "image": r.get("image") or r.get("thumbnail"),
                     "rating": r.get("rating"),
-                    "reviews": r.get("reviews")
+                    "reviews": r.get("reviews"),
+                    # Match quality fields from LLM pipeline
+                    "match_classification": r.get("match_classification", "SIMILAR"),
+                    "match_score": r.get("match_score", 0),
+                    "llm_reason": r.get("llm_reason", ""),
+                    "image_match_score": r.get("image_match_score"),
                 })
+
         
         return {
             "query": title,

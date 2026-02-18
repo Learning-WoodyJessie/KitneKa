@@ -311,7 +311,159 @@ class URLScraperService:
             logger.error(f"Playwright scraping failed: {e}")
             return ""
 
+    # ── Structured Attribute Extraction Cache (class-level, shared across instances) ──
+    _attr_cache: dict = {}
+
+    def _extract_structured_attributes(self, title: str, image_url: str = None) -> dict:
+        """
+        Layer 1: Extract a full structured product representation from a title + optional image.
+
+        Output schema:
+        {
+            "title": "fabindia Red Cotton Kalamkari Printed Midi Dress",
+            "brand": "Fabindia",
+            "category": "Women's Ethnic Wear",
+            "color": "Red",
+            "material": "Cotton",
+            "pattern": "Kalamkari Print",
+            "length": "Midi",
+            "type": "Dress",
+            "price": null,          # unknown from title alone
+            "images": ["https://..."],  # injected from image_url arg
+            "search_query": "Cotton Kalamkari Printed Midi Dress women",  # brand-neutral
+            "match_keywords": ["kalamkari", "midi", "dress", "cotton", "printed", "ethnic"]
+        }
+
+        Uses GPT-4o-mini (text) for title parsing.
+        Uses GPT-4o Vision (optional) to confirm color/pattern/length/type from image.
+        Cached by hash of title+image_url to avoid repeat API calls.
+        """
+        import hashlib
+
+        cache_key = hashlib.md5(f"{title}|{image_url or ''}".encode()).hexdigest()
+        if cache_key in URLScraperService._attr_cache:
+            logger.info(f"[StructuredExtract] Cache hit for: {title[:60]}")
+            return URLScraperService._attr_cache[cache_key]
+
+        # ── Fallback (no OpenAI client) ───────────────────────────────────────
+        if not self.client:
+            words = title.split()
+            fallback = {
+                "title": title,
+                "brand": words[0] if words else "Unknown",
+                "category": "General",
+                "color": "",
+                "material": "",
+                "pattern": "",
+                "length": "",
+                "type": "",
+                "price": None,
+                "images": [image_url] if image_url else [],
+                "search_query": title,
+                "match_keywords": [w.lower() for w in words if len(w) > 3],
+                "source": "fallback"
+            }
+            URLScraperService._attr_cache[cache_key] = fallback
+            return fallback
+
+        # ── Step 1: GPT-4o-mini text extraction ──────────────────────────────
+        system_prompt = (
+            "You are a product data extraction expert for an Indian e-commerce price comparison app. "
+            "Given a product title, extract structured attributes and return ONLY valid JSON "
+            "with these exact keys:\n"
+            "{\n"
+            '  "title": "full product title as given",\n'
+            '  "brand": "brand name, or Unknown if not clear",\n'
+            '  "category": "e.g. Women\'s Ethnic Wear, Men\'s Footwear, Electronics",\n'
+            '  "color": "primary color, or empty string",\n'
+            '  "material": "e.g. Cotton, Polyester, Leather, or empty string",\n'
+            '  "pattern": "e.g. Kalamkari Print, Solid, Floral, Striped, or empty string",\n'
+            '  "length": "e.g. Midi, Maxi, Mini, Knee-length, or empty string",\n'
+            '  "type": "e.g. Dress, Kurta, Sneaker, Handbag, Lipstick, or empty string",\n'
+            '  "price": null,\n'
+            '  "search_query": "brand-neutral query to find this on Myntra/AJIO/Amazon (omit brand name)",\n'
+            '  "match_keywords": ["key", "descriptive", "words", "for", "matching"]\n'
+            "}\n"
+            "price is always null. search_query must NOT contain the brand name."
+        )
+        try:
+            text_response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Product title: {title}"}
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=350,
+                temperature=0
+            )
+            attrs = json.loads(text_response.choices[0].message.content)
+            attrs["price"] = None  # Always null — we don't know from title
+            attrs["images"] = [image_url] if image_url else []
+            attrs["source"] = "llm_text"
+            logger.info(
+                f"[StructuredExtract] brand={attrs.get('brand')}, "
+                f"category={attrs.get('category')}, length={attrs.get('length')}, "
+                f"type={attrs.get('type')}, query='{attrs.get('search_query')}'"
+            )
+        except Exception as e:
+            logger.warning(f"[StructuredExtract] Text extraction failed: {e}")
+            words = title.split()
+            attrs = {
+                "title": title,
+                "brand": words[0] if words else "Unknown",
+                "category": "General",
+                "color": "", "material": "", "pattern": "", "length": "", "type": "",
+                "price": None,
+                "images": [image_url] if image_url else [],
+                "search_query": title,
+                "match_keywords": [w.lower() for w in words if len(w) > 3],
+                "source": "fallback"
+            }
+
+        # ── Step 2: GPT-4o Vision confirmation (only if image_url provided) ──
+        if image_url and self.client:
+            try:
+                vision_response = self.client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        f"This is a product image for: '{title}'\n"
+                                        "From the image, confirm or correct these attributes. "
+                                        "Return ONLY valid JSON with keys: color, pattern, length, type. "
+                                        "Use empty string if not visible in the image."
+                                    )
+                                },
+                                {"type": "image_url", "image_url": {"url": image_url, "detail": "low"}}
+                            ]
+                        }
+                    ],
+                    response_format={"type": "json_object"},
+                    max_tokens=120,
+                    temperature=0
+                )
+                vision_attrs = json.loads(vision_response.choices[0].message.content)
+                for key in ["color", "pattern", "length", "type"]:
+                    if vision_attrs.get(key):
+                        attrs[key] = vision_attrs[key]
+                attrs["source"] = "llm_vision"
+                logger.info(
+                    f"[StructuredExtract] Vision confirmed: color={attrs.get('color')}, "
+                    f"pattern={attrs.get('pattern')}, length={attrs.get('length')}"
+                )
+            except Exception as e:
+                logger.warning(f"[StructuredExtract] Vision confirmation failed (non-critical): {e}")
+
+        URLScraperService._attr_cache[cache_key] = attrs
+        return attrs
+
     def extract_product_from_url(self, url: str) -> dict:
+
         """
         Robust URL Extraction Pipeline:
         1. Resolve Redirects

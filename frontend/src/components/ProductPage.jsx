@@ -206,7 +206,10 @@ const ProductPage = () => {
             eta: '2-5 Days',
             url: comp.url || product.url,
             image: comp.image,
-            stock: 'In Stock'
+            stock: 'In Stock',
+            matchClassification: comp.match_classification || 'SIMILAR',
+            matchScore: comp.match_score || 0,
+            llmReason: comp.llm_reason || '',
         }));
     } else {
         // Fallback: Use product.competitors (original behavior)
@@ -428,11 +431,11 @@ const ProductPage = () => {
                                 </p>
                             </div>
                             <button
-                                onClick={(e) => handleBuyNow(e, bestOffer.url)}
-                                disabled={resolvingUrl === bestOffer.url}
+                                onClick={(e) => handleBuyNow(e, product.url)}
+                                disabled={resolvingUrl === product.url}
                                 className="w-full sm:w-auto px-8 py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-wait"
                             >
-                                {resolvingUrl === bestOffer.url ? (
+                                {resolvingUrl === product.url ? (
                                     <>
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
                                         Redirecting...
@@ -504,6 +507,7 @@ const ProductPage = () => {
                                     <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
                                         <th className="px-6 py-4">Seller</th>
                                         <th className="px-6 py-4">Price</th>
+                                        <th className="px-6 py-4">Match</th>
                                         <th className="px-6 py-4">Shipping</th>
                                         <th className="px-6 py-4 hidden sm:table-cell">Delivery</th>
                                         <th className="px-6 py-4"></th>
@@ -514,12 +518,35 @@ const ProductPage = () => {
                                         <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-900">{offer.seller}</div>
-                                                {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 ml-2 uppercase tracking-wide">BEST DEAL</span>}
-                                                {isPopularStore(offer.seller) && <span className="ml-2 text-[10px] font-bold border border-gray-200 text-gray-500 px-2 py-0.5 uppercase tracking-wide">VERIFIED</span>}
-                                                {isSampleStore(offer.seller) && <span className="ml-2 text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 uppercase tracking-wide">SAMPLE</span>}
+                                                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                                    {idx === 0 && activeOfferTab === 'popular' && <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 uppercase tracking-wide">BEST DEAL</span>}
+                                                    {isPopularStore(offer.seller) && <span className="text-[10px] font-bold border border-gray-200 text-gray-500 px-2 py-0.5 uppercase tracking-wide">VERIFIED</span>}
+                                                    {isSampleStore(offer.seller) && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 uppercase tracking-wide">SAMPLE</span>}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 ₹{(offer.price || 0).toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {offer.matchScore > 0 ? (
+                                                    <div title={offer.llmReason || ''} className="cursor-help">
+                                                        <div className={`text-xl font-bold leading-none ${offer.matchClassification === 'EXACT_MATCH' ? 'text-green-600' :
+                                                            offer.matchClassification === 'VARIANT_MATCH' ? 'text-blue-600' :
+                                                                'text-gray-400'
+                                                            }`}>
+                                                            {offer.matchScore}%
+                                                        </div>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-wide mt-0.5 ${offer.matchClassification === 'EXACT_MATCH' ? 'text-green-500' :
+                                                            offer.matchClassification === 'VARIANT_MATCH' ? 'text-blue-500' :
+                                                                'text-gray-400'
+                                                            }`}>
+                                                            {offer.matchClassification === 'EXACT_MATCH' ? '✓ Exact' :
+                                                                offer.matchClassification === 'VARIANT_MATCH' ? '~ Variant' : 'Similar'}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 text-xs font-medium">Low Confidence</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600">
                                                 {offer.shipping === 0 ? <span className="text-green-600 font-bold text-xs uppercase">Free</span> : `+₹${offer.shipping}`}
@@ -539,6 +566,7 @@ const ProductPage = () => {
                                                 </button>
                                             </td>
                                         </tr>
+
                                     ))}
                                 </tbody>
                             </table>

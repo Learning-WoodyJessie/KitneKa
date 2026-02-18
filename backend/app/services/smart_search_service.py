@@ -328,7 +328,141 @@ class SmartSearchService:
                 "recommendation_text": "Here are the top results we found."
             }
 
+
+    def _llm_score_matches(self, source_attrs: dict, candidates: list) -> dict:
+        """
+        Layer 3: Batch LLM semantic match scoring.
+
+        Takes structured source attributes and up to 20 candidate products.
+        Makes ONE GPT-4o-mini call to classify all candidates as:
+            EXACT   — same product (same style, color, size range)
+            VARIANT — same style but different color/size/material
+            SIMILAR — same category but different product
+
+        Returns: {candidate_index: {classification, confidence, reason}}
+        """
+        client = self._get_client()
+        if not client or not candidates:
+            return {}
+
+        candidate_lines = []
+        for i, c in enumerate(candidates[:20]):
+            title = (c.get("title") or "")[:80]
+            source = c.get("source", "")
+            price = c.get("price", 0)
+            candidate_lines.append(f"{i+1}. [{source}] {title} (₹{price})")
+
+        source_desc = (
+            f"Brand: {source_attrs.get('brand', 'Unknown')}, "
+            f"Category: {source_attrs.get('category', '')}, "
+            f"Type: {source_attrs.get('type', '')}, "
+            f"Color: {source_attrs.get('color', '')}, "
+            f"Material: {source_attrs.get('material', '')}, "
+            f"Pattern: {source_attrs.get('pattern', '')}, "
+            f"Length: {source_attrs.get('length', '')}"
+        )
+        keywords = ", ".join(source_attrs.get("match_keywords", []))
+
+        prompt = (
+            f"Source product: {source_desc}\n"
+            f"Key attributes: {keywords}\n\n"
+            f"Candidates:\n" + "\n".join(candidate_lines) + "\n\n"
+            "For each candidate, classify as:\n"
+            "  EXACT   = same product (same style, same type, same general color)\n"
+            "  VARIANT = same style/type but different color, size, or material\n"
+            "  SIMILAR = same broad category but different product\n\n"
+            "Return ONLY a JSON array:\n"
+            '[{"id": 1, "classification": "EXACT", "confidence": 0.9, "reason": "..."},...]'
+        )
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a product matching expert for an Indian e-commerce price comparison app. "
+                            "Classify candidates accurately. Be strict: EXACT only if it's clearly the same product."
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=800,
+                temperature=0
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r"```[a-z]*\n?", "", raw).strip().rstrip("```").strip()
+            scored = json.loads(raw)
+            result = {}
+            for item in scored:
+                idx = item.get("id", 0) - 1  # Convert 1-indexed to 0-indexed
+                if 0 <= idx < len(candidates):
+                    result[idx] = {
+                        "classification": item.get("classification", "SIMILAR"),
+                        "confidence": item.get("confidence", 0.5),
+                        "reason": item.get("reason", "")
+                    }
+            logger.info(
+                f"[LLMScore] Scored {len(result)} candidates. "
+                f"EXACT: {sum(1 for v in result.values() if v['classification']=='EXACT')}, "
+                f"VARIANT: {sum(1 for v in result.values() if v['classification']=='VARIANT')}"
+            )
+            return result
+        except Exception as e:
+            logger.warning(f"[LLMScore] Batch scoring failed: {e}")
+            return {}
+
+    def _image_match_score(self, source_image_url: str, candidate_image_url: str) -> int:
+        """
+        Layer 4: GPT-4o Vision image similarity scoring.
+
+        Compares two product images and returns a similarity score 0-100.
+        Only called for EXACT/VARIANT candidates (max 5 per search).
+
+        Returns: int score 0-100 (100 = identical product)
+        """
+        client = self._get_client()
+        if not client or not source_image_url or not candidate_image_url:
+            return 50  # Neutral score if unavailable
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "Compare these two product images. "
+                                    "Are they the same product (possibly listed differently)? "
+                                    "Return ONLY a JSON object: "
+                                    '{"score": <0-100>, "reason": "<brief reason>"} '
+                                    "where 100 = identical product, 0 = completely different."
+                                )
+                            },
+                            {"type": "image_url", "image_url": {"url": source_image_url, "detail": "low"}},
+                            {"type": "image_url", "image_url": {"url": candidate_image_url, "detail": "low"}}
+                        ]
+                    }
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=100,
+                temperature=0
+            )
+            result = json.loads(response.choices[0].message.content)
+            score = int(result.get("score", 50))
+            logger.info(f"[ImageMatch] Score={score}, reason={result.get('reason', '')[:60]}")
+            return score
+        except Exception as e:
+            logger.warning(f"[ImageMatch] Vision comparison failed: {e}")
+            return 50  # Neutral fallback
+
     def _rank_results(self, results, query, target_url=None, canonical_url=None, product_id=None, debug=True):
+
         """
         Rank results based on relevance (Tiered Logic).
         Prioritizes: Product ID > Canonical URL > Fuzzy URL > Model > Text
@@ -749,7 +883,8 @@ class SmartSearchService:
                 
         return None
 
-    def smart_search(self, query: str, location: str = "Mumbai", db=None):
+    def smart_search(self, query: str, location: str = "Mumbai", db=None, image_url: str = None):
+
         """
         Orchestrates the search:
         1. Analyzes query (is it a URL?)
@@ -869,51 +1004,133 @@ class SmartSearchService:
                 all_serp_results.extend(res.get("online", []))
         else:
             # Standard single query
-            scraper_response = self.scraper.search_products(query)
+            # ── Layer 2: Extract structured attrs + use brand-neutral search query ──
+            source_attrs = self.url_service._extract_structured_attributes(query, image_url=image_url)
+            search_query = source_attrs.get("search_query") or query
+            if search_query != query:
+                logger.info(f"[Layer2] Brand-neutral query: '{query}' → '{search_query}'")
+            scraper_response = self.scraper.search_products(search_query)
             all_serp_results = scraper_response.get("online", [])
 
         # TIERED RESULT CLASSIFICATION
         exact_matches = []
         variant_matches = []
         similar_matches = []
-        
+
         # Use first model as target if available
         target_model_clean = query_models[0] if query_models else None
-        
+
+        # ── Layer 3: LLM batch scoring on top 20 candidates ──────────────────
+        # Pre-sort by fuzzy score first, then LLM re-classifies the top 20
         for item in all_serp_results:
-             # Calculate Score
-             calc = self._calculate_match_score(
-                 target_model=target_model_clean, 
-                 target_brand=target_brand, 
-                 target_fingerprint=target_fingerprint, 
-                 candidate_title=item.get("title", ""),
-                 candidate_source=item.get("source", ""),
-                 candidate_image_url=item.get("thumbnail") or item.get("image")
-             )
-             score = calc["score"]
-             item["match_score"] = score
-             item["match_reasons"] = calc["reasons"]
-             
-             # NEW: Force Official Store results to be EXACT matches if they have high similarity matches
-             if item.get("is_official") or item.get("source") == "Official Site":
-                 # If model matches or score is decent, boost it
-                 if target_model_clean and target_model_clean in item.get("title", "").upper():
-                     score += 100 # Super boost
-                     item["match_score"] += 100
-                 elif score > 50:
-                     score = 95 # Assume correct if decent
-            
-             # CLASSIFY
-             # Relaxed thresholds to ensure "Top Match" appears more often for strong candidates
-             if score >= 85:  # Was 90
-                 item["match_classification"] = "EXACT_MATCH"
-                 exact_matches.append(item)
-             elif score >= 60: # Was 70
-                 item["match_classification"] = "VARIANT_MATCH"
-                 variant_matches.append(item)
-             else:
-                 item["match_classification"] = "SIMILAR"
-                 similar_matches.append(item)
+            calc = self._calculate_match_score(
+                target_model=target_model_clean,
+                target_brand=target_brand,
+                target_fingerprint=target_fingerprint,
+                candidate_title=item.get("title", ""),
+                candidate_source=item.get("source", ""),
+                candidate_image_url=item.get("thumbnail") or item.get("image")
+            )
+            item["match_score"] = calc["score"]
+            item["match_reasons"] = calc["reasons"]
+
+        # Sort all results by fuzzy score descending
+        all_serp_results.sort(key=lambda x: x.get("match_score", 0), reverse=True)
+        top20 = all_serp_results[:20]
+        rest = all_serp_results[20:]
+
+        # LLM scores the top 20 (one API call)
+        # source_attrs may not exist if marketplace mix was used — build minimal fallback
+        if "source_attrs" not in dir():
+            fp = target_fingerprint if isinstance(target_fingerprint, dict) else {}
+            source_attrs = {
+                "brand": target_brand or "",
+                "category": "",
+                "color": fp.get("color", ""),
+                "material": fp.get("material", ""),
+                "pattern": "",
+                "length": "",
+                "type": "",
+                "match_keywords": [w for w in (target_brand or "").split() + list(fp.values()) if isinstance(w, str) and len(w) > 2]
+            }
+
+        llm_scores = self._llm_score_matches(source_attrs, top20)
+
+        for i, item in enumerate(top20):
+            llm = llm_scores.get(i, {})
+            llm_class = llm.get("classification", "").upper()
+            llm_conf = llm.get("confidence", 0.5)
+            item["llm_reason"] = llm.get("reason", "")
+
+            # Official store boost (keep existing logic)
+            score = item["match_score"]
+            if item.get("is_official") or item.get("source") == "Official Site":
+                if target_model_clean and target_model_clean in item.get("title", "").upper():
+                    score += 100
+                    item["match_score"] += 100
+                elif score > 50:
+                    score = 95
+                    item["match_score"] = 95
+
+            # LLM classification takes priority for top 20
+            if llm_class == "EXACT":
+                item["match_classification"] = "EXACT_MATCH"
+                item["match_score"] = max(score, int(llm_conf * 100))
+                exact_matches.append(item)
+            elif llm_class == "VARIANT":
+                item["match_classification"] = "VARIANT_MATCH"
+                item["match_score"] = max(score, int(llm_conf * 100))
+                variant_matches.append(item)
+            elif llm_class == "SIMILAR":
+                item["match_classification"] = "SIMILAR"
+                similar_matches.append(item)
+            else:
+                # LLM didn't score this item — fall back to fuzzy threshold
+                if score >= 85:
+                    item["match_classification"] = "EXACT_MATCH"
+                    exact_matches.append(item)
+                elif score >= 60:
+                    item["match_classification"] = "VARIANT_MATCH"
+                    variant_matches.append(item)
+                else:
+                    item["match_classification"] = "SIMILAR"
+                    similar_matches.append(item)
+
+        # Items outside top 20 — fuzzy threshold only
+        for item in rest:
+            score = item.get("match_score", 0)
+            if item.get("is_official") or item.get("source") == "Official Site":
+                if target_model_clean and target_model_clean in item.get("title", "").upper():
+                    score += 100
+                elif score > 50:
+                    score = 95
+            if score >= 85:
+                item["match_classification"] = "EXACT_MATCH"
+                exact_matches.append(item)
+            elif score >= 60:
+                item["match_classification"] = "VARIANT_MATCH"
+                variant_matches.append(item)
+            else:
+                item["match_classification"] = "SIMILAR"
+                similar_matches.append(item)
+
+        # ── Layer 4: Image matching on top EXACT/VARIANT candidates (max 5) ──
+        source_image_url = (source_attrs.get("images") or [None])[0]
+        if source_image_url:
+            image_checks = 0
+            for item in list(exact_matches):  # iterate copy so we can modify
+                if image_checks >= 5:
+                    break
+                cand_img = item.get("thumbnail") or item.get("image")
+                if cand_img:
+                    img_score = self._image_match_score(source_image_url, cand_img)
+                    item["image_match_score"] = img_score
+                    if img_score < 40:
+                        # Downgrade: not the same product visually
+                        exact_matches.remove(item)
+                        item["match_classification"] = "VARIANT_MATCH"
+                        variant_matches.append(item)
+                    image_checks += 1
 
         # 4. Synthesize with LLM (Optional, mostly for "Top Pick" text)
         # We skip this for raw search speed usually, but if needed:

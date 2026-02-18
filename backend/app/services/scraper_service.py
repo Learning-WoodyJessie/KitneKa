@@ -369,8 +369,9 @@ class RealScraperService:
             
         # Fallback: DEMO MODE (If API is exhausted/fails)
         if not online_results:
-             logger.warning("All APIs failed (likely quota exhausted). Using MOCK fallback for demo.")
-             online_results = self._get_mock_fallback(query)
+            key_status = "API key missing (check SERPAPI_API_KEY env var)" if not self.serpapi_key else "quota exhausted or API error"
+            logger.warning(f"All APIs failed ({key_status}). Using MOCK fallback for demo.")
+            online_results = self._get_mock_fallback(query)
 
         return {
             "online": online_results,
